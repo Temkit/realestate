@@ -106,7 +106,7 @@ export function FilterBar({ properties, onFilteredChange, sortBy, onSortChange }
           <select
             value={sortBy}
             onChange={(e) => onSortChange(e.target.value as SortOption)}
-            className="appearance-none text-sm pl-8 pr-6 py-2.5 rounded-xl border bg-card text-muted-foreground
+            className="appearance-none text-base sm:text-sm pl-8 pr-6 py-2.5 rounded-xl border bg-card text-muted-foreground
                        hover:text-foreground transition-colors cursor-pointer"
           >
             {sortOptions.map((opt) => (
@@ -214,7 +214,7 @@ export function FilterBar({ properties, onFilteredChange, sortBy, onSortChange }
             <select
               value={sortBy}
               onChange={(e) => onSortChange(e.target.value as SortOption)}
-              className="appearance-none text-[0.8125rem] pl-8 pr-8 py-1.5 rounded-full border bg-card text-muted-foreground
+              className="appearance-none text-base sm:text-[0.8125rem] pl-8 pr-8 py-1.5 rounded-full border bg-card text-muted-foreground
                          hover:text-foreground hover:border-primary/40 transition-all duration-200 cursor-pointer"
             >
               {sortOptions.map((opt) => (

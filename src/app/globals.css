@@ -126,7 +126,7 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply scroll-smooth;
+    @apply scroll-smooth overflow-x-hidden;
   }
 }
 

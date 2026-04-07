@@ -102,12 +102,12 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
 
       {/* Header */}
-      <header className="border-b sticky top-0 z-40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+      <header className="border-b sticky top-0 z-40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 h-16 flex items-center justify-between">
           <div
             className="flex items-center gap-2.5 cursor-pointer"
             onClick={resetConversation}
@@ -144,14 +144,14 @@ export default function HomePage() {
         id="main-content"
         className={`transition-all duration-500 ${
           results
-            ? "py-2.5 sm:py-4 sticky top-16 z-30 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 border-b"
-            : "py-16 sm:py-20 lg:py-32 hero-mesh"
+            ? "py-2.5 sm:py-4 sticky top-16 z-30 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 border-b overflow-hidden"
+            : "py-12 sm:py-20 lg:py-32 hero-mesh"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-8">
           {!results && !isLoading && (
-            <div className="text-center mb-12 animate-fade-in-up">
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-balance leading-[1.1]">
+            <div className="text-center mb-8 sm:mb-12 animate-fade-in-up">
+              <h1 className="text-2xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-balance leading-[1.1]">
                 {t("title")}
                 <br />
                 <span className="text-primary">{t("titleHighlight")}</span>
@@ -173,7 +173,7 @@ export default function HomePage() {
 
       {/* Error */}
       {error && (
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 mb-8 mt-6">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 mb-8 mt-6">
           <div className="rounded-2xl bg-destructive/10 border border-destructive/20 p-5">
             <p className="text-sm text-destructive">{error}</p>
           </div>
@@ -182,7 +182,7 @@ export default function HomePage() {
 
       {/* Loading */}
       {isLoading && (
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-8 mt-6">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-8 mt-6">
           <ResultSkeleton />
         </div>
       )}

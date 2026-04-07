@@ -19,8 +19,8 @@ export function FavoritesBar({ favorites, onOpenCompare, onViewFavorites }: Favo
     <div className="fixed bottom-0 left-0 right-0 z-50
                     bg-background/80 backdrop-blur-xl border-t shadow-lg
                     animate-slide-up">
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-8 py-3.5 flex items-center justify-between gap-3 min-w-0">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
           {/* Mini thumbnails */}
           <div className="hidden sm:flex -space-x-2">
             {favorites.slice(0, 4).map((p) => (
@@ -53,8 +53,8 @@ export function FavoritesBar({ favorites, onOpenCompare, onViewFavorites }: Favo
             )}
           </div>
 
-          <div>
-            <span className="text-sm font-semibold">
+          <div className="min-w-0">
+            <span className="text-sm font-semibold truncate block">
               {favorites.length} saved {favorites.length === 1 ? "property" : "properties"}
             </span>
             <div className="hidden sm:flex gap-1.5 mt-1">
@@ -69,7 +69,7 @@ export function FavoritesBar({ favorites, onOpenCompare, onViewFavorites }: Favo
             </div>
           </div>
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex gap-2 sm:gap-2.5 shrink-0">
           <Button variant="outline" size="sm" onClick={onViewFavorites} className="rounded-xl">
             <Eye className="h-4 w-4 mr-1.5 hidden sm:inline" />
             View All

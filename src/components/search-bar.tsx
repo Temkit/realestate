@@ -123,7 +123,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
       </div>
 
       <form onSubmit={handleSubmit} role="search" aria-label="Search properties">
-        <div className="relative flex items-center gap-2">
+        <div className="relative flex items-center gap-2 min-w-0">
           {/* Mobile Buy/Rent mini-toggle when compact */}
           {compact && (
             <div className="flex sm:hidden shrink-0">
@@ -154,7 +154,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
             </div>
           )}
 
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <Search className={`absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 ${compact ? "h-4 w-4" : "h-5 w-5 sm:left-5"}`} />
             <input
               ref={inputRef}
@@ -169,8 +169,8 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                          placeholder:text-muted-foreground/40
                          disabled:opacity-50
                          ${compact
-                           ? "h-11 pl-10 pr-20 text-sm rounded-xl"
-                           : "h-12 sm:h-14 pl-11 sm:pl-13 pr-28 sm:pr-32 text-[0.9375rem]"
+                           ? "h-11 pl-10 pr-[4.5rem] text-base rounded-xl"
+                           : "h-12 sm:h-14 pl-11 sm:pl-13 pr-24 sm:pr-32 text-base"
                          }`}
               disabled={isLoading}
               aria-label="Search for properties"

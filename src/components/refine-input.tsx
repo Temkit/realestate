@@ -31,7 +31,7 @@ export function RefineInput({ onRefine, onReset, isLoading }: RefineInputProps) 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("placeholder")}
-          className="w-full h-11 sm:h-12 pl-10 sm:pl-11 pr-16 sm:pr-24 text-sm bg-card border border-primary/20 rounded-xl sm:rounded-2xl
+          className="w-full h-11 sm:h-12 pl-10 sm:pl-11 pr-16 sm:pr-24 text-base sm:text-sm bg-card border border-primary/20 rounded-xl sm:rounded-2xl
                      outline-none transition-all duration-200
                      focus:border-primary focus:ring-4 focus:ring-primary/10
                      placeholder:text-muted-foreground/40
