@@ -1,18 +1,23 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import { useRouter, usePathname } from "@/i18n/navigation";
+import { usePathname } from "next/navigation";
 
 export function LanguageSwitcher() {
   const locale = useLocale();
-  const router = useRouter();
   const pathname = usePathname();
 
   const switchTo = locale === "fr" ? "en" : "fr";
 
+  const handleSwitch = () => {
+    // Replace /fr/ or /en/ prefix with the target locale
+    const newPath = pathname.replace(/^\/(fr|en)/, `/${switchTo}`);
+    window.location.href = newPath;
+  };
+
   return (
     <button
-      onClick={() => router.replace(pathname, { locale: switchTo })}
+      onClick={handleSwitch}
       className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors
                  px-2.5 py-1.5 rounded-lg hover:bg-muted tabular-nums"
       aria-label={`Switch to ${switchTo === "fr" ? "French" : "English"}`}

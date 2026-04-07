@@ -182,7 +182,7 @@ export default function HomePage() {
 
       {/* Loading */}
       {isLoading && (
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-32 mt-6">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-8 mt-6">
           <ResultSkeleton />
         </div>
       )}
@@ -249,7 +249,7 @@ export default function HomePage() {
       {results &&
         !isLoading &&
         (isExpandedLoading || displayExpanded.length > 0) && (
-          <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-32">
+          <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-8">
             <div className="relative mt-4">
               <div className="bg-muted/40 border rounded-2xl sm:rounded-3xl p-4 sm:p-8">
                 <div className="flex items-center gap-3 mb-5">
@@ -284,11 +284,6 @@ export default function HomePage() {
           </div>
         )}
 
-      {/* Bottom spacer */}
-      {results &&
-        !isLoading &&
-        !isExpandedLoading &&
-        displayExpanded.length === 0 && <div className="pb-32" />}
 
       {/* Property Detail */}
       <PropertyDetail
