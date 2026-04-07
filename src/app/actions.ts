@@ -1,12 +1,24 @@
 "use server";
 
+import { headers } from "next/headers";
 import { searchProperties, searchExpandedProperties, searchWithContext, compareProperties, getNeighborhoodAnalysis } from "@/lib/perplexity";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { SearchResult, NeighborhoodData, ConversationTurn } from "@/lib/types";
+
+async function enforceRateLimit() {
+  const h = await headers();
+  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+  const { allowed, retryAfter } = checkRateLimit(ip);
+  if (!allowed) {
+    throw new Error(`Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
+  }
+}
 
 export async function searchAction(query: string): Promise<SearchResult> {
   if (!query.trim()) {
     return { properties: [], summary: "", citations: [] };
   }
+  await enforceRateLimit();
   return searchProperties(query);
 }
 
@@ -17,6 +29,7 @@ export async function expandedSearchAction(
   if (!query.trim()) {
     return { properties: [], summary: "", citations: [] };
   }
+  await enforceRateLimit();
   return searchExpandedProperties(query, preferenceHints);
 }
 
@@ -207,12 +220,14 @@ export async function refineSearchAction(
   if (!query.trim()) {
     return { properties: [], summary: "", citations: [] };
   }
+  await enforceRateLimit();
   return searchWithContext(query, previousTurns, mode);
 }
 
 export async function compareAction(
   properties: { address: string; city: string; price: number; sqft: number; bedrooms: number; bathrooms: number; propertyType: string; features: string[] }[]
 ): Promise<string> {
+  await enforceRateLimit();
   return compareProperties(properties);
 }
 
@@ -221,5 +236,6 @@ export async function neighborhoodAction(
   city: string,
   state: string
 ): Promise<NeighborhoodData> {
+  await enforceRateLimit();
   return getNeighborhoodAnalysis(address, city, state);
 }

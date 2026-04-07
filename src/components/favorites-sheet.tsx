@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { getProxiedImageUrl } from "@/lib/image-proxy";
+import { formatPrice, formatNumber } from "@/lib/format";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
@@ -75,14 +76,14 @@ export function FavoritesSheet({
 
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-lg tabular-nums">
-                    €{property.price.toLocaleString()}
+                    {formatPrice(property.price, property.listingMode)}
                   </p>
                   <p className="text-sm truncate mt-0.5">{property.address}</p>
                   <p className="text-[0.8125rem] text-muted-foreground">
                     {property.city}, {property.state} {property.zipCode}
                   </p>
                   <p className="text-[0.8125rem] text-muted-foreground mt-1.5">
-                    {property.bedrooms} bd &middot; {property.bathrooms} ba &middot; {property.sqft.toLocaleString()} m²
+                    {property.bedrooms} ch &middot; {property.bathrooms} sdb &middot; {formatNumber(property.sqft)} m²
                   </p>
                 </div>
                 <Button

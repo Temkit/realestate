@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { routing } from "@/i18n/routing";
+import { ConsentBanner } from "@/components/consent-banner";
 import type { Metadata } from "next";
 
 type Props = {
@@ -85,6 +86,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         </a>
         <NextIntlClientProvider messages={messages}>
           {children}
+          <ConsentBanner />
         </NextIntlClientProvider>
       </body>
     </html>

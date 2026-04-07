@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { getProxiedImageUrl } from "@/lib/image-proxy";
+import { formatPrice, formatNumber } from "@/lib/format";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,7 +115,7 @@ export function PropertyDetail({
           {/* Price & Actions */}
           <div className="flex items-center justify-between">
             <span className="text-3xl font-bold tracking-tight tabular-nums">
-              {property.price > 0 ? `€${property.price.toLocaleString()}` : "Price on request"}
+              {property.price > 0 ? formatPrice(property.price, property.listingMode) : "Prix sur demande"}
             </span>
             <div className="flex items-center gap-2">
               <Button
@@ -145,7 +146,7 @@ export function PropertyDetail({
             {[
               { value: property.bedrooms, label: "Beds" },
               { value: property.bathrooms, label: "Baths" },
-              { value: property.sqft > 0 ? property.sqft.toLocaleString() : "\u2014", label: "m²" },
+              { value: property.sqft > 0 ? formatNumber(property.sqft) : "\u2014", label: "m²" },
               { value: property.yearBuilt || "\u2014", label: "Built" },
             ].map(({ value, label }) => (
               <div key={label} className="text-center rounded-2xl bg-muted/50 p-3.5">
@@ -165,7 +166,7 @@ export function PropertyDetail({
             </Badge>
             {property.sqft > 0 && property.price > 0 && (
               <span className="text-sm text-muted-foreground ml-auto tabular-nums">
-                €{Math.round(property.price / property.sqft).toLocaleString()}/m²
+                {formatNumber(Math.round(property.price / property.sqft))} €/m²
               </span>
             )}
           </div>

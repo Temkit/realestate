@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { Heart, Home, Bed, Bath, Ruler, ExternalLink, Sparkles } from "lucide-react";
 import type { Property } from "@/lib/types";
 import { getProxiedImageUrl } from "@/lib/image-proxy";
+import { formatPriceCompact, formatNumber } from "@/lib/format";
 
 interface PropertyCardProps {
   property: Property;
@@ -12,24 +14,6 @@ interface PropertyCardProps {
   onToggleFavorite: () => void;
   onSelect: () => void;
   index?: number;
-}
-
-function formatPrice(price: number, mode?: "rent" | "buy"): string {
-  if (price === 0) return "Price on request";
-  if (mode === "rent") {
-    return `€${price.toLocaleString()}/mo`;
-  }
-  if (price >= 1_000_000) {
-    return `€${(price / 1_000_000).toFixed(price % 1_000_000 === 0 ? 0 : 1)}M`;
-  }
-  if (price >= 1_000) {
-    return `€${(price / 1_000).toFixed(0)}K`;
-  }
-  return `€${price.toLocaleString()}`;
-}
-
-function formatNumber(n: number): string {
-  return n.toLocaleString();
 }
 
 function getStatusStyle(status: string): string {
@@ -56,6 +40,7 @@ export function PropertyCard({
   onSelect,
   index = 0,
 }: PropertyCardProps) {
+  const t = useTranslations("property");
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [heartBounce, setHeartBounce] = useState(false);
@@ -68,7 +53,7 @@ export function PropertyCard({
       style={{ animationDelay: `${index * 60}ms` }}
       onClick={onSelect}
       role="article"
-      aria-label={`${property.address}, ${formatPrice(property.price, property.listingMode)}`}
+      aria-label={`${property.address}, ${formatPriceCompact(property.price, property.listingMode) || t("priceOnRequest")}`}
     >
       {/* Image — fixed height, not aspect ratio, so all cards match */}
       <div
@@ -105,7 +90,7 @@ export function PropertyCard({
               strokeWidth={1}
             />
             <span className="text-xs text-muted-foreground/40 font-medium">
-              No photo available
+              {t("noPhoto")}
             </span>
           </div>
         )}
@@ -119,7 +104,7 @@ export function PropertyCard({
             className="bg-white/95 dark:bg-card/95 backdrop-blur-sm text-foreground
                            px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-base sm:text-xl font-bold shadow-sm tabular-nums tracking-tight"
           >
-            {formatPrice(property.price, property.listingMode)}
+            {formatPriceCompact(property.price, property.listingMode) || t("priceOnRequest")}
           </span>
         </div>
 

@@ -21,6 +21,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { compareAction } from "@/app/actions";
+import { formatPrice, formatNumber } from "@/lib/format";
 import type { Property } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
 
@@ -71,7 +72,7 @@ export function CompareView({ properties, isOpen, onClose, onRemove }: CompareVi
     {
       label: "Price",
       icon: DollarSign,
-      getValue: (p) => `€${p.price.toLocaleString()}`,
+      getValue: (p) => formatPrice(p.price, p.listingMode),
       isBest: (vals, cur) => {
         const nums = vals.map((v) => parseInt(v.replace(/[^0-9]/g, "")));
         const curNum = parseInt(cur.replace(/[^0-9]/g, ""));
@@ -91,7 +92,7 @@ export function CompareView({ properties, isOpen, onClose, onRemove }: CompareVi
     {
       label: "m²",
       icon: Ruler,
-      getValue: (p) => p.sqft.toLocaleString(),
+      getValue: (p) => formatNumber(p.sqft),
       isBest: (vals, cur) => {
         const nums = vals.map((v) => parseInt(v.replace(/,/g, "")) || 0);
         const curNum = parseInt(cur.replace(/,/g, "")) || 0;
@@ -101,7 +102,7 @@ export function CompareView({ properties, isOpen, onClose, onRemove }: CompareVi
     {
       label: "€/m²",
       icon: TrendingUp,
-      getValue: (p) => (p.sqft > 0 ? `€${Math.round(p.price / p.sqft).toLocaleString()}` : "N/A"),
+      getValue: (p) => (p.sqft > 0 ? `${formatNumber(Math.round(p.price / p.sqft))} €/m²` : "N/A"),
       isBest: (vals, cur) => {
         const nums = vals.filter((v) => v !== "N/A").map((v) => parseInt(v.replace(/[^0-9]/g, "")));
         const curNum = parseInt(cur.replace(/[^0-9]/g, ""));

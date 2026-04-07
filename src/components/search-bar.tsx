@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Search, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useConsent } from "@/hooks/use-consent";
 import type { SearchMode } from "@/hooks/use-property-search";
 
 interface SearchBarProps {
@@ -43,14 +44,17 @@ function saveRecentSearch(query: string) {
 
 export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeChange }: SearchBarProps) {
   const t = useTranslations("search");
+  const { canStore } = useConsent();
   const [query, setQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [showRecent, setShowRecent] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setRecentSearches(getRecentSearches());
-  }, []);
+    if (canStore("functional")) {
+      setRecentSearches(getRecentSearches());
+    }
+  }, [canStore]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

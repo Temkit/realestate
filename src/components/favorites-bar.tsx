@@ -63,7 +63,7 @@ export function FavoritesBar({ favorites, onOpenCompare, onViewFavorites }: Favo
                   key={p.id}
                   className="text-[11px] bg-secondary text-secondary-foreground px-2.5 py-0.5 rounded-md truncate max-w-[110px]"
                 >
-                  {p.city} - €{(p.price / 1000).toFixed(0)}K
+                  {p.city} - €{(p.price / 1000).toFixed(0)}k
                 </span>
               ))}
             </div>
