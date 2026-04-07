@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { SlidersHorizontal, X, ArrowUpDown } from "lucide-react";
 import type { Property } from "@/lib/types";
 import type { SortOption } from "@/hooks/use-property-search";
@@ -53,6 +54,7 @@ function applyFilters(properties: Property[], filters: Filters): Property[] {
 }
 
 export function FilterBar({ properties, onFilteredChange, sortBy, onSortChange }: FilterBarProps) {
+  const t = useTranslations("filter");
   const [expanded, setExpanded] = useState(false);
   const [filters, setFilters] = useState<Filters>({
     minPrice: null,

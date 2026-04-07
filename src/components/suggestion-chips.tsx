@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
 
 interface SuggestionChipsProps {
@@ -9,6 +10,7 @@ interface SuggestionChipsProps {
 }
 
 export function SuggestionChips({ chips, onChipClick, isLoading }: SuggestionChipsProps) {
+  const t = useTranslations("suggestions");
   if (chips.length === 0 || isLoading) return null;
 
   return (
@@ -16,7 +18,7 @@ export function SuggestionChips({ chips, onChipClick, isLoading }: SuggestionChi
       <div className="flex items-center gap-2 mb-3">
         <Sparkles className="h-3.5 w-3.5 text-primary/60" />
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Try next
+          {t("tryNext")}
         </span>
       </div>
       <div className="flex flex-wrap gap-2 stagger-children">

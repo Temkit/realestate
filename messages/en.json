@@ -1,0 +1,143 @@
+{
+  "home": {
+    "title": "Your next home",
+    "titleHighlight": "in Luxembourg",
+    "subtitle": "Search all major portals at once. Just describe what you want.",
+    "propertiesFound": "{count} {count, plural, one {property} other {properties}} found",
+    "youMightAlsoLike": "You might also like",
+    "similarListings": "Similar listings",
+    "noMatchingProperties": "No matching properties",
+    "tryAdjustingFilters": "Try adjusting your filters or search for something different.",
+    "priceDisclaimer": "Prices shown are indicative and may differ from the listing source."
+  },
+  "search": {
+    "buy": "Buy",
+    "rent": "Rent",
+    "placeholderBuy": "Describe your ideal home...",
+    "placeholderRent": "Find a rental in Luxembourg...",
+    "search": "Search",
+    "searching": "Searching",
+    "recentSearches": "Recent searches",
+    "clear": "Clear",
+    "suggestions": {
+      "1": "3-bedroom apartment in Kirchberg",
+      "2": "Family house in Bertrange under €1M",
+      "3": "Office to rent in Luxembourg City",
+      "4": "Modern apartment in Belval under €500K",
+      "5": "House with garden in Hesperange"
+    }
+  },
+  "filter": {
+    "filters": "Filters",
+    "clearAll": "Clear all",
+    "under": "Under {price}",
+    "priceRange": "{min}–{max}",
+    "priceAbove": "{price}+",
+    "beds": "{count}+ bd",
+    "house": "House",
+    "condo": "Condo",
+    "apartment": "Apartment",
+    "townhouse": "Townhouse",
+    "sortRecommended": "AI Recommended",
+    "sortPriceAsc": "Price: Low to High",
+    "sortPriceDesc": "Price: High to Low",
+    "sortSize": "Largest first"
+  },
+  "property": {
+    "priceOnRequest": "Price on request",
+    "noPhoto": "No photo available",
+    "beds": "bd",
+    "baths": "ba",
+    "viewListing": "View listing",
+    "perMonth": "/mo"
+  },
+  "detail": {
+    "beds": "Beds",
+    "baths": "Baths",
+    "area": "m²",
+    "built": "Built",
+    "overview": "Overview",
+    "features": "Features",
+    "neighborhood": "Neighborhood",
+    "viewOriginal": "View original listing",
+    "save": "Save",
+    "saved": "Saved",
+    "share": "Share",
+    "noDescription": "No description available.",
+    "noFeatures": "No feature details available.",
+    "analyzingNeighborhood": "Analyzing neighborhood...",
+    "neighborhoodError": "Failed to load neighborhood data",
+    "retry": "Retry",
+    "nearbyAmenities": "Nearby amenities",
+    "sources": "Sources",
+    "schools": "Schools",
+    "walkability": "Walkability",
+    "safety": "Safety",
+    "commute": "Commute",
+    "medianPrice": "Median Price",
+    "trends": "Trends"
+  },
+  "compare": {
+    "title": "Compare Properties ({count})",
+    "price": "Price",
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "area": "Area",
+    "pricePerSqm": "€/m²",
+    "type": "Type",
+    "yearBuilt": "Year Built",
+    "features": "Features"
+  },
+  "favorites": {
+    "savedProperties": "Saved Properties ({count})",
+    "clearAll": "Clear All",
+    "noSavedProperties": "No saved properties",
+    "noSavedDescription": "Click the heart icon on any property to save it.",
+    "saved": "saved",
+    "property": "property",
+    "properties": "properties",
+    "viewAll": "View All",
+    "compare": "Compare ({count})",
+    "addedToast": "Added to favorites",
+    "removedToast": "Removed from favorites"
+  },
+  "refine": {
+    "placeholder": "Refine: \"with terrace\", \"cheaper\"...",
+    "newSearch": "New search"
+  },
+  "suggestions": {
+    "tryNext": "Try next"
+  },
+  "theme": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode"
+  },
+  "backToTop": {
+    "label": "Back to top"
+  },
+  "consent": {
+    "title": "We respect your privacy",
+    "description": "We use local storage to save your favorites and preferences. No data is sent to third parties for advertising.",
+    "acceptAll": "Accept all",
+    "onlyEssential": "Essential only",
+    "manage": "Manage",
+    "necessary": "Necessary",
+    "necessaryDesc": "Theme and display preferences. Always active.",
+    "functional": "Functional",
+    "functionalDesc": "Favorites, search preferences, and recent search history.",
+    "savePreferences": "Save"
+  },
+  "footer": {
+    "about": "About",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "legalNotice": "Legal Notice",
+    "cookies": "Cookies",
+    "contact": "Contact",
+    "disclaimer": "Indicative prices. Listings sourced from public data.",
+    "copyright": "© 2026 olu.lu"
+  },
+  "legal": {
+    "backToHome": "Back to home"
+  }
+}

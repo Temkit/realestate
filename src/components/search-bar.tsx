@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Search, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SearchMode } from "@/hooks/use-property-search";
@@ -13,13 +14,7 @@ interface SearchBarProps {
   onModeChange: (mode: SearchMode) => void;
 }
 
-const suggestions = [
-  "Appartement 3 chambres à Kirchberg",
-  "Maison familiale à Bertrange sous €1M",
-  "Bureau à louer Luxembourg-ville centre",
-  "Appartement moderne à Belval sous €500K",
-  "Maison avec jardin à Hesperange",
-];
+const suggestionKeys = ["1", "2", "3", "4", "5"] as const;
 
 const RECENT_SEARCHES_KEY = "olu-recent-searches";
 const MAX_RECENT = 5;
@@ -47,6 +42,7 @@ function saveRecentSearch(query: string) {
 }
 
 export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeChange }: SearchBarProps) {
+  const t = useTranslations("search");
   const [query, setQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [showRecent, setShowRecent] = useState(false);
@@ -106,7 +102,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Buy
+            {t("buy")}
           </button>
           <button
             type="button"
@@ -117,7 +113,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Rent
+            {t("rent")}
           </button>
         </div>
       </div>
@@ -137,7 +133,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                       : "text-muted-foreground"
                   }`}
                 >
-                  Buy
+                  {t("buy")}
                 </button>
                 <button
                   type="button"
@@ -148,7 +144,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                       : "text-muted-foreground"
                   }`}
                 >
-                  Rent
+                  {t("rent")}
                 </button>
               </div>
             </div>
@@ -162,7 +158,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setShowRecent(true)}
               onBlur={() => setTimeout(() => setShowRecent(false), 200)}
-              placeholder={searchMode === "rent" ? "Find a rental..." : "Describe your ideal home..."}
+              placeholder={searchMode === "rent" ? t("placeholderRent") : t("placeholderBuy")}
               className={`w-full bg-card border-2 border-border rounded-2xl
                          outline-none transition-all duration-200 shadow-sm
                          focus:border-primary focus:ring-4 focus:ring-primary/10 focus:shadow-md
@@ -193,7 +189,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "Search"
+                  t("search")
                 )}
               </Button>
             </div>
@@ -207,7 +203,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
               >
                 <div className="flex items-center justify-between px-4 py-2.5 border-b">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Recent searches
+                    {t("recentSearches")}
                   </span>
                   <button
                     type="button"
@@ -215,7 +211,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                     onClick={clearRecent}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    Clear
+                    {t("clear")}
                   </button>
                 </div>
                 {recentSearches.map((s) => (
@@ -239,15 +235,15 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
 
       {!isLoading && !hasResults && (
         <div className="mt-4 sm:mt-5 flex flex-wrap gap-2 sm:gap-2.5 justify-center stagger-children">
-          {suggestions.map((s) => (
+          {suggestionKeys.map((key) => (
             <button
-              key={s}
-              onClick={() => handleSuggestionClick(s)}
+              key={key}
+              onClick={() => handleSuggestionClick(t(`suggestions.${key}`))}
               className="text-xs sm:text-[0.8125rem] px-3 sm:px-4 py-2 rounded-full border bg-card
                          text-muted-foreground hover:bg-secondary hover:border-primary/30
                          hover:text-foreground transition-all duration-200 shadow-sm"
             >
-              {s}
+              {t(`suggestions.${key}`)}
             </button>
           ))}
         </div>

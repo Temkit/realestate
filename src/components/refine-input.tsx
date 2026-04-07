@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Sparkles, Send, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +12,7 @@ interface RefineInputProps {
 }
 
 export function RefineInput({ onRefine, onReset, isLoading }: RefineInputProps) {
+  const t = useTranslations("refine");
   const [query, setQuery] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -28,7 +30,7 @@ export function RefineInput({ onRefine, onReset, isLoading }: RefineInputProps) 
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Refine: &quot;avec terrasse&quot;, &quot;moins cher&quot;..."
+          placeholder={t("placeholder")}
           className="w-full h-11 sm:h-12 pl-10 sm:pl-11 pr-16 sm:pr-24 text-sm bg-card border border-primary/20 rounded-xl sm:rounded-2xl
                      outline-none transition-all duration-200
                      focus:border-primary focus:ring-4 focus:ring-primary/10
@@ -55,7 +57,7 @@ export function RefineInput({ onRefine, onReset, isLoading }: RefineInputProps) 
                      flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted"
         >
           <RotateCcw className="h-3 w-3" />
-          New search
+          {t("newSearch")}
         </button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { SearchBar } from "@/components/search-bar";
 import { PropertyCard } from "@/components/property-card";
 import { PropertyDetail } from "@/components/property-detail";
@@ -12,6 +13,7 @@ import { SuggestionChips } from "@/components/suggestion-chips";
 import { RefineInput } from "@/components/refine-input";
 import { BackToTop } from "@/components/back-to-top";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { ToastContainer } from "@/components/ui/toast";
 import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,8 +48,10 @@ function ResultSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
-
 export default function HomePage() {
+  const t = useTranslations("home");
+  const tFav = useTranslations("favorites");
+
   const {
     results,
     expandedResults,
@@ -60,7 +64,6 @@ export default function HomePage() {
     sortedPrimary,
     sortedExpanded,
     suggestedChips,
-    marketContext,
     searchMode,
     sortBy,
     favorites,
@@ -91,9 +94,9 @@ export default function HomePage() {
   const handleToggleFavorite = (property: Property) => {
     const action = toggleFavorite(property);
     if (action === "added") {
-      toast("Added to favorites", "success");
+      toast(tFav("addedToast"), "success");
     } else {
-      toast("Removed from favorites", "default");
+      toast(tFav("removedToast"), "default");
     }
   };
 
@@ -121,7 +124,7 @@ export default function HomePage() {
                 onClick={() => setShowFavorites(true)}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground
                            transition-colors px-3 py-2 rounded-xl hover:bg-muted"
-                aria-label={`View ${favorites.length} saved properties`}
+                aria-label={`${favorites.length} ${tFav("saved")}`}
               >
                 <Heart className="h-4 w-4 fill-red-500 text-red-500" />
                 <span className="font-medium tabular-nums">
@@ -129,6 +132,7 @@ export default function HomePage() {
                 </span>
               </button>
             )}
+            <LanguageSwitcher />
             <ThemeToggle />
           </div>
         </div>
@@ -147,13 +151,12 @@ export default function HomePage() {
           {!results && !isLoading && (
             <div className="text-center mb-12 animate-fade-in-up">
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-balance leading-[1.1]">
-                Your next home
+                {t("title")}
                 <br />
-                <span className="text-primary">in Luxembourg</span>
+                <span className="text-primary">{t("titleHighlight")}</span>
               </h1>
               <p className="mt-4 sm:mt-5 text-base sm:text-xl text-muted-foreground max-w-md mx-auto leading-relaxed text-balance">
-                Search all major portals at once.
-                Just describe what you want.
+                {t("subtitle")}
               </p>
             </div>
           )}
@@ -188,8 +191,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-8 mt-4 sm:mt-6" aria-live="polite">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-medium text-muted-foreground">
-              {displayPrimary.length}{" "}
-              {displayPrimary.length === 1 ? "property" : "properties"} found
+              {t("propertiesFound", { count: displayPrimary.length })}
             </h2>
           </div>
 
@@ -199,6 +201,11 @@ export default function HomePage() {
             sortBy={sortBy}
             onSortChange={setSortBy}
           />
+
+          {/* Price disclaimer */}
+          <p className="text-xs text-muted-foreground/60 mb-4 -mt-2">
+            {t("priceDisclaimer")}
+          </p>
 
           {displayPrimary.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -216,8 +223,8 @@ export default function HomePage() {
           ) : (
             <EmptyState
               icon={SearchX}
-              title="No matching properties"
-              description="Try adjusting your filters or search for something different."
+              title={t("noMatchingProperties")}
+              description={t("tryAdjustingFilters")}
             />
           )}
 
@@ -246,37 +253,30 @@ export default function HomePage() {
               <div className="bg-muted/40 border rounded-2xl sm:rounded-3xl p-4 sm:p-8">
                 <div className="flex items-center gap-3 mb-5">
                   <h2 className="text-lg font-semibold tracking-tight">
-                    You might also like
+                    {t("youMightAlsoLike")}
                   </h2>
                   <span className="text-xs px-3 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                    Similar listings
+                    {t("similarListings")}
                   </span>
                 </div>
-                {expandedResults?.summary && !isExpandedLoading && (
-                  <p className="text-[0.9375rem] text-muted-foreground mb-6 leading-relaxed max-w-2xl">
-                    {expandedResults.summary}
-                  </p>
-                )}
 
                 {isExpandedLoading ? (
                   <ResultSkeleton count={3} />
                 ) : (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                      {displayExpanded.map((property, index) => (
-                        <PropertyCard
-                          key={property.id}
-                          property={property}
-                          isFavorite={isFavorite(property.id)}
-                          onToggleFavorite={() =>
-                            handleToggleFavorite(property)
-                          }
-                          onSelect={() => handlePropertyClick(property)}
-                          index={index}
-                        />
-                      ))}
-                    </div>
-                  </>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    {displayExpanded.map((property, index) => (
+                      <PropertyCard
+                        key={property.id}
+                        property={property}
+                        isFavorite={isFavorite(property.id)}
+                        onToggleFavorite={() =>
+                          handleToggleFavorite(property)
+                        }
+                        onSelect={() => handlePropertyClick(property)}
+                        index={index}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>

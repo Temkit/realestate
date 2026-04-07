@@ -1,0 +1,143 @@
+{
+  "home": {
+    "title": "Votre prochain chez-vous",
+    "titleHighlight": "au Luxembourg",
+    "subtitle": "Recherchez sur tous les portails en une fois. Décrivez simplement ce que vous cherchez.",
+    "propertiesFound": "{count} {count, plural, one {bien} other {biens}} trouvé(s)",
+    "youMightAlsoLike": "Vous pourriez aussi aimer",
+    "similarListings": "Annonces similaires",
+    "noMatchingProperties": "Aucun bien correspondant",
+    "tryAdjustingFilters": "Essayez de modifier vos filtres ou lancez une nouvelle recherche.",
+    "priceDisclaimer": "Les prix affichés sont indicatifs et peuvent différer de la source."
+  },
+  "search": {
+    "buy": "Acheter",
+    "rent": "Louer",
+    "placeholderBuy": "Décrivez votre bien idéal...",
+    "placeholderRent": "Trouvez une location au Luxembourg...",
+    "search": "Rechercher",
+    "searching": "Recherche",
+    "recentSearches": "Recherches récentes",
+    "clear": "Effacer",
+    "suggestions": {
+      "1": "Appartement 3 chambres à Kirchberg",
+      "2": "Maison familiale à Bertrange sous 1M€",
+      "3": "Bureau à louer Luxembourg-ville centre",
+      "4": "Appartement moderne à Belval sous 500K€",
+      "5": "Maison avec jardin à Hesperange"
+    }
+  },
+  "filter": {
+    "filters": "Filtres",
+    "clearAll": "Tout effacer",
+    "under": "Moins de {price}",
+    "priceRange": "{min}–{max}",
+    "priceAbove": "{price}+",
+    "beds": "{count}+ ch",
+    "house": "Maison",
+    "condo": "Condo",
+    "apartment": "Appartement",
+    "townhouse": "Maison de ville",
+    "sortRecommended": "Recommandé par l'IA",
+    "sortPriceAsc": "Prix croissant",
+    "sortPriceDesc": "Prix décroissant",
+    "sortSize": "Plus grand d'abord"
+  },
+  "property": {
+    "priceOnRequest": "Prix sur demande",
+    "noPhoto": "Pas de photo",
+    "beds": "ch",
+    "baths": "sdb",
+    "viewListing": "Voir l'annonce",
+    "perMonth": "/mois"
+  },
+  "detail": {
+    "beds": "Chambres",
+    "baths": "SdB",
+    "area": "m²",
+    "built": "Année",
+    "overview": "Aperçu",
+    "features": "Caractéristiques",
+    "neighborhood": "Quartier",
+    "viewOriginal": "Voir l'annonce originale",
+    "save": "Sauvegarder",
+    "saved": "Sauvegardé",
+    "share": "Partager",
+    "noDescription": "Aucune description disponible.",
+    "noFeatures": "Aucune caractéristique listée.",
+    "analyzingNeighborhood": "Analyse du quartier en cours...",
+    "neighborhoodError": "Impossible de charger les données du quartier",
+    "retry": "Réessayer",
+    "nearbyAmenities": "Commodités à proximité",
+    "sources": "Sources",
+    "schools": "Écoles",
+    "walkability": "Accessibilité piétonne",
+    "safety": "Sécurité",
+    "commute": "Transport",
+    "medianPrice": "Prix médian",
+    "trends": "Tendances"
+  },
+  "compare": {
+    "title": "Comparer les biens ({count})",
+    "price": "Prix",
+    "bedrooms": "Chambres",
+    "bathrooms": "Salles de bain",
+    "area": "Surface",
+    "pricePerSqm": "€/m²",
+    "type": "Type",
+    "yearBuilt": "Année",
+    "features": "Caractéristiques"
+  },
+  "favorites": {
+    "savedProperties": "Biens sauvegardés ({count})",
+    "clearAll": "Tout supprimer",
+    "noSavedProperties": "Aucun bien sauvegardé",
+    "noSavedDescription": "Cliquez sur l'icône cœur pour sauvegarder des biens.",
+    "saved": "sauvegardé(s)",
+    "property": "bien",
+    "properties": "biens",
+    "viewAll": "Voir tout",
+    "compare": "Comparer ({count})",
+    "addedToast": "Ajouté aux favoris",
+    "removedToast": "Retiré des favoris"
+  },
+  "refine": {
+    "placeholder": "Affiner : « avec terrasse », « moins cher »...",
+    "newSearch": "Nouvelle recherche"
+  },
+  "suggestions": {
+    "tryNext": "Essayez aussi"
+  },
+  "theme": {
+    "switchToLight": "Passer en mode clair",
+    "switchToDark": "Passer en mode sombre"
+  },
+  "backToTop": {
+    "label": "Retour en haut"
+  },
+  "consent": {
+    "title": "Nous respectons votre vie privée",
+    "description": "Nous utilisons le stockage local pour sauvegarder vos favoris et préférences. Aucune donnée n'est envoyée à des tiers à des fins publicitaires.",
+    "acceptAll": "Tout accepter",
+    "onlyEssential": "Essentiel uniquement",
+    "manage": "Gérer",
+    "necessary": "Nécessaire",
+    "necessaryDesc": "Thème et préférences d'affichage. Toujours actif.",
+    "functional": "Fonctionnel",
+    "functionalDesc": "Favoris, préférences de recherche et historique des recherches.",
+    "savePreferences": "Enregistrer"
+  },
+  "footer": {
+    "about": "À propos",
+    "privacy": "Confidentialité",
+    "terms": "Conditions",
+    "legalNotice": "Mentions légales",
+    "cookies": "Cookies",
+    "contact": "Contact",
+    "disclaimer": "Prix indicatifs. Annonces issues de données publiques.",
+    "copyright": "© 2026 olu.lu"
+  },
+  "legal": {
+    "backToHome": "Retour à l'accueil"
+  }
+}
