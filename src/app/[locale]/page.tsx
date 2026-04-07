@@ -12,6 +12,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { SuggestionChips } from "@/components/suggestion-chips";
 import { RefineInput } from "@/components/refine-input";
 import { BackToTop } from "@/components/back-to-top";
+import { Footer } from "@/components/footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ToastContainer } from "@/components/ui/toast";
@@ -327,6 +328,7 @@ export default function HomePage() {
         onViewFavorites={() => setShowFavorites(true)}
       />
 
+      <Footer />
       <BackToTop />
     </div>
   );

@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 
 interface LegalPageProps {
   title: string;
-  lastUpdated: string;
+  lastUpdated?: string;
   children: React.ReactNode;
 }
 
@@ -15,29 +15,45 @@ export function LegalPage({ title, lastUpdated, children }: LegalPageProps) {
 
   return (
     <>
-      <header className="border-b">
-        <div className="max-w-3xl mx-auto px-5 sm:px-8 h-16 flex items-center gap-4">
+      {/* Header */}
+      <header className="border-b sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
+        <div className="max-w-3xl mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
           <Link
             href="/"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            {t("backToHome")}
+            <span className="hidden sm:inline">{t("backToHome")}</span>
+          </Link>
+          <Link href="/" className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-md bg-[#3b5bdb] flex items-center justify-center">
+              <span className="text-white text-xs font-extrabold">olu</span>
+            </div>
+            <span className="text-sm font-bold">
+              olu<span className="text-muted-foreground font-normal">.lu</span>
+            </span>
           </Link>
         </div>
       </header>
+
+      {/* Content */}
       <main className="flex-1">
         <article className="max-w-3xl mx-auto px-5 sm:px-8 py-10 sm:py-16">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{title}</h1>
-          <p className="text-sm text-muted-foreground mb-8">{lastUpdated}</p>
-          <div className="prose prose-sm dark:prose-invert max-w-none
-                          prose-headings:font-semibold prose-headings:tracking-tight
-                          prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-3
-                          prose-p:text-muted-foreground prose-p:leading-relaxed
-                          prose-li:text-muted-foreground
-                          prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                          prose-strong:text-foreground prose-strong:font-semibold
-                          prose-table:text-sm">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{title}</h1>
+          {lastUpdated && (
+            <p className="text-sm text-muted-foreground mt-2">{lastUpdated}</p>
+          )}
+
+          <div className="mt-8 space-y-8 text-[0.9375rem] leading-relaxed text-muted-foreground
+                          [&_h2]:text-foreground [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:mb-3
+                          [&_p]:mb-3
+                          [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2 [&_ul]:mb-4
+                          [&_li]:pl-1
+                          [&_strong]:text-foreground [&_strong]:font-semibold
+                          [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:text-primary/80
+                          [&_table]:w-full [&_table]:border-collapse [&_table]:mt-3 [&_table]:mb-4
+                          [&_th]:text-left [&_th]:text-foreground [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wider [&_th]:pb-2 [&_th]:border-b
+                          [&_td]:py-2.5 [&_td]:pr-4 [&_td]:border-b [&_td]:border-border/50 [&_td]:text-sm [&_td]:align-top">
             {children}
           </div>
         </article>
