@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Property } from "@/lib/types";
 
-const STORAGE_KEY = "realestate-user-preferences";
+const STORAGE_KEY = "olu-user-preferences";
 
 export interface UserPreferences {
   // Learned price range from clicks/favorites

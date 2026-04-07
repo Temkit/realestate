@@ -1,10 +1,28 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { searchAction, expandedSearchAction, fetchListingImages } from "@/app/actions";
-import type { Property, SearchResult } from "@/lib/types";
+import { searchAction, expandedSearchAction, refineSearchAction, fetchListingImages } from "@/app/actions";
+import type { Property, SearchResult, ConversationTurn } from "@/lib/types";
+
+export type SortOption = "recommended" | "price-asc" | "price-desc" | "size";
+export type SearchMode = "buy" | "rent";
+
+function sortProperties(properties: Property[], sortBy: SortOption): Property[] {
+  if (sortBy === "recommended") return properties;
+  const sorted = [...properties];
+  switch (sortBy) {
+    case "price-asc":
+      return sorted.sort((a, b) => (a.price || Infinity) - (b.price || Infinity));
+    case "price-desc":
+      return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+    case "size":
+      return sorted.sort((a, b) => (b.sqft || 0) - (a.sqft || 0));
+    default:
+      return sorted;
+  }
+}
 
 export function usePropertySearch() {
   const [results, setResults] = useState<SearchResult | null>(null);
@@ -16,6 +34,13 @@ export function usePropertySearch() {
   const [showCompare, setShowCompare] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [lastQuery, setLastQuery] = useState("");
+
+  // New AI-native state
+  const [conversationTurns, setConversationTurns] = useState<ConversationTurn[]>([]);
+  const [searchMode, setSearchMode] = useState<SearchMode>("buy");
+  const [sortBy, setSortBy] = useState<SortOption>("recommended");
+  const [suggestedChips, setSuggestedChips] = useState<string[]>([]);
+  const [marketContext, setMarketContext] = useState<string>("");
 
   const { favorites, addFavorite, removeFavorite, isFavorite, clearFavorites } = useFavorites();
   const { recordClick, recordFavorite, getPreferenceHints } = useUserPreferences();
@@ -53,6 +78,10 @@ export function usePropertySearch() {
     setError(null);
     setLastQuery(query);
     setExpandedResults(null);
+    setSortBy("recommended");
+
+    // Fresh search — reset conversation
+    setConversationTurns([{ role: "user", content: query }]);
 
     const preferenceHints = getPreferenceHints();
 
@@ -62,6 +91,13 @@ export function usePropertySearch() {
     primaryPromise
       .then((data) => {
         setResults(data);
+        setSuggestedChips(data.suggestedFollowUps || []);
+        setMarketContext(data.marketContext || "");
+        // Store assistant response in conversation
+        setConversationTurns((prev) => [
+          ...prev,
+          { role: "assistant", content: data.summary },
+        ]);
         enrichWithListingImages(data, setResults);
       })
       .catch(() => {
@@ -82,6 +118,45 @@ export function usePropertySearch() {
       .finally(() => {
         setIsExpandedLoading(false);
       });
+  };
+
+  const handleRefine = async (query: string) => {
+    setIsLoading(true);
+    setError(null);
+    setExpandedResults(null);
+    setIsExpandedLoading(false);
+    setSortBy("recommended");
+
+    const newTurns: ConversationTurn[] = [...conversationTurns, { role: "user", content: query }];
+    setConversationTurns(newTurns);
+    setLastQuery(query);
+
+    try {
+      const data = await refineSearchAction(query, conversationTurns, searchMode);
+      setResults(data);
+      setSuggestedChips(data.suggestedFollowUps || []);
+      setMarketContext(data.marketContext || "");
+      setConversationTurns([
+        ...newTurns,
+        { role: "assistant", content: data.summary },
+      ]);
+      enrichWithListingImages(data, setResults);
+    } catch {
+      setError("Refinement failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetConversation = () => {
+    setResults(null);
+    setExpandedResults(null);
+    setConversationTurns([]);
+    setSuggestedChips([]);
+    setMarketContext("");
+    setLastQuery("");
+    setSortBy("recommended");
+    setError(null);
   };
 
   const handlePropertyClick = (property: Property) => {
@@ -109,6 +184,16 @@ export function usePropertySearch() {
       (p) => !primaryIds.has(p.id) && !primaryAddresses.has(p.address.toLowerCase().trim())
     ) || [];
 
+  // Apply sorting
+  const sortedPrimary = useMemo(
+    () => (results ? sortProperties(results.properties, sortBy) : []),
+    [results, sortBy]
+  );
+  const sortedExpanded = useMemo(
+    () => sortProperties(filteredExpanded, sortBy),
+    [filteredExpanded, sortBy]
+  );
+
   return {
     // State
     results,
@@ -120,7 +205,17 @@ export function usePropertySearch() {
     selectedProperty,
     showCompare,
     showFavorites,
-    filteredExpanded,
+    sortedPrimary,
+    sortedExpanded,
+    // Keep filteredExpanded for backward compat
+    filteredExpanded: sortedExpanded,
+
+    // AI-native state
+    conversationTurns,
+    searchMode,
+    sortBy,
+    suggestedChips,
+    marketContext,
 
     // Favorites
     favorites,
@@ -130,10 +225,14 @@ export function usePropertySearch() {
 
     // Actions
     handleSearch,
+    handleRefine,
+    resetConversation,
     handlePropertyClick,
     toggleFavorite,
     setSelectedProperty,
     setShowCompare,
     setShowFavorites,
+    setSearchMode,
+    setSortBy,
   };
 }

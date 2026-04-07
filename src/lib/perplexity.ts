@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { Property, SearchResult, NeighborhoodData, PerplexityImage } from "./types";
+import type { Property, SearchResult, NeighborhoodData, PerplexityImage, ConversationTurn } from "./types";
 
 let clientInstance: OpenAI | null = null;
 
@@ -165,16 +165,22 @@ Return a JSON object with this structure:
       "features": ["feature1", "feature2"],
       "imageUrl": null,
       "source": "website name where listing was found",
-      "listingStatus": "Active"
+      "listingStatus": "Active",
+      "aiInsight": "one short sentence: what makes this property notable (e.g. 'Below market price for Kirchberg', 'Best value per m²', 'Near international school', 'Recently listed')",
+      "listingMode": "buy"
     }
   ],
-  "summary": "brief summary in the same language as the query"
+  "summary": "MAX 1-2 short sentences. State how many found, price range, and your top pick. Example: '8 apartments found, €650K–€1.2M. Best value: 17 rue Sauvage at €868K — below market for Kirchberg.' NEVER write more than 2 sentences.",
+  "marketContext": "One short stat. Example: 'Kirchberg average: €10,500/m²'. MAX 15 words.",
+  "suggestedFollowUps": ["3-4 natural follow-up queries the user might want to try next, e.g. 'Show me cheaper options in nearby Neudorf', 'Only rentals under €2,000/month', 'Apartments with terrace']
 }
 
 - For commercial (office/bureau/retail): bedrooms=0, bathrooms=0
 - Price = NUMBER only. Monthly rent for rentals. 0 if unknown.
 - The "sqft" field is used for surface area in m² — return the value in m² directly, do NOT convert. Use 0 if unknown.
-- For rentals: set listingStatus to "Rental - €X/month" or similar
+- For rentals: set listingMode to "rent" and listingStatus to "Rental - €X/month" or similar
+- For sales: set listingMode to "buy"
+- aiInsight MUST be unique per property — highlight what differentiates each one
 - Return as many results as you can find (aim for 8-15), but only real verified listings
 - MUST be valid JSON`;
 
@@ -210,7 +216,9 @@ Return a JSON object with this structure:
       "features": ["feature1", "feature2"],
       "imageUrl": null,
       "source": "website name where listing was found",
-      "listingStatus": "Active"
+      "listingStatus": "Active",
+      "aiInsight": "one short sentence about what makes this notable",
+      "listingMode": "buy"
     }
   ],
   "summary": "brief summary explaining how these differ from the main results, in the same language as the query"
@@ -219,7 +227,8 @@ Return a JSON object with this structure:
 - For commercial (office/bureau/retail): bedrooms=0, bathrooms=0
 - Price = NUMBER only. Monthly rent for rentals. 0 if unknown.
 - The "sqft" field is used for surface area in m² — return the value in m² directly, do NOT convert. Use 0 if unknown.
-- For rentals: set listingStatus to "Rental - €X/month" or similar
+- For rentals: set listingMode to "rent" and listingStatus to "Rental - €X/month" or similar
+- For sales: set listingMode to "buy"
 - Return as many results as you can find (aim for 5-10), but only real verified listings
 - MUST be valid JSON`;
 
@@ -345,18 +354,22 @@ function parseProperties(
   citations: string[],
   searchResults: PerplexitySearchResult[],
   idPrefix: string
-): { properties: Property[]; summary: string } {
+): { properties: Property[]; summary: string; suggestedFollowUps: string[]; marketContext: string } {
   const arrayMatch = content.match(/\[[\s\S]*\]/);
   const objectMatch = content.match(/\{[\s\S]*\}/);
 
   let rawProperties: unknown[] = [];
   let summary = "";
+  let suggestedFollowUps: string[] = [];
+  let marketContext = "";
 
   if (objectMatch) {
     const parsed = JSON.parse(objectMatch[0]);
     if (Array.isArray(parsed.properties)) {
       rawProperties = parsed.properties;
       summary = parsed.summary || "";
+      suggestedFollowUps = Array.isArray(parsed.suggestedFollowUps) ? parsed.suggestedFollowUps : [];
+      marketContext = parsed.marketContext || "";
     } else if (Array.isArray(parsed)) {
       rawProperties = parsed;
     }
@@ -414,10 +427,17 @@ function parseProperties(
       source,
       listingUrl,
       listingStatus: p.listingStatus || p.status || "Active",
+      aiInsight: p.aiInsight || undefined,
+      listingMode: p.listingMode === "rent" ? "rent" : "buy",
+      pricePerSqm:
+        (typeof p.price === "number" ? p.price : parseFloat(String(p.price || "0").replace(/[^0-9.]/g, "")) || 0) > 0 &&
+        (p.sqft || p.size || p.surface || 0) > 0
+          ? Math.round((typeof p.price === "number" ? p.price : parseFloat(String(p.price || "0").replace(/[^0-9.]/g, "")) || 0) / (p.sqft || p.size || p.surface))
+          : undefined,
     };
   });
 
-  return { properties, summary };
+  return { properties, summary, suggestedFollowUps, marketContext };
 }
 
 // ── Search functions ─────────────────────────────────────────────────────────
@@ -448,11 +468,13 @@ export async function searchProperties(query: string): Promise<SearchResult> {
   const images = raw.images || [];
 
   try {
-    const { properties, summary } = parseProperties(content, images, citations, searchResults, "prop");
+    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, images, citations, searchResults, "prop");
     return {
       properties,
       summary: summary || `Found ${properties.length} results`,
       citations,
+      suggestedFollowUps,
+      marketContext,
     };
   } catch {
     return {
@@ -506,11 +528,13 @@ Do NOT repeat the same properties from the original search. Focus on real, curre
   const images = raw.images || [];
 
   try {
-    const { properties, summary } = parseProperties(content, images, citations, searchResults, "expanded");
+    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, images, citations, searchResults, "expanded");
     return {
       properties,
       summary: summary || `Found ${properties.length} additional results`,
       citations,
+      suggestedFollowUps,
+      marketContext,
     };
   } catch {
     return {
@@ -519,6 +543,96 @@ Do NOT repeat the same properties from the original search. Focus on real, curre
       citations,
     };
   }
+}
+
+export async function searchWithContext(
+  query: string,
+  previousTurns: ConversationTurn[],
+  mode: "rent" | "buy"
+): Promise<SearchResult> {
+  const client = getClient();
+  const { enrichedQuery, domains } = analyzeQuery(query);
+
+  const modeInstruction = mode === "rent"
+    ? "The user is looking to RENT. Only show rental listings."
+    : "The user is looking to BUY. Only show properties for sale.";
+
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    { role: "system", content: `${SEARCH_SYSTEM_PROMPT}\n\n${modeInstruction}\n\nIMPORTANT: This is a follow-up query. The user is refining their previous search. Use the conversation history to understand context. Do NOT repeat properties from earlier turns.` },
+  ];
+
+  // Add conversation history
+  for (const turn of previousTurns) {
+    messages.push({ role: turn.role, content: turn.content });
+  }
+
+  // Add the new query
+  messages.push({ role: "user", content: enrichedQuery });
+
+  const response = await client.chat.completions.create({
+    model: "sonar",
+    // @ts-expect-error -- Perplexity-specific params not in OpenAI types
+    return_images: true,
+    search_domain_filter: domains.length > 0 ? domains : undefined,
+    web_search_options: {
+      search_context_size: "high",
+    },
+    messages,
+    temperature: 0,
+  });
+
+  const content = response.choices[0]?.message?.content || "";
+  const raw = response as unknown as PerplexityRawResponse;
+  const citations = raw.citations || [];
+  const searchResults = raw.search_results || [];
+  const images = raw.images || [];
+
+  try {
+    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, images, citations, searchResults, "refine");
+    return {
+      properties,
+      summary: summary || `Found ${properties.length} results`,
+      citations,
+      suggestedFollowUps,
+      marketContext,
+    };
+  } catch {
+    return {
+      properties: [],
+      summary: content,
+      citations,
+    };
+  }
+}
+
+export async function compareProperties(
+  properties: { address: string; city: string; price: number; sqft: number; bedrooms: number; bathrooms: number; propertyType: string; features: string[] }[]
+): Promise<string> {
+  const client = getClient();
+
+  const propertyDescriptions = properties.map((p, i) =>
+    `Property ${i + 1}: ${p.address}, ${p.city} — €${p.price.toLocaleString()}, ${p.sqft}m², ${p.bedrooms}bd/${p.bathrooms}ba, ${p.propertyType}. Features: ${p.features.slice(0, 5).join(", ") || "none listed"}`
+  ).join("\n");
+
+  const response = await client.chat.completions.create({
+    model: "sonar",
+    web_search_options: {
+      search_context_size: "high",
+    },
+    messages: [
+      {
+        role: "system",
+        content: `You are a Luxembourg real estate advisor. Compare the given properties and give a clear, opinionated recommendation. Be concise (3-4 sentences max). State which is the best value and why. Consider price per m², location desirability in Luxembourg, and features. Respond in the same language the properties are described in.`,
+      },
+      {
+        role: "user",
+        content: `Compare these properties and tell me which is the best choice:\n\n${propertyDescriptions}`,
+      },
+    ],
+    temperature: 0,
+  });
+
+  return response.choices[0]?.message?.content || "Unable to generate comparison.";
 }
 
 export async function getNeighborhoodAnalysis(

@@ -16,6 +16,9 @@ export interface Property {
   source: string | null;
   listingUrl: string | null;
   listingStatus: string;
+  aiInsight?: string;
+  listingMode?: "rent" | "buy";
+  pricePerSqm?: number;
 }
 
 export interface NeighborhoodData {
@@ -42,4 +45,11 @@ export interface SearchResult {
   properties: Property[];
   summary: string;
   citations: string[];
+  suggestedFollowUps?: string[];
+  marketContext?: string;
+}
+
+export interface ConversationTurn {
+  role: "user" | "assistant";
+  content: string;
 }

@@ -4,9 +4,21 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HomeFind — AI-Powered Real Estate Search",
+  title: "olu.lu — Luxembourg Real Estate Search",
   description:
-    "Find your perfect home using natural language search powered by AI. Browse real listings, compare properties, and explore neighborhoods.",
+    "Find your next home in Luxembourg. AI-powered search across athome.lu, immotop.lu, and more. Buy, rent, compare.",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-touch-icon.svg",
+  },
+  openGraph: {
+    title: "olu.lu — Luxembourg Real Estate Search",
+    description: "Find your next home in Luxembourg. AI-powered search across all major portals.",
+    siteName: "olu.lu",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {

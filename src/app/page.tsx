@@ -8,6 +8,8 @@ import { CompareView } from "@/components/compare-view";
 import { FavoritesBar } from "@/components/favorites-bar";
 import { FavoritesSheet } from "@/components/favorites-sheet";
 import { FilterBar } from "@/components/filter-bar";
+import { SuggestionChips } from "@/components/suggestion-chips";
+import { RefineInput } from "@/components/refine-input";
 import { BackToTop } from "@/components/back-to-top";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastContainer } from "@/components/ui/toast";
@@ -20,14 +22,14 @@ import type { Property } from "@/lib/types";
 
 function ResultSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
           className="rounded-2xl overflow-hidden bg-card border"
           style={{ animationDelay: `${i * 75}ms` }}
         >
-          <Skeleton className="aspect-[16/10] w-full" />
+          <Skeleton className="h-[200px] w-full" />
           <div className="p-5 space-y-3">
             <Skeleton className="h-6 w-28" />
             <Skeleton className="h-4 w-3/4" />
@@ -44,6 +46,7 @@ function ResultSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
+
 export default function HomePage() {
   const {
     results,
@@ -54,17 +57,26 @@ export default function HomePage() {
     selectedProperty,
     showCompare,
     showFavorites,
-    filteredExpanded,
+    sortedPrimary,
+    sortedExpanded,
+    suggestedChips,
+    marketContext,
+    searchMode,
+    sortBy,
     favorites,
     isFavorite,
     clearFavorites,
     removeFavorite,
     handleSearch,
+    handleRefine,
+    resetConversation,
     handlePropertyClick,
     toggleFavorite,
     setSelectedProperty,
     setShowCompare,
     setShowFavorites,
+    setSearchMode,
+    setSortBy,
   } = usePropertySearch();
 
   const { toasts, toast, dismiss } = useToast();
@@ -72,12 +84,9 @@ export default function HomePage() {
   const [filteredPrimary, setFilteredPrimary] = useState<Property[] | null>(
     null
   );
-  const [filteredExpandedLocal, setFilteredExpandedLocal] = useState<
-    Property[] | null
-  >(null);
 
-  const displayPrimary = filteredPrimary ?? results?.properties ?? [];
-  const displayExpanded = filteredExpandedLocal ?? filteredExpanded;
+  const displayPrimary = filteredPrimary ?? sortedPrimary;
+  const displayExpanded = sortedExpanded;
 
   const handleToggleFavorite = (property: Property) => {
     const action = toggleFavorite(property);
@@ -95,25 +104,15 @@ export default function HomePage() {
       {/* Header */}
       <header className="border-b sticky top-0 z-40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-primary-foreground"
-              >
-                <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
-                <path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              </svg>
+          <div
+            className="flex items-center gap-2.5 cursor-pointer"
+            onClick={resetConversation}
+          >
+            <div className="h-8 w-8 rounded-lg bg-[#3b5bdb] flex items-center justify-center shadow-sm">
+              <span className="text-white text-sm font-extrabold tracking-tight">olu</span>
             </div>
-            <span className="text-[1.125rem] font-semibold tracking-tight">
-              HomeFind
+            <span className="text-[1.125rem] font-bold tracking-tight">
+              olu<span className="text-muted-foreground font-normal">.lu</span>
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -135,22 +134,26 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero / Search */}
+      {/* Search Section — sticky when results exist */}
       <section
         id="main-content"
-        className={`transition-all duration-500 ${results ? "py-6" : "py-20 sm:py-32 hero-mesh"}`}
+        className={`transition-all duration-500 ${
+          results
+            ? "py-2.5 sm:py-4 sticky top-16 z-30 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 border-b"
+            : "py-16 sm:py-20 lg:py-32 hero-mesh"
+        }`}
       >
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
           {!results && !isLoading && (
             <div className="text-center mb-12 animate-fade-in-up">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-balance leading-[1.1]">
-                Find your perfect
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-balance leading-[1.1]">
+                Your next home
                 <br />
-                <span className="text-primary">place to call home</span>
+                <span className="text-primary">in Luxembourg</span>
               </h1>
-              <p className="mt-5 text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto leading-relaxed text-balance">
-                Describe what you&apos;re looking for in plain language.
-                We&apos;ll search real listings across the web.
+              <p className="mt-4 sm:mt-5 text-base sm:text-xl text-muted-foreground max-w-md mx-auto leading-relaxed text-balance">
+                Search all major portals at once.
+                Just describe what you want.
               </p>
             </div>
           )}
@@ -158,13 +161,15 @@ export default function HomePage() {
             onSearch={handleSearch}
             isLoading={isLoading}
             hasResults={!!results}
+            searchMode={searchMode}
+            onModeChange={setSearchMode}
           />
         </div>
       </section>
 
       {/* Error */}
       {error && (
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 mb-8">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 mb-8 mt-6">
           <div className="rounded-2xl bg-destructive/10 border border-destructive/20 p-5">
             <p className="text-sm text-destructive">{error}</p>
           </div>
@@ -173,55 +178,30 @@ export default function HomePage() {
 
       {/* Loading */}
       {isLoading && (
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-32">
-          <div className="mb-6">
-            <Skeleton className="h-6 w-52" />
-            <Skeleton className="h-4 w-80 mt-2.5" />
-          </div>
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-32 mt-6">
           <ResultSkeleton />
         </div>
       )}
 
       {/* Primary Results */}
       {results && !isLoading && (
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-8" aria-live="polite">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold tracking-tight">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-8 mt-4 sm:mt-6" aria-live="polite">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-medium text-muted-foreground">
               {displayPrimary.length}{" "}
-              {displayPrimary.length === 1 ? "home" : "homes"} found
+              {displayPrimary.length === 1 ? "property" : "properties"} found
             </h2>
-            {results.summary && (
-              <p className="text-[0.9375rem] text-muted-foreground mt-1.5 leading-relaxed max-w-2xl">
-                {results.summary}
-              </p>
-            )}
-            {results.citations.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 mt-3">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Sources
-                </span>
-                {results.citations.map((url, i) => (
-                  <a
-                    key={i}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary/70 hover:text-primary hover:underline transition-colors"
-                  >
-                    [{i + 1}]
-                  </a>
-                ))}
-              </div>
-            )}
           </div>
 
           <FilterBar
-            properties={results.properties}
+            properties={sortedPrimary}
             onFilteredChange={(filtered) => setFilteredPrimary(filtered)}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
           />
 
           {displayPrimary.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {displayPrimary.map((property, index) => (
                 <PropertyCard
                   key={property.id}
@@ -240,6 +220,20 @@ export default function HomePage() {
               description="Try adjusting your filters or search for something different."
             />
           )}
+
+          {/* Suggestion Chips */}
+          <SuggestionChips
+            chips={suggestedChips}
+            onChipClick={handleRefine}
+            isLoading={isLoading}
+          />
+
+          {/* Refine Input */}
+          <RefineInput
+            onRefine={handleRefine}
+            onReset={resetConversation}
+            isLoading={isLoading}
+          />
         </div>
       )}
 
@@ -247,9 +241,9 @@ export default function HomePage() {
       {results &&
         !isLoading &&
         (isExpandedLoading || displayExpanded.length > 0) && (
-          <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-32">
+          <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-32">
             <div className="relative mt-4">
-              <div className="bg-muted/40 border rounded-3xl p-6 sm:p-8">
+              <div className="bg-muted/40 border rounded-2xl sm:rounded-3xl p-4 sm:p-8">
                 <div className="flex items-center gap-3 mb-5">
                   <h2 className="text-lg font-semibold tracking-tight">
                     You might also like
@@ -268,7 +262,7 @@ export default function HomePage() {
                   <ResultSkeleton count={3} />
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                       {displayExpanded.map((property, index) => (
                         <PropertyCard
                           key={property.id}
@@ -282,25 +276,6 @@ export default function HomePage() {
                         />
                       ))}
                     </div>
-                    {expandedResults &&
-                      expandedResults.citations.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-2 mt-5">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            Sources
-                          </span>
-                          {expandedResults.citations.map((url, i) => (
-                            <a
-                              key={i}
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary/70 hover:text-primary hover:underline transition-colors"
-                            >
-                              [{i + 1}]
-                            </a>
-                          ))}
-                        </div>
-                      )}
                   </>
                 )}
               </div>

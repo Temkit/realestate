@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { getProxiedImageUrl } from "@/lib/image-proxy";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -63,6 +63,16 @@ export function PropertyDetail({
       setLoadingNeighborhood(false);
     }
   };
+
+  // Auto-load neighborhood when sheet opens (debounced)
+  useEffect(() => {
+    if (!isOpen || !property || neighborhood || loadingNeighborhood) return;
+    const timer = setTimeout(() => {
+      loadNeighborhood();
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, property?.id]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -291,13 +301,10 @@ export function PropertyDetail({
               )}
 
               {!neighborhood && !loadingNeighborhood && !neighborhoodError && (
-                <div className="text-center py-8">
-                  <p className="text-[0.9375rem] text-muted-foreground mb-4">
-                    Get AI-powered insights on schools, safety, walkability, and more.
-                  </p>
-                  <Button variant="outline" size="sm" onClick={loadNeighborhood} className="rounded-xl">
-                    Analyze Neighborhood
-                  </Button>
+                <div className="space-y-3 py-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                  <Skeleton className="h-4 w-3/5" />
                 </div>
               )}
             </TabsContent>

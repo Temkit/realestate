@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Heart, Home, Bed, Bath, Ruler, ExternalLink } from "lucide-react";
+import { Heart, Home, Bed, Bath, Ruler, ExternalLink, Sparkles } from "lucide-react";
 import type { Property } from "@/lib/types";
 import { getProxiedImageUrl } from "@/lib/image-proxy";
 
@@ -14,8 +14,11 @@ interface PropertyCardProps {
   index?: number;
 }
 
-function formatPrice(price: number): string {
+function formatPrice(price: number, mode?: "rent" | "buy"): string {
   if (price === 0) return "Price on request";
+  if (mode === "rent") {
+    return `€${price.toLocaleString()}/mo`;
+  }
   if (price >= 1_000_000) {
     return `€${(price / 1_000_000).toFixed(price % 1_000_000 === 0 ? 0 : 1)}M`;
   }
@@ -55,20 +58,21 @@ export function PropertyCard({
 }: PropertyCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [heartBounce, setHeartBounce] = useState(false);
 
   return (
     <article
-      className="group cursor-pointer rounded-2xl border bg-card overflow-hidden
+      className="group cursor-pointer rounded-xl sm:rounded-2xl border bg-card overflow-hidden
                  transition-all duration-300 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:-translate-y-0.5
                  animate-fade-in-up"
       style={{ animationDelay: `${index * 60}ms` }}
       onClick={onSelect}
       role="article"
-      aria-label={`${property.address}, ${formatPrice(property.price)}`}
+      aria-label={`${property.address}, ${formatPrice(property.price, property.listingMode)}`}
     >
       {/* Image — fixed height, not aspect ratio, so all cards match */}
       <div
-        className="relative overflow-hidden bg-muted h-[200px]"
+        className="relative overflow-hidden bg-muted h-[180px] sm:h-[200px]"
       >
         {property.imageUrl && !imageError ? (
           <>
@@ -113,9 +117,9 @@ export function PropertyCard({
         <div className="absolute bottom-3.5 left-3.5">
           <span
             className="bg-white/95 dark:bg-card/95 backdrop-blur-sm text-foreground
-                           px-3.5 py-2 rounded-xl text-xl font-bold shadow-sm tabular-nums tracking-tight"
+                           px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-base sm:text-xl font-bold shadow-sm tabular-nums tracking-tight"
           >
-            {formatPrice(property.price)}
+            {formatPrice(property.price, property.listingMode)}
           </span>
         </div>
 
@@ -123,6 +127,8 @@ export function PropertyCard({
         <button
           onClick={(e) => {
             e.stopPropagation();
+            setHeartBounce(true);
+            setTimeout(() => setHeartBounce(false), 350);
             onToggleFavorite();
           }}
           className="absolute top-3.5 right-3.5 p-2.5 rounded-full bg-white/90 dark:bg-black/60
@@ -132,7 +138,8 @@ export function PropertyCard({
         >
           <Heart
             className={`h-[18px] w-[18px] transition-all duration-200
-              ${isFavorite ? "fill-red-500 text-red-500 scale-110" : "text-gray-600 dark:text-gray-300"}`}
+              ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-600 dark:text-gray-300"}
+              ${heartBounce ? "animate-heart-bounce" : ""}`}
           />
         </button>
 
@@ -146,14 +153,24 @@ export function PropertyCard({
         </div>
       </div>
 
-      {/* Content — all sections fixed height for uniform cards */}
-      <div className="p-4 sm:p-5 h-[152px] flex flex-col">
-        {/* Address + location: fixed 2 lines */}
+      {/* Content */}
+      <div className="p-3.5 sm:p-5 min-h-[140px] sm:min-h-[160px] flex flex-col">
+        {/* AI Insight */}
+        {property.aiInsight && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <Sparkles className="h-3 w-3 text-primary shrink-0" />
+            <span className="text-xs text-primary font-medium truncate">
+              {property.aiInsight}
+            </span>
+          </div>
+        )}
+
+        {/* Address + location */}
         <h3 className="font-semibold text-[0.9375rem] leading-snug truncate">
           {property.address}
         </h3>
         <p className="text-muted-foreground text-sm mt-1 truncate">
-          {property.city}, {property.state} {property.zipCode}
+          {property.city}{property.zipCode ? ` ${property.zipCode}` : ""}
         </p>
 
         {/* Stats */}
@@ -189,6 +206,11 @@ export function PropertyCard({
                 </strong>{" "}
                 m²
               </span>
+            </span>
+          )}
+          {property.pricePerSqm && property.pricePerSqm > 0 && (
+            <span className="text-xs text-muted-foreground/70 tabular-nums">
+              €{formatNumber(property.pricePerSqm)}/m²
             </span>
           )}
         </div>

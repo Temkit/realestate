@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Property } from "@/lib/types";
 
-const STORAGE_KEY = "realestate-favorites";
+const STORAGE_KEY = "olu-favorites";
 
 export function useFavorites() {
   const [favorites, setFavorites] = useState<Property[]>([]);

@@ -1,7 +1,7 @@
 "use server";
 
-import { searchProperties, searchExpandedProperties, getNeighborhoodAnalysis } from "@/lib/perplexity";
-import type { SearchResult, NeighborhoodData } from "@/lib/types";
+import { searchProperties, searchExpandedProperties, searchWithContext, compareProperties, getNeighborhoodAnalysis } from "@/lib/perplexity";
+import type { SearchResult, NeighborhoodData, ConversationTurn } from "@/lib/types";
 
 export async function searchAction(query: string): Promise<SearchResult> {
   if (!query.trim()) {
@@ -197,6 +197,23 @@ export async function fetchListingImages(
   }
 
   return results;
+}
+
+export async function refineSearchAction(
+  query: string,
+  previousTurns: ConversationTurn[],
+  mode: "rent" | "buy"
+): Promise<SearchResult> {
+  if (!query.trim()) {
+    return { properties: [], summary: "", citations: [] };
+  }
+  return searchWithContext(query, previousTurns, mode);
+}
+
+export async function compareAction(
+  properties: { address: string; city: string; price: number; sqft: number; bedrooms: number; bathrooms: number; propertyType: string; features: string[] }[]
+): Promise<string> {
+  return compareProperties(properties);
 }
 
 export async function neighborhoodAction(
