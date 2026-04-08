@@ -384,24 +384,64 @@ function parseProperties(
 
   // Track which citation URLs have been assigned to avoid giving same URL to multiple properties
   const usedUrls = new Set<string>();
+  // Track which images have been claimed so each image is used at most once
+  const usedImageUrls = new Set<string>();
+
+  // Common words to ignore when matching images to properties
+  const imgCommonWords = new Set(["street", "avenue", "road", "drive", "lane", "court", "place", "boulevard", "north", "south", "east", "west", "square", "park", "house", "building", "floor", "unit", "apartment", "flat", "suite", "block", "tower", "residence", "city", "town", "village", "rue", "allée", "chemin", "maison", "appartement", "chambre", "étage", "immeuble", "terrain", "bureau", "résidence", "cité", "lotissement", "les", "des", "aux", "sur", "les", "bains", "la", "le", "du", "de"]);
+
+  function matchImage(address: string, city: string): PerplexityImage | undefined {
+    const addressLower = address.toLowerCase();
+    const cityLower = (city || "").toLowerCase();
+    // Build search words from address + city, split on whitespace and hyphens
+    const allWords = (addressLower + " " + cityLower)
+      .split(/[\s\-,]+/)
+      .filter((w: string) => w.length > 2 && !imgCommonWords.has(w));
+    // Deduplicate
+    const searchWords = [...new Set(allWords)];
+
+    // Score each unused image
+    let bestImage: PerplexityImage | undefined;
+    let bestScore = 0;
+
+    for (const img of images) {
+      if (usedImageUrls.has(img.image_url)) continue;
+      const haystack = ((img.title || "") + " " + (img.origin_url || "")).toLowerCase();
+      let score = 0;
+      for (const word of searchWords) {
+        if (haystack.includes(word)) score++;
+      }
+      // Boost: if the full compound name (e.g. "mondorf-les-bains") appears in the haystack
+      if (cityLower && cityLower.length > 3 && haystack.includes(cityLower)) score += 2;
+      // Boost: if address number matches in the URL/title
+      const streetNum = addressLower.match(/^\d+/)?.[0];
+      if (streetNum && haystack.includes(streetNum)) score++;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestImage = img;
+      }
+    }
+
+    // Accept with score >= 1 (at least one meaningful word matched)
+    if (bestImage && bestScore >= 1) {
+      usedImageUrls.add(bestImage.image_url);
+      return bestImage;
+    }
+    return undefined;
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const properties: Property[] = rawProperties.map((p: any, i: number) => {
     const address = p.address || p.name || p.location || "Address not available";
+    const city = p.city || p.ville || "";
     const description = p.description || "";
     const source =
       typeof p.source === "string"
         ? p.source.replace(/\[\d+\]/g, "").trim() || null
         : p.source || null;
 
-    // Match image — require at least 2 meaningful address words
-    const imgCommonWords = new Set(["street", "avenue", "road", "drive", "lane", "court", "place", "boulevard", "north", "south", "east", "west", "square", "park", "house", "building", "floor", "unit", "apartment", "flat", "suite", "block", "tower", "residence", "city", "town", "village", "rue", "allée", "chemin", "maison", "appartement", "chambre", "étage", "immeuble", "terrain", "bureau", "résidence", "cité", "lotissement"]);
-    const imgAddressWords = address.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2 && !imgCommonWords.has(w));
-    const matchedImage = images.find((img) => {
-      const haystack = ((img.title || "") + " " + (img.origin_url || "")).toLowerCase();
-      const matchCount = imgAddressWords.filter((word: string) => haystack.includes(word)).length;
-      return matchCount >= 2;
-    });
+    const matchedImage = matchImage(address, city);
 
     // Resolve listing URL from citations (real URLs, not model-generated)
     const listingUrl = extractListingUrl(address, description, source, citations, searchResults, usedUrls);
@@ -409,7 +449,7 @@ function parseProperties(
     return {
       id: p.id || `${idPrefix}-${Date.now()}-${i}`,
       address,
-      city: p.city || p.ville || "",
+      city,
       state: p.state || p.region || p.country || "",
       zipCode: String(p.zipCode || p.postalCode || p.zip || ""),
       price:
