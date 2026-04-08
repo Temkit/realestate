@@ -80,7 +80,7 @@ export default function HomePage() {
     setSelectedProperty,
     setShowCompare,
     setShowFavorites,
-    setSearchMode,
+    handleModeChange,
     setSortBy,
   } = usePropertySearch();
 
@@ -201,7 +201,7 @@ export default function HomePage() {
             isLoading={isLoading}
             hasResults={!!results}
             searchMode={searchMode}
-            onModeChange={setSearchMode}
+            onModeChange={handleModeChange}
           />
         </div>
       </section>

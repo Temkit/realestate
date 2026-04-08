@@ -45,6 +45,27 @@ export function usePropertySearch() {
   const { favorites, addFavorite, removeFavorite, isFavorite, clearFavorites } = useFavorites();
   const { recordClick, recordFavorite, getPreferenceHints } = useUserPreferences();
 
+  // When mode changes and we have results, re-search with the new mode
+  const handleModeChange = (mode: SearchMode) => {
+    setSearchMode(mode);
+    if (lastQuery) {
+      // Re-trigger search with new mode (will use the updated searchMode via closure on next render)
+      // We need to call searchAction directly with the new mode since setState is async
+      setIsLoading(true);
+      setExpandedResults(null);
+      setSortBy("recommended");
+      searchAction(lastQuery, mode).then((data) => {
+        setResults(data);
+        setSuggestedChips(data.suggestedFollowUps || []);
+        setMarketContext(data.marketContext || "");
+      }).catch(() => {
+        setError("Search failed. Please try again.");
+      }).finally(() => {
+        setIsLoading(false);
+      });
+    }
+  };
+
   const handleSearch = async (query: string) => {
     setIsLoading(true);
     setIsExpandedLoading(false);
@@ -199,7 +220,7 @@ export function usePropertySearch() {
     setSelectedProperty,
     setShowCompare,
     setShowFavorites,
-    setSearchMode,
+    handleModeChange,
     setSortBy,
   };
 }
