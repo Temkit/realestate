@@ -5,6 +5,31 @@ import { searchProperties, searchExpandedProperties, searchWithContext, compareP
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { SearchResult, NeighborhoodData, ConversationTurn } from "@/lib/types";
 
+// ── In-memory search cache (TTL: 20 minutes) ──────────────────────────────
+const CACHE_TTL = 20 * 60 * 1000;
+const searchCache = new Map<string, { result: SearchResult; timestamp: number }>();
+
+/**
+ * Enrich search results with listing images server-side.
+ * Mutates the result in place for properties that have a listingUrl but no imageUrl.
+ */
+async function enrichResultImages(result: SearchResult): Promise<void> {
+  const needImages = result.properties
+    .filter((p) => !p.imageUrl && p.listingUrl)
+    .map((p) => ({ id: p.id, url: p.listingUrl! }));
+
+  if (needImages.length === 0) return;
+
+  const imageMap = await fetchListingImages(needImages);
+  if (Object.keys(imageMap).length === 0) return;
+
+  for (const p of result.properties) {
+    if (imageMap[p.id]) {
+      p.imageUrl = imageMap[p.id];
+    }
+  }
+}
+
 async function enforceRateLimit() {
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
@@ -19,7 +44,23 @@ export async function searchAction(query: string): Promise<SearchResult> {
     return { properties: [], summary: "", citations: [] };
   }
   await enforceRateLimit();
-  return searchProperties(query);
+
+  // Check cache first
+  const cacheKey = `search:${query.trim().toLowerCase()}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.result;
+  }
+
+  const result = await searchProperties(query);
+
+  // Enrich with listing images server-side before returning
+  await enrichResultImages(result);
+
+  // Cache the result
+  searchCache.set(cacheKey, { result, timestamp: Date.now() });
+
+  return result;
 }
 
 export async function expandedSearchAction(
@@ -30,7 +71,12 @@ export async function expandedSearchAction(
     return { properties: [], summary: "", citations: [] };
   }
   await enforceRateLimit();
-  return searchExpandedProperties(query, preferenceHints);
+  const result = await searchExpandedProperties(query, preferenceHints);
+
+  // Enrich with listing images server-side (no cache for expanded — too variable)
+  await enrichResultImages(result);
+
+  return result;
 }
 
 /**
@@ -237,7 +283,23 @@ export async function refineSearchAction(
     return { properties: [], summary: "", citations: [] };
   }
   await enforceRateLimit();
-  return searchWithContext(query, previousTurns, mode);
+
+  // Check cache
+  const cacheKey = `refine:${query.trim().toLowerCase()}:${mode}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.result;
+  }
+
+  const result = await searchWithContext(query, previousTurns, mode);
+
+  // Enrich with listing images server-side
+  await enrichResultImages(result);
+
+  // Cache the result
+  searchCache.set(cacheKey, { result, timestamp: Date.now() });
+
+  return result;
 }
 
 export async function compareAction(

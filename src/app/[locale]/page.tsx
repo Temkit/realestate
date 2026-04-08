@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { SearchBar } from "@/components/search-bar";
 import { PropertyCard } from "@/components/property-card";
@@ -73,6 +73,7 @@ export default function HomePage() {
     removeFavorite,
     handleSearch,
     handleRefine,
+    loadExpanded,
     resetConversation,
     handlePropertyClick,
     toggleFavorite,
@@ -84,6 +85,40 @@ export default function HomePage() {
   } = usePropertySearch();
 
   const { toasts, toast, dismiss } = useToast();
+
+  // Intersection observer to lazy-load expanded results on scroll
+  const expandedSentinelRef = useRef<HTMLDivElement | null>(null);
+  const expandedLoadedRef = useRef(false);
+
+  // Reset the loaded flag when results change (new search)
+  useEffect(() => {
+    expandedLoadedRef.current = false;
+  }, [results]);
+
+  const sentinelCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      expandedSentinelRef.current = node;
+    },
+    []
+  );
+
+  useEffect(() => {
+    const sentinel = expandedSentinelRef.current;
+    if (!sentinel || !results || isLoading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !expandedLoadedRef.current) {
+          expandedLoadedRef.current = true;
+          loadExpanded();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [results, isLoading, loadExpanded]);
 
   const [filteredPrimary, setFilteredPrimary] = useState<Property[] | null>(
     null
@@ -243,6 +278,11 @@ export default function HomePage() {
             isLoading={isLoading}
           />
         </div>
+      )}
+
+      {/* Sentinel for lazy-loading expanded results */}
+      {results && !isLoading && (
+        <div ref={sentinelCallback} aria-hidden="true" />
       )}
 
       {/* Expanded Results */}

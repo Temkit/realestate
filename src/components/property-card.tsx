@@ -73,6 +73,8 @@ export function PropertyCard({
               alt={property.address}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              priority={index < 2}
+              loading={index < 2 ? "eager" : "lazy"}
               className={`object-cover transition-all duration-500 group-hover:scale-105 ${
                 imageLoaded ? "opacity-100" : "opacity-0"
               }`}

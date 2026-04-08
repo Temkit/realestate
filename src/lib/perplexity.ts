@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { Property, SearchResult, NeighborhoodData, PerplexityImage, ConversationTurn } from "./types";
+import type { Property, SearchResult, NeighborhoodData, ConversationTurn } from "./types";
 
 let clientInstance: OpenAI | null = null;
 
@@ -128,7 +128,6 @@ interface PerplexitySearchResult {
 interface PerplexityRawResponse {
   citations?: string[];
   search_results?: PerplexitySearchResult[];
-  images?: PerplexityImage[];
 }
 
 // ── System prompts ───────────────────────────────────────────────────────────
@@ -369,7 +368,6 @@ function looksLikeListingUrl(url: string): boolean {
  */
 function parseProperties(
   content: string,
-  images: PerplexityImage[],
   citations: string[],
   searchResults: PerplexitySearchResult[],
   idPrefix: string
@@ -403,52 +401,6 @@ function parseProperties(
 
   // Track which citation URLs have been assigned to avoid giving same URL to multiple properties
   const usedUrls = new Set<string>();
-  // Track which images have been claimed so each image is used at most once
-  const usedImageUrls = new Set<string>();
-
-  // Common words to ignore when matching images to properties
-  const imgCommonWords = new Set(["street", "avenue", "road", "drive", "lane", "court", "place", "boulevard", "north", "south", "east", "west", "square", "park", "house", "building", "floor", "unit", "apartment", "flat", "suite", "block", "tower", "residence", "city", "town", "village", "rue", "allée", "chemin", "maison", "appartement", "chambre", "étage", "immeuble", "terrain", "bureau", "résidence", "cité", "lotissement", "les", "des", "aux", "sur", "les", "bains", "la", "le", "du", "de"]);
-
-  function matchImage(address: string, city: string): PerplexityImage | undefined {
-    const addressLower = address.toLowerCase();
-    const cityLower = (city || "").toLowerCase();
-    // Build search words from address + city, split on whitespace and hyphens
-    const allWords = (addressLower + " " + cityLower)
-      .split(/[\s\-,]+/)
-      .filter((w: string) => w.length > 2 && !imgCommonWords.has(w));
-    // Deduplicate
-    const searchWords = [...new Set(allWords)];
-
-    // Score each unused image
-    let bestImage: PerplexityImage | undefined;
-    let bestScore = 0;
-
-    for (const img of images) {
-      if (usedImageUrls.has(img.image_url)) continue;
-      const haystack = ((img.title || "") + " " + (img.origin_url || "")).toLowerCase();
-      let score = 0;
-      for (const word of searchWords) {
-        if (haystack.includes(word)) score++;
-      }
-      // Boost: if the full compound name (e.g. "mondorf-les-bains") appears in the haystack
-      if (cityLower && cityLower.length > 3 && haystack.includes(cityLower)) score += 2;
-      // Boost: if address number matches in the URL/title
-      const streetNum = addressLower.match(/^\d+/)?.[0];
-      if (streetNum && haystack.includes(streetNum)) score++;
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestImage = img;
-      }
-    }
-
-    // Accept with score >= 1 (at least one meaningful word matched)
-    if (bestImage && bestScore >= 1) {
-      usedImageUrls.add(bestImage.image_url);
-      return bestImage;
-    }
-    return undefined;
-  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const properties: Property[] = rawProperties.map((p: any, i: number) => {
@@ -459,8 +411,6 @@ function parseProperties(
       typeof p.source === "string"
         ? p.source.replace(/\[\d+\]/g, "").trim() || null
         : p.source || null;
-
-    const matchedImage = matchImage(address, city);
 
     // Resolve listing URL from citations (real URLs, not model-generated)
     const listingUrl = extractListingUrl(address, description, source, citations, searchResults, usedUrls);
@@ -482,7 +432,7 @@ function parseProperties(
       yearBuilt: p.yearBuilt || null,
       description: description.replace(/\[\d+\]/g, "").trim(),
       features: Array.isArray(p.features) ? p.features : [],
-      imageUrl: matchedImage?.image_url || null,
+      imageUrl: null,
       source,
       listingUrl,
       listingStatus: p.listingStatus || p.status || "Active",
@@ -496,33 +446,6 @@ function parseProperties(
     };
   });
 
-  // Fallback pass: assign unused images to properties that still have no image
-  // Prefer images from the same portal domain as the property's source
-  const remaining = images.filter((img) => !usedImageUrls.has(img.image_url));
-  if (remaining.length > 0) {
-    for (const prop of properties) {
-      if (prop.imageUrl) continue;
-      if (remaining.length === 0) break;
-
-      // Try to match by source domain
-      const sourceDomain = (prop.source || "").toLowerCase().replace(/\s+/g, "");
-      let fallback: PerplexityImage | undefined;
-      const idx = remaining.findIndex((img) => {
-        const origin = (img.origin_url || "").toLowerCase();
-        return sourceDomain && origin.includes(sourceDomain.split(".")[0]);
-      });
-      if (idx >= 0) {
-        fallback = remaining.splice(idx, 1)[0];
-      } else {
-        // Take the next available image
-        fallback = remaining.shift();
-      }
-      if (fallback) {
-        prop.imageUrl = fallback.image_url;
-      }
-    }
-  }
-
   return { properties, summary, suggestedFollowUps, marketContext };
 }
 
@@ -535,7 +458,6 @@ export async function searchProperties(query: string): Promise<SearchResult> {
   const response = await client.chat.completions.create({
     model: "sonar",
     // @ts-expect-error -- Perplexity-specific params not in OpenAI types
-    return_images: true,
     search_domain_filter: domains.length > 0 ? domains : undefined,
     web_search_options: {
       search_context_size: "high",
@@ -551,10 +473,9 @@ export async function searchProperties(query: string): Promise<SearchResult> {
   const raw = response as unknown as PerplexityRawResponse;
   const citations = raw.citations || [];
   const searchResults = raw.search_results || [];
-  const images = raw.images || [];
 
   try {
-    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, images, citations, searchResults, "prop");
+    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, citations, searchResults, "prop");
     return {
       properties,
       summary: summary || `Found ${properties.length} results`,
@@ -595,7 +516,6 @@ Do NOT repeat the same properties from the original search. Focus on real, curre
   const response = await client.chat.completions.create({
     model: "sonar",
     // @ts-expect-error -- Perplexity-specific params not in OpenAI types
-    return_images: true,
     search_domain_filter: domains.length > 0 ? domains : undefined,
     web_search_options: {
       search_context_size: "high",
@@ -611,10 +531,9 @@ Do NOT repeat the same properties from the original search. Focus on real, curre
   const raw = response as unknown as PerplexityRawResponse;
   const citations = raw.citations || [];
   const searchResults = raw.search_results || [];
-  const images = raw.images || [];
 
   try {
-    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, images, citations, searchResults, "expanded");
+    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, citations, searchResults, "expanded");
     return {
       properties,
       summary: summary || `Found ${properties.length} additional results`,
@@ -658,7 +577,6 @@ export async function searchWithContext(
   const response = await client.chat.completions.create({
     model: "sonar",
     // @ts-expect-error -- Perplexity-specific params not in OpenAI types
-    return_images: true,
     search_domain_filter: domains.length > 0 ? domains : undefined,
     web_search_options: {
       search_context_size: "high",
@@ -671,10 +589,9 @@ export async function searchWithContext(
   const raw = response as unknown as PerplexityRawResponse;
   const citations = raw.citations || [];
   const searchResults = raw.search_results || [];
-  const images = raw.images || [];
 
   try {
-    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, images, citations, searchResults, "refine");
+    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, citations, searchResults, "refine");
     return {
       properties,
       summary: summary || `Found ${properties.length} results`,

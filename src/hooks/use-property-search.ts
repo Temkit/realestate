@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { searchAction, expandedSearchAction, refineSearchAction, fetchListingImages } from "@/app/actions";
+import { searchAction, expandedSearchAction, refineSearchAction } from "@/app/actions";
 import type { Property, SearchResult, ConversationTurn } from "@/lib/types";
 
 export type SortOption = "recommended" | "price-asc" | "price-desc" | "size";
@@ -45,36 +45,9 @@ export function usePropertySearch() {
   const { favorites, addFavorite, removeFavorite, isFavorite, clearFavorites } = useFavorites();
   const { recordClick, recordFavorite, getPreferenceHints } = useUserPreferences();
 
-  const enrichWithListingImages = useCallback(
-    (
-      searchResult: SearchResult,
-      setter: (updater: (prev: SearchResult | null) => SearchResult | null) => void
-    ) => {
-      const needImages = searchResult.properties
-        .filter((p) => !p.imageUrl && p.listingUrl)
-        .map((p) => ({ id: p.id, url: p.listingUrl! }));
-
-      if (needImages.length === 0) return;
-
-      fetchListingImages(needImages).then((imageMap) => {
-        if (Object.keys(imageMap).length === 0) return;
-        setter((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            properties: prev.properties.map((p) =>
-              imageMap[p.id] ? { ...p, imageUrl: imageMap[p.id] } : p
-            ),
-          };
-        });
-      });
-    },
-    []
-  );
-
   const handleSearch = async (query: string) => {
     setIsLoading(true);
-    setIsExpandedLoading(true);
+    setIsExpandedLoading(false);
     setError(null);
     setLastQuery(query);
     setExpandedResults(null);
@@ -83,42 +56,36 @@ export function usePropertySearch() {
     // Fresh search — reset conversation
     setConversationTurns([{ role: "user", content: query }]);
 
-    const preferenceHints = getPreferenceHints();
-
-    const primaryPromise = searchAction(query);
-    const expandedPromise = expandedSearchAction(query, preferenceHints);
-
-    primaryPromise
-      .then((data) => {
-        setResults(data);
-        setSuggestedChips(data.suggestedFollowUps || []);
-        setMarketContext(data.marketContext || "");
-        // Store assistant response in conversation
-        setConversationTurns((prev) => [
-          ...prev,
-          { role: "assistant", content: data.summary },
-        ]);
-        enrichWithListingImages(data, setResults);
-      })
-      .catch(() => {
-        setError("Search failed. Please check your API key and try again.");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-
-    expandedPromise
-      .then((data) => {
-        setExpandedResults(data);
-        enrichWithListingImages(data, setExpandedResults);
-      })
-      .catch(() => {
-        setExpandedResults(null);
-      })
-      .finally(() => {
-        setIsExpandedLoading(false);
-      });
+    try {
+      const data = await searchAction(query);
+      setResults(data);
+      setSuggestedChips(data.suggestedFollowUps || []);
+      setMarketContext(data.marketContext || "");
+      setConversationTurns((prev) => [
+        ...prev,
+        { role: "assistant", content: data.summary },
+      ]);
+    } catch {
+      setError("Search failed. Please check your API key and try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  /** Load expanded results on demand (triggered by scroll). */
+  const loadExpanded = useCallback(async () => {
+    if (!lastQuery || isExpandedLoading || expandedResults) return;
+    setIsExpandedLoading(true);
+    const preferenceHints = getPreferenceHints();
+    try {
+      const data = await expandedSearchAction(lastQuery, preferenceHints);
+      setExpandedResults(data);
+    } catch {
+      setExpandedResults(null);
+    } finally {
+      setIsExpandedLoading(false);
+    }
+  }, [lastQuery, isExpandedLoading, expandedResults, getPreferenceHints]);
 
   const handleRefine = async (query: string) => {
     setIsLoading(true);
@@ -140,7 +107,6 @@ export function usePropertySearch() {
         ...newTurns,
         { role: "assistant", content: data.summary },
       ]);
-      enrichWithListingImages(data, setResults);
     } catch {
       setError("Refinement failed. Please try again.");
     } finally {
@@ -226,6 +192,7 @@ export function usePropertySearch() {
     // Actions
     handleSearch,
     handleRefine,
+    loadExpanded,
     resetConversation,
     handlePropertyClick,
     toggleFavorite,
