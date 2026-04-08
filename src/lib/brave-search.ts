@@ -95,6 +95,79 @@ function isListingUrl(url: string): boolean {
   }
 }
 
+/**
+ * Check if a URL is from a known Luxembourg portal (but might be a category page).
+ */
+function isPortalUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return LUXEMBOURG_PORTAL_SITES.some(
+      (s) => hostname === s || hostname === `www.${s}` || hostname.endsWith(`.${s}`)
+    );
+  } catch { return false; }
+}
+
+/**
+ * Scrape a category/search page from a Luxembourg portal to extract individual listing URLs.
+ * Each portal has different HTML patterns for listing links.
+ */
+async function extractListingUrlsFromCategoryPage(url: string): Promise<string[]> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+        "Accept-Encoding": "identity",
+      },
+      redirect: "follow",
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) return [];
+
+    const reader = response.body?.getReader();
+    if (!reader) return [];
+
+    const decoder = new TextDecoder();
+    let html = "";
+    const maxBytes = 300_000; // category pages are larger
+
+    while (html.length < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      html += decoder.decode(value, { stream: true });
+    }
+    reader.cancel();
+
+    const hostname = new URL(url).hostname.toLowerCase();
+    const links: string[] = [];
+
+    // Extract all href links that look like individual listing pages
+    const hrefPattern = /href=["'](https?:\/\/[^"']+|\/[^"']+)["']/gi;
+    let match;
+    while ((match = hrefPattern.exec(html)) !== null) {
+      let href = match[1];
+      // Resolve relative URLs
+      if (href.startsWith("/")) {
+        href = `https://${hostname}${href}`;
+      }
+      // Check if this is a listing URL with a numeric ID
+      if (isListingUrl(href) && !links.includes(href)) {
+        links.push(href);
+      }
+    }
+
+    return links.slice(0, 20); // cap at 20 listings per category page
+  } catch {
+    return [];
+  }
+}
+
 // ── JSON-LD scraping ────────────────────────────────────────────────────────
 
 interface ScrapedProperty {
@@ -529,17 +602,32 @@ export async function braveSearchProperties(
   query: string,
   mode: "buy" | "rent" = "buy"
 ): Promise<SearchResult> {
-  // 1. Search Brave for listing URLs
+  // 1. Search Brave for URLs
   const searchQuery = buildSearchQuery(query, mode);
   const results = await braveSearch(searchQuery);
 
-  // 2. Filter to actual listing pages
-  const listingUrls = results
-    .map((r) => r.url)
-    .filter(isListingUrl);
+  // 2. Separate direct listing URLs from category/search pages
+  const directListings = results.map((r) => r.url).filter(isListingUrl);
+  const categoryPages = results.map((r) => r.url).filter((u) => !isListingUrl(u) && isPortalUrl(u));
 
-  // Deduplicate
-  const uniqueUrls = [...new Set(listingUrls)].slice(0, 15);
+  // 3. If few direct listings, scrape category pages for individual listing URLs
+  let allListingUrls = [...directListings];
+
+  if (allListingUrls.length < 5 && categoryPages.length > 0) {
+    // Scrape up to 4 category pages in parallel to find listing URLs
+    const pagesToScrape = categoryPages.slice(0, 4);
+    const categoryResults = await Promise.allSettled(
+      pagesToScrape.map(extractListingUrlsFromCategoryPage)
+    );
+    for (const result of categoryResults) {
+      if (result.status === "fulfilled") {
+        allListingUrls.push(...result.value);
+      }
+    }
+  }
+
+  // Deduplicate and cap
+  const uniqueUrls = [...new Set(allListingUrls)].slice(0, 15);
 
   if (uniqueUrls.length === 0) {
     return {
