@@ -1,8 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { compareProperties, getNeighborhoodAnalysis } from "@/lib/perplexity";
-import { braveSearchProperties, braveExpandedSearch } from "@/lib/brave-search";
+import { searchProperties, searchExpandedProperties, searchWithContext, compareProperties, getNeighborhoodAnalysis } from "@/lib/perplexity";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { SearchResult, NeighborhoodData, ConversationTurn } from "@/lib/types";
 
@@ -53,8 +52,10 @@ export async function searchAction(query: string, mode: "buy" | "rent" = "buy"):
     return cached.result;
   }
 
-  // Use Brave Search → JSON-LD scraping → cheap LLM summary
-  const result = await braveSearchProperties(query, mode);
+  const result = await searchProperties(query);
+
+  // Enrich with listing images server-side before returning
+  await enrichResultImages(result);
 
   // Cache the result
   searchCache.set(cacheKey, { result, timestamp: Date.now() });
@@ -64,14 +65,19 @@ export async function searchAction(query: string, mode: "buy" | "rent" = "buy"):
 
 export async function expandedSearchAction(
   query: string,
-  _preferenceHints: string | null,
-  mode: "buy" | "rent" = "buy"
+  preferenceHints: string | null,
+  _mode: "buy" | "rent" = "buy"
 ): Promise<SearchResult> {
   if (!query.trim()) {
     return { properties: [], summary: "", citations: [] };
   }
   await enforceRateLimit();
-  return braveExpandedSearch(query, mode);
+  const result = await searchExpandedProperties(query, preferenceHints);
+
+  // Enrich with listing images server-side
+  await enrichResultImages(result);
+
+  return result;
 }
 
 /**
@@ -271,7 +277,7 @@ export async function fetchListingImages(
 
 export async function refineSearchAction(
   query: string,
-  _previousTurns: ConversationTurn[],
+  previousTurns: ConversationTurn[],
   mode: "rent" | "buy"
 ): Promise<SearchResult> {
   if (!query.trim()) {
@@ -286,8 +292,10 @@ export async function refineSearchAction(
     return cached.result;
   }
 
-  // Brave search — refine is just a new search with the refined query
-  const result = await braveSearchProperties(query, mode);
+  const result = await searchWithContext(query, previousTurns, mode);
+
+  // Enrich with listing images server-side
+  await enrichResultImages(result);
 
   // Cache the result
   searchCache.set(cacheKey, { result, timestamp: Date.now() });
