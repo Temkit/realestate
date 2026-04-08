@@ -16,6 +16,11 @@ interface ScrapedListingData {
   imageUrl: string | null;
   title: string | null;
   description: string | null;
+  price: number | null;
+  pricePerSqm: number | null;
+  contract: "rent" | "buy" | null;
+  rooms: number | null;
+  surface: number | null;
 }
 
 /**
@@ -41,7 +46,38 @@ async function enrichFromListingPages(result: SearchResult): Promise<void> {
       p.imageUrl = scraped.imageUrl;
     }
 
-    // Parse og:title for structured data (immotop format: "Type, City | rooms | m²")
+    // Correct price from scraped data — listing page is the source of truth
+    if (scraped.price && scraped.price > 0) {
+      p.price = scraped.price;
+    }
+
+    // Correct price per sqm from scraped data
+    if (scraped.pricePerSqm && scraped.pricePerSqm > 0) {
+      p.pricePerSqm = scraped.pricePerSqm;
+    }
+
+    // Correct contract type — scraped data is truth
+    if (scraped.contract) {
+      if (scraped.contract === "rent" && p.listingMode !== "rent") {
+        p.listingMode = "rent";
+        p.listingStatus = `Rental - €${p.price.toLocaleString()}/month`;
+      } else if (scraped.contract === "buy" && p.listingMode !== "buy") {
+        p.listingMode = "buy";
+        p.listingStatus = "Active";
+      }
+    }
+
+    // Fill in surface from scraped data
+    if (scraped.surface && scraped.surface > 0 && !p.sqft) {
+      p.sqft = scraped.surface;
+    }
+
+    // Fill in rooms from scraped data
+    if (scraped.rooms && scraped.rooms > 0 && !p.bedrooms) {
+      p.bedrooms = scraped.rooms;
+    }
+
+    // Parse og:title for property type and additional data
     if (scraped.title) {
       const parsed = parseListingTitle(scraped.title);
 
@@ -50,16 +86,14 @@ async function enrichFromListingPages(result: SearchResult): Promise<void> {
         p.propertyType = parsed.type;
       }
 
-      // Fill in missing sqft
+      // Fill in from title if still missing
       if (!p.sqft && parsed.sqm) p.sqft = parsed.sqm;
-
-      // Fill in missing bedrooms (use rooms as proxy)
       if (!p.bedrooms && parsed.rooms) p.bedrooms = parsed.rooms;
 
-      // Detect rent vs buy mismatch — og:title is truth
-      if (parsed.isRental && p.listingMode !== "rent") {
+      // Title-based rental detection as fallback
+      if (!scraped.contract && parsed.isRental && p.listingMode !== "rent") {
         p.listingMode = "rent";
-        p.listingStatus = `Rental${p.price ? ` - €${p.price.toLocaleString()}/month` : ""}`;
+        p.listingStatus = `Rental - €${p.price.toLocaleString()}/month`;
       }
     }
 
@@ -68,7 +102,7 @@ async function enrichFromListingPages(result: SearchResult): Promise<void> {
       p.description = scraped.description;
     }
 
-    // Recalculate price per sqm if sqft was filled in
+    // Recalculate price per sqm if we now have both
     if (p.price > 0 && p.sqft > 0 && !p.pricePerSqm) {
       p.pricePerSqm = Math.round(p.price / p.sqft);
     }
@@ -226,7 +260,10 @@ async function scrapeListingPage(url: string): Promise<ScrapedListingData | null
     const title = extractMetaImage(html, "og:title") || extractMetaImage(html, "title") || null;
     const description = extractMetaImage(html, "og:description") || extractMetaImage(html, "description") || null;
 
-    return { imageUrl, title, description };
+    // Extract price, contract, and details from embedded JSON (immotop.lu pattern)
+    const { price, pricePerSqm, contract, rooms, surface } = extractEmbeddedData(html);
+
+    return { imageUrl, title, description, price, pricePerSqm, contract, rooms, surface };
   } catch {
     return null;
   }
@@ -256,6 +293,57 @@ async function scrapeListingPages(
   }
 
   return results;
+}
+
+/**
+ * Extract structured data embedded in the page's JavaScript (common on immotop.lu, wortimmo.lu).
+ * Looks for patterns like "price":{"value":470}, "contract":"rent", "bathrooms":0, etc.
+ */
+function extractEmbeddedData(html: string): {
+  price: number | null;
+  pricePerSqm: number | null;
+  contract: "rent" | "buy" | null;
+  rooms: number | null;
+  surface: number | null;
+} {
+  let price: number | null = null;
+  let pricePerSqm: number | null = null;
+  let contract: "rent" | "buy" | null = null;
+  let rooms: number | null = null;
+  let surface: number | null = null;
+
+  // Price: "price":{"visible":true,"value":470,...}
+  const priceMatch = html.match(/"price":\{"visible":true,"value":(\d+)/);
+  if (priceMatch) {
+    price = parseInt(priceMatch[1]);
+  }
+
+  // Price per sqm: "pricePerSquareMeter":"7 778 €/m²"
+  const ppsqmMatch = html.match(/"pricePerSquareMeter":"([\d\s.,]+)/);
+  if (ppsqmMatch) {
+    pricePerSqm = parseInt(ppsqmMatch[1].replace(/[\s.]/g, ""));
+  }
+
+  // Contract type: "contract":"rent" or "contract":"sale"
+  const contractMatch = html.match(/"contract":"(rent|sale|buy|location|vente)"/i);
+  if (contractMatch) {
+    const val = contractMatch[1].toLowerCase();
+    contract = (val === "rent" || val === "location") ? "rent" : "buy";
+  }
+
+  // Rooms: "rooms":3 or "numberOfRooms":3
+  const roomsMatch = html.match(/"(?:rooms|numberOfRooms|bedrooms)":(\d+)/);
+  if (roomsMatch && parseInt(roomsMatch[1]) > 0) {
+    rooms = parseInt(roomsMatch[1]);
+  }
+
+  // Surface: look for m² pattern near a number in structured data
+  const surfaceMatch = html.match(/"(?:surface|surfaceValue|floorSize|area)":(\d+)/);
+  if (surfaceMatch) {
+    surface = parseInt(surfaceMatch[1]);
+  }
+
+  return { price, pricePerSqm, contract, rooms, surface };
 }
 
 /**
