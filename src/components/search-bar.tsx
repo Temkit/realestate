@@ -169,8 +169,8 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                          placeholder:text-muted-foreground/40
                          disabled:opacity-50
                          ${compact
-                           ? "h-11 pl-10 pr-[4.5rem] text-base rounded-xl"
-                           : "h-12 sm:h-14 pl-11 sm:pl-13 pr-24 sm:pr-32 text-base"
+                           ? "h-11 pl-10 pr-14 text-base rounded-xl"
+                           : "h-12 sm:h-14 pl-11 sm:pl-13 pr-14 sm:pr-32 text-base"
                          }`}
               disabled={isLoading}
               aria-label="Search for properties"
@@ -187,13 +187,19 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
               <Button
                 type="submit"
                 disabled={isLoading || !query.trim()}
-                className={compact ? "h-8 px-3 rounded-lg text-xs" : "h-9 sm:h-10 px-4 sm:px-5 rounded-xl font-medium text-sm"}
+                className={compact
+                  ? "h-8 w-8 sm:w-auto sm:px-3 rounded-lg text-xs"
+                  : "h-9 w-9 sm:w-auto sm:h-10 sm:px-5 rounded-xl font-medium text-sm"
+                }
                 size={compact ? "sm" : "default"}
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  t("search")
+                  <>
+                    <Search className="h-4 w-4 sm:hidden" />
+                    <span className="hidden sm:inline">{t("search")}</span>
+                  </>
                 )}
               </Button>
             </div>
