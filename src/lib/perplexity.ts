@@ -102,18 +102,6 @@ function analyzeQuery(rawQuery: string): QueryContext {
     enriched += " Luxembourg";
   }
 
-  // Expand with nearby communes for broader results
-  // Extract the commune name from the enriched query
-  const communeMatch = enriched.match(/([A-Za-zÀ-ÿ-]+(?:[\s-][A-Za-zÀ-ÿ-]+)*),?\s*(?:Luxembourg|Luxembourg City)/i);
-  if (communeMatch) {
-    const commune = communeMatch[1].trim();
-    const nearby = getNearbyCommunes(commune);
-    if (nearby.length > 0) {
-      // Add nearby communes to the query
-      enriched += ` (also search: ${nearby.join(", ")})`;
-    }
-  }
-
   return { enrichedQuery: enriched, domains: LUXEMBOURG_PORTALS };
 }
 
@@ -435,9 +423,17 @@ export async function searchExpandedProperties(
   const client = getClient();
   const { enrichedQuery, domains } = analyzeQuery(originalQuery);
 
+  // Extract commune from query and get nearby communes for targeted expansion
+  const communeMatch = enrichedQuery.match(/([A-Za-zÀ-ÿ-]+(?:[\s-][A-Za-zÀ-ÿ-]+)*),?\s*(?:Luxembourg|Luxembourg City)/i);
+  const commune = communeMatch ? communeMatch[1].trim() : "";
+  const nearby = getNearbyCommunes(commune);
+  const nearbyText = nearby.length > 0
+    ? `Search specifically in these nearby communes: ${nearby.join(", ")}.`
+    : "Search in nearby communes.";
+
   let expandedPrompt = `Based on this original search: "${enrichedQuery}"
 
-Find ADDITIONAL properties in nearby communes or with slightly different criteria. Do NOT repeat the same properties.`;
+Find ADDITIONAL properties in the area. ${nearbyText} Do NOT repeat properties from the original search.`;
 
   if (preferenceHints) {
     expandedPrompt += `\n\nUser preferences: ${preferenceHints}`;
