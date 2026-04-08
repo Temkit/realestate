@@ -76,20 +76,36 @@ export async function fetchListingImage(url: string): Promise<string | null> {
 
     // 1. Try JSON-LD — most reliable on Luxembourg portals
     const imageFromJsonLd = extractImageFromJsonLd(html);
-    if (imageFromJsonLd) return imageFromJsonLd;
+    if (imageFromJsonLd && isPropertyImage(imageFromJsonLd)) return imageFromJsonLd;
 
     // 2. Try og:image
     const imageFromOg = extractMetaImage(html, "og:image");
-    if (imageFromOg) return imageFromOg;
+    if (imageFromOg && isPropertyImage(imageFromOg)) return imageFromOg;
 
     // 3. Try twitter:image
     const imageFromTwitter = extractMetaImage(html, "twitter:image");
-    if (imageFromTwitter) return imageFromTwitter;
+    if (imageFromTwitter && isPropertyImage(imageFromTwitter)) return imageFromTwitter;
 
     return null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Reject generic portal images (logos, banners, placeholders).
+ * Real property photos are hosted on CDN subdomains with long paths.
+ */
+function isPropertyImage(url: string): boolean {
+  const lower = url.toLowerCase();
+  // Reject obvious logos/icons/placeholders
+  if (/logo|favicon|icon|placeholder|default|banner|sprite|no[-_]?image/i.test(lower)) return false;
+  // Reject tiny images (common pattern: .../50x50/... or similar)
+  if (/\/\d{1,2}x\d{1,2}[/.]/i.test(lower)) return false;
+  // Reject SVGs (usually icons/logos)
+  if (lower.endsWith(".svg")) return false;
+  // Must be a reasonable image URL
+  return lower.startsWith("http");
 }
 
 /**

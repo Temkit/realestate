@@ -328,8 +328,14 @@ function extractListingUrl(
 }
 
 /**
- * Heuristic: a listing URL typically has a meaningful path,
- * not just a homepage or search results page.
+ * Heuristic: does this URL point to a specific listing page (not a search/category page)?
+ * Luxembourg portals use numeric IDs for individual listings:
+ *   athome.lu: /vente/bureau/city/id-8909236.html
+ *   immotop.lu: /annonces/1353427/
+ *   wortimmo.lu: /fr/annonce/12345
+ * Search/category pages lack numeric IDs:
+ *   athome.lu: /vente/bureau/mondorf-les-bains/
+ *   immotop.lu: /en/vente-bureaux/mondorf-les-bains/
  */
 function looksLikeListingUrl(url: string): boolean {
   try {
@@ -337,8 +343,21 @@ function looksLikeListingUrl(url: string): boolean {
     const path = parsed.pathname;
     // Reject bare homepages
     if (path.length <= 1) return false;
-    // Reject generic search/index pages (but allow deeper paths like /listings/12345)
+    // Reject generic search/index pages
     if (/^\/(search|results|index)\/?$/i.test(path)) return false;
+    // For known Luxembourg portals, require a numeric listing ID in the URL
+    const hostname = parsed.hostname.toLowerCase();
+    const isLuxPortal =
+      hostname.includes("athome.lu") ||
+      hostname.includes("immotop.lu") ||
+      hostname.includes("wortimmo.lu") ||
+      hostname.includes("immobilier.lu") ||
+      hostname.includes("vivi.lu") ||
+      hostname.includes("habiter.lu");
+    if (isLuxPortal) {
+      // Must contain a numeric ID (at least 4 digits) — listing pages always have one
+      return /\d{4,}/.test(path);
+    }
     return true;
   } catch {
     return false;
@@ -476,6 +495,33 @@ function parseProperties(
           : undefined,
     };
   });
+
+  // Fallback pass: assign unused images to properties that still have no image
+  // Prefer images from the same portal domain as the property's source
+  const remaining = images.filter((img) => !usedImageUrls.has(img.image_url));
+  if (remaining.length > 0) {
+    for (const prop of properties) {
+      if (prop.imageUrl) continue;
+      if (remaining.length === 0) break;
+
+      // Try to match by source domain
+      const sourceDomain = (prop.source || "").toLowerCase().replace(/\s+/g, "");
+      let fallback: PerplexityImage | undefined;
+      const idx = remaining.findIndex((img) => {
+        const origin = (img.origin_url || "").toLowerCase();
+        return sourceDomain && origin.includes(sourceDomain.split(".")[0]);
+      });
+      if (idx >= 0) {
+        fallback = remaining.splice(idx, 1)[0];
+      } else {
+        // Take the next available image
+        fallback = remaining.shift();
+      }
+      if (fallback) {
+        prop.imageUrl = fallback.image_url;
+      }
+    }
+  }
 
   return { properties, summary, suggestedFollowUps, marketContext };
 }
