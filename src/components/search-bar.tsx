@@ -94,28 +94,30 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      {/* Rent/Buy Toggle — hidden on mobile when compact */}
-      <div className={`flex justify-center ${compact ? "hidden sm:flex mb-3" : "mb-5"}`}>
-        <div className="inline-flex rounded-xl bg-muted p-1 gap-0.5">
+      {/* Rent/Buy Toggle */}
+      <div className={`flex justify-center ${compact ? "mb-2 sm:mb-3" : "mb-5"}`}>
+        <div className={`inline-flex rounded-xl bg-muted p-1 gap-0.5 ${compact ? "rounded-lg p-0.5" : ""}`}>
           <button
             type="button"
             onClick={() => onModeChange("buy")}
-            className={`px-5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-              searchMode === "buy"
+            className={`rounded-lg text-sm font-medium transition-all duration-200
+              ${compact ? "px-3 py-1 rounded-md text-xs" : "px-5 py-1.5"}
+              ${searchMode === "buy"
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             {t("buy")}
           </button>
           <button
             type="button"
             onClick={() => onModeChange("rent")}
-            className={`px-5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-              searchMode === "rent"
+            className={`rounded-lg text-sm font-medium transition-all duration-200
+              ${compact ? "px-3 py-1 rounded-md text-xs" : "px-5 py-1.5"}
+              ${searchMode === "rent"
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             {t("rent")}
           </button>
@@ -123,39 +125,12 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
       </div>
 
       <form onSubmit={handleSubmit} role="search" aria-label="Search properties">
-        <div className="relative flex items-center gap-2 min-w-0">
-          {/* Mobile Buy/Rent mini-toggle when compact */}
-          {compact && (
-            <div className="flex sm:hidden shrink-0">
-              <div className="inline-flex rounded-lg bg-muted p-0.5 gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => onModeChange("buy")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                    searchMode === "buy"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {t("buy")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onModeChange("rent")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                    searchMode === "rent"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {t("rent")}
-                </button>
-              </div>
-            </div>
-          )}
-
+        {/* Mobile: stacked layout. Desktop: button inside input */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-0">
           <div className="relative flex-1 min-w-0">
-            <Search className={`absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 ${compact ? "h-4 w-4" : "h-5 w-5 sm:left-5"}`} />
+            <Search className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground/50
+              ${compact ? "left-3 h-4 w-4" : "left-4 h-4 w-4 sm:h-5 sm:w-5 sm:left-5"}`}
+            />
             <input
               ref={inputRef}
               value={query}
@@ -163,22 +138,23 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
               onFocus={() => setShowRecent(true)}
               onBlur={() => setTimeout(() => setShowRecent(false), 200)}
               placeholder={searchMode === "rent" ? t("placeholderRent") : t("placeholderBuy")}
-              className={`w-full bg-card border-2 border-border rounded-2xl
-                         outline-none transition-all duration-200 shadow-sm
+              className={`w-full bg-card border-2 border-border
+                         outline-none transition-all duration-200 shadow-sm text-base
                          focus:border-primary focus:ring-4 focus:ring-primary/10 focus:shadow-md
                          placeholder:text-muted-foreground/40
                          disabled:opacity-50
                          ${compact
-                           ? "h-11 pl-10 pr-14 text-base rounded-xl"
-                           : "h-12 sm:h-14 pl-11 sm:pl-13 pr-14 sm:pr-32 text-base"
+                           ? "h-11 pl-9 pr-4 rounded-xl"
+                           : "h-12 sm:h-14 pl-10 sm:pl-13 pr-4 sm:pr-32 rounded-xl sm:rounded-2xl"
                          }`}
               disabled={isLoading}
               aria-label="Search for properties"
             />
-            <div className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 ${compact ? "right-1.5" : ""}`}>
+            {/* Desktop: button inside input */}
+            <div className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 items-center gap-2">
               {!hasResults && !isLoading && (
                 <kbd
-                  className="hidden sm:inline-flex h-7 items-center gap-0.5 rounded-lg border bg-muted px-2.5
+                  className="inline-flex h-7 items-center gap-0.5 rounded-lg border bg-muted px-2.5
                                 text-[11px] font-medium text-muted-foreground"
                 >
                   <span className="text-xs">&#8984;</span>K
@@ -187,19 +163,13 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
               <Button
                 type="submit"
                 disabled={isLoading || !query.trim()}
-                className={compact
-                  ? "h-8 w-8 sm:w-auto sm:px-3 rounded-lg text-xs"
-                  : "h-9 w-9 sm:w-auto sm:h-10 sm:px-5 rounded-xl font-medium text-sm"
-                }
+                className={compact ? "h-8 px-3 rounded-lg text-xs" : "h-10 px-5 rounded-xl font-medium text-sm"}
                 size={compact ? "sm" : "default"}
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <Search className="h-4 w-4 sm:hidden" />
-                    <span className="hidden sm:inline">{t("search")}</span>
-                  </>
+                  t("search")
                 )}
               </Button>
             </div>
@@ -231,7 +201,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleSuggestionClick(s)}
                     className="w-full text-left px-4 py-3 text-sm flex items-center gap-3
-                               hover:bg-muted transition-colors"
+                               hover:bg-muted transition-colors min-h-[44px]"
                   >
                     <Clock className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
                     <span className="truncate">{s}</span>
@@ -240,6 +210,19 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
               </div>
             )}
           </div>
+
+          {/* Mobile: full-width button below input */}
+          <Button
+            type="submit"
+            disabled={isLoading || !query.trim()}
+            className={`sm:hidden rounded-xl font-medium text-sm ${compact ? "h-10" : "h-11"}`}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              t("search")
+            )}
+          </Button>
         </div>
       </form>
 
@@ -251,7 +234,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
               onClick={() => handleSuggestionClick(t(`suggestions.${key}`))}
               className="text-xs sm:text-[0.8125rem] px-3 sm:px-4 py-2 rounded-full border bg-card
                          text-muted-foreground hover:bg-secondary hover:border-primary/30
-                         hover:text-foreground transition-all duration-200 shadow-sm"
+                         hover:text-foreground transition-all duration-200 shadow-sm min-h-[44px] sm:min-h-0"
             >
               {t(`suggestions.${key}`)}
             </button>

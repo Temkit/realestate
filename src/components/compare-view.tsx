@@ -124,11 +124,11 @@ export function CompareView({ properties, isOpen, onClose, onRemove }: CompareVi
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[85vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-0">
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-0">
           <DialogTitle>Compare Properties ({properties.length})</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[70vh] px-6 pb-6">
+        <ScrollArea className="max-h-[70vh] px-4 sm:px-6 pb-4 sm:pb-6">
           {/* AI Opinion */}
           {(loadingOpinion || aiOpinion) && (
             <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-4 mt-4 mb-2">
@@ -153,7 +153,7 @@ export function CompareView({ properties, isOpen, onClose, onRemove }: CompareVi
               return (
                 <div
                   key={p.id}
-                  className="min-w-[200px] flex-1 snap-center rounded-xl border bg-card overflow-hidden"
+                  className="min-w-[70vw] sm:min-w-[200px] flex-1 snap-center rounded-xl border bg-card overflow-hidden"
                 >
                   {/* Image */}
                   <div className="relative aspect-[16/10] bg-muted">
@@ -172,7 +172,7 @@ export function CompareView({ properties, isOpen, onClose, onRemove }: CompareVi
                     )}
                     <button
                       onClick={() => onRemove(p.id)}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 dark:bg-black/60
+                      className="absolute top-2 right-2 p-2.5 sm:p-1.5 rounded-full bg-white/90 dark:bg-black/60
                                  backdrop-blur-sm hover:bg-white dark:hover:bg-black/80 transition-colors"
                       aria-label={`Remove ${p.address} from comparison`}
                     >
@@ -214,7 +214,7 @@ export function CompareView({ properties, isOpen, onClose, onRemove }: CompareVi
                     <div className="p-3 border-t">
                       <div className="flex flex-wrap gap-1">
                         {p.features.slice(0, 4).map((f) => (
-                          <span key={f} className="text-[10px] px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground">
+                          <span key={f} className="text-[11px] sm:text-[10px] px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground">
                             {f}
                           </span>
                         ))}

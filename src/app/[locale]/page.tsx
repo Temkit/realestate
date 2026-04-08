@@ -124,7 +124,7 @@ export default function HomePage() {
               <button
                 onClick={() => setShowFavorites(true)}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground
-                           transition-colors px-3 py-2 rounded-xl hover:bg-muted"
+                           transition-colors px-3 py-2 rounded-xl hover:bg-muted min-h-[44px]"
                 aria-label={`${favorites.length} ${tFav("saved")}`}
               >
                 <Heart className="h-4 w-4 fill-red-500 text-red-500" />
@@ -151,7 +151,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8">
           {!results && !isLoading && (
             <div className="text-center mb-8 sm:mb-12 animate-fade-in-up">
-              <h1 className="text-2xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-balance leading-[1.1]">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-balance leading-[1.15]">
                 {t("title")}
                 <br />
                 <span className="text-primary">{t("titleHighlight")}</span>

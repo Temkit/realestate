@@ -102,7 +102,7 @@ export function PropertyDetail({
           </div>
         )}
 
-        <div className="p-6 sm:p-8 space-y-7">
+        <div className="p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-7">
           <SheetHeader className="space-y-1.5 p-0">
             <SheetTitle className="text-left text-xl font-bold tracking-tight">
               {property.address}

@@ -19,7 +19,7 @@ export function LanguageSwitcher() {
     <button
       onClick={handleSwitch}
       className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors
-                 px-2.5 py-1.5 rounded-lg hover:bg-muted tabular-nums"
+                 px-3 py-2.5 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-muted tabular-nums min-h-[44px] sm:min-h-0 flex items-center"
       aria-label={`Switch to ${switchTo === "fr" ? "French" : "English"}`}
     >
       <span className={locale === "fr" ? "text-foreground font-semibold" : ""}>FR</span>

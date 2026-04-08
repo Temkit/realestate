@@ -116,7 +116,7 @@ export function PropertyCard({
             setTimeout(() => setHeartBounce(false), 350);
             onToggleFavorite();
           }}
-          className="absolute top-3.5 right-3.5 p-2.5 rounded-full bg-white/90 dark:bg-black/60
+          className="absolute top-2.5 right-2.5 p-3 sm:p-2.5 rounded-full bg-white/90 dark:bg-black/60
                      backdrop-blur-sm hover:bg-white dark:hover:bg-black/80
                      transition-all duration-200 active:scale-90 shadow-sm"
           aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
@@ -194,7 +194,7 @@ export function PropertyCard({
             </span>
           )}
           {property.pricePerSqm && property.pricePerSqm > 0 && (
-            <span className="text-xs text-muted-foreground/70 tabular-nums">
+            <span className="text-xs text-muted-foreground tabular-nums">
               €{formatNumber(property.pricePerSqm)}/m²
             </span>
           )}

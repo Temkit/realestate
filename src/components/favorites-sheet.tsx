@@ -51,7 +51,7 @@ export function FavoritesSheet({
             favorites.map((property) => (
               <div
                 key={property.id}
-                className="flex items-start gap-4 p-3.5 rounded-xl border hover:bg-accent/50 transition-colors cursor-pointer"
+                className="flex items-start gap-3 sm:gap-4 p-2.5 sm:p-3.5 rounded-xl border hover:bg-accent/50 transition-colors cursor-pointer"
                 onClick={() => {
                   onClose();
                   onSelect(property);
