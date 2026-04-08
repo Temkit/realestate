@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { Property, SearchResult, NeighborhoodData, ConversationTurn } from "./types";
+import { getNearbyCommunes } from "./communes";
 
 let clientInstance: OpenAI | null = null;
 
@@ -100,6 +101,19 @@ function analyzeQuery(rawQuery: string): QueryContext {
   if (!/luxembourg/i.test(enriched)) {
     enriched += " Luxembourg";
   }
+
+  // Expand with nearby communes for broader results
+  // Extract the commune name from the enriched query
+  const communeMatch = enriched.match(/([A-Za-zÀ-ÿ-]+(?:[\s-][A-Za-zÀ-ÿ-]+)*),?\s*(?:Luxembourg|Luxembourg City)/i);
+  if (communeMatch) {
+    const commune = communeMatch[1].trim();
+    const nearby = getNearbyCommunes(commune);
+    if (nearby.length > 0) {
+      // Add nearby communes to the query
+      enriched += ` (also search: ${nearby.join(", ")})`;
+    }
+  }
+
   return { enrichedQuery: enriched, domains: LUXEMBOURG_PORTALS };
 }
 
