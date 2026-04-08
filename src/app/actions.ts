@@ -10,24 +10,116 @@ const CACHE_TTL = 20 * 60 * 1000;
 const searchCache = new Map<string, { result: SearchResult; timestamp: number }>();
 
 /**
- * Enrich search results with listing images server-side.
- * Mutates the result in place for properties that have a listingUrl but no imageUrl.
+ * Data scraped from a listing page to enrich/correct Perplexity output.
  */
-async function enrichResultImages(result: SearchResult): Promise<void> {
-  const needImages = result.properties
-    .filter((p) => !p.imageUrl && p.listingUrl)
+interface ScrapedListingData {
+  imageUrl: string | null;
+  title: string | null;
+  description: string | null;
+}
+
+/**
+ * Enrich search results with data scraped from listing pages server-side.
+ * Fills in missing images and corrects bad data from Perplexity.
+ */
+async function enrichFromListingPages(result: SearchResult): Promise<void> {
+  const toScrape = result.properties
+    .filter((p) => p.listingUrl)
     .map((p) => ({ id: p.id, url: p.listingUrl! }));
 
-  if (needImages.length === 0) return;
+  if (toScrape.length === 0) return;
 
-  const imageMap = await fetchListingImages(needImages);
-  if (Object.keys(imageMap).length === 0) return;
+  const scrapedMap = await scrapeListingPages(toScrape);
+  if (Object.keys(scrapedMap).length === 0) return;
 
   for (const p of result.properties) {
-    if (imageMap[p.id]) {
-      p.imageUrl = imageMap[p.id];
+    const scraped = scrapedMap[p.id];
+    if (!scraped) continue;
+
+    // Fill in missing image
+    if (!p.imageUrl && scraped.imageUrl) {
+      p.imageUrl = scraped.imageUrl;
+    }
+
+    // Parse og:title for structured data (immotop format: "Type, City | rooms | m²")
+    if (scraped.title) {
+      const parsed = parseListingTitle(scraped.title);
+
+      // Correct property type if we got something more specific
+      if (parsed.type && (p.propertyType === "Unknown" || p.propertyType === "Property")) {
+        p.propertyType = parsed.type;
+      }
+
+      // Fill in missing sqft
+      if (!p.sqft && parsed.sqm) p.sqft = parsed.sqm;
+
+      // Fill in missing bedrooms (use rooms as proxy)
+      if (!p.bedrooms && parsed.rooms) p.bedrooms = parsed.rooms;
+
+      // Detect rent vs buy mismatch — og:title is truth
+      if (parsed.isRental && p.listingMode !== "rent") {
+        p.listingMode = "rent";
+        p.listingStatus = `Rental${p.price ? ` - €${p.price.toLocaleString()}/month` : ""}`;
+      }
+    }
+
+    // Use scraped description if current one is empty/short
+    if (scraped.description && (!p.description || p.description.length < 20)) {
+      p.description = scraped.description;
+    }
+
+    // Recalculate price per sqm if sqft was filled in
+    if (p.price > 0 && p.sqft > 0 && !p.pricePerSqm) {
+      p.pricePerSqm = Math.round(p.price / p.sqft);
     }
   }
+}
+
+/**
+ * Parse a listing page title (especially immotop.lu format) for property details.
+ * Examples:
+ *   "Bureau - Cabinet en Location" → type=Office, isRental=true
+ *   "Appartement 3 chambres à vendre, Kirchberg | 120 m²" → type=Apartment, rooms=3, sqm=120
+ *   "2-room flat first floor, Kirchberg | 2 rooms | 75 m²" → rooms=2, sqm=75
+ */
+function parseListingTitle(title: string): {
+  type: string | null;
+  rooms: number;
+  sqm: number;
+  isRental: boolean;
+} {
+  const lower = title.toLowerCase();
+
+  // Detect rental
+  const isRental = /\b(location|louer|rent|en location|à louer|for rent)\b/i.test(lower);
+
+  // Extract type
+  let type: string | null = null;
+  if (/bureau|office|cabinet/i.test(lower)) type = "Office";
+  else if (/appartement|apartment|flat/i.test(lower)) type = "Apartment";
+  else if (/maison|house|villa/i.test(lower)) type = "House";
+  else if (/studio/i.test(lower)) type = "Studio";
+  else if (/terrain|land/i.test(lower)) type = "Land";
+  else if (/commerce|commercial|retail|magasin/i.test(lower)) type = "Commercial";
+  else if (/duplex/i.test(lower)) type = "Duplex";
+  else if (/penthouse/i.test(lower)) type = "Penthouse";
+  else if (/loft/i.test(lower)) type = "Loft";
+
+  // Extract rooms
+  let rooms = 0;
+  const roomMatch = lower.match(/(\d+)\s*(?:rooms?|chambres?|pièces?|ch\b)/);
+  if (roomMatch) rooms = parseInt(roomMatch[1]);
+  if (!rooms) {
+    const dashRoom = lower.match(/(\d+)-room/);
+    if (dashRoom) rooms = parseInt(dashRoom[1]);
+  }
+
+  // Extract sqm
+  let sqm = 0;
+  const sqmMatch = title.match(/([\d.,]+)\s*m²/i);
+  if (sqmMatch) sqm = parseFloat(sqmMatch[1].replace(",", "."));
+
+  return { type, rooms, sqm, isRental };
 }
 
 async function enforceRateLimit() {
@@ -55,7 +147,7 @@ export async function searchAction(query: string, mode: "buy" | "rent" = "buy"):
   const result = await searchProperties(query);
 
   // Enrich with listing images server-side before returning
-  await enrichResultImages(result);
+  await enrichFromListingPages(result);
 
   // Cache the result
   searchCache.set(cacheKey, { result, timestamp: Date.now() });
@@ -75,19 +167,15 @@ export async function expandedSearchAction(
   const result = await searchExpandedProperties(query, preferenceHints);
 
   // Enrich with listing images server-side
-  await enrichResultImages(result);
+  await enrichFromListingPages(result);
 
   return result;
 }
 
 /**
- * Extract the first usable image from a listing page.
- * Strategy (in priority order):
- *   1. JSON-LD structured data (most Luxembourg portals embed this)
- *   2. og:image meta tag
- *   3. twitter:image meta tag
+ * Scrape a listing page for image, title, and description.
  */
-export async function fetchListingImage(url: string): Promise<string | null> {
+async function scrapeListingPage(url: string): Promise<ScrapedListingData | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
@@ -112,7 +200,7 @@ export async function fetchListingImage(url: string): Promise<string | null> {
 
     const decoder = new TextDecoder();
     let html = "";
-    const maxBytes = 100_000; // 100KB — JSON-LD can appear deeper in the page
+    const maxBytes = 100_000;
 
     while (html.length < maxBytes) {
       const { done, value } = await reader.read();
@@ -121,22 +209,53 @@ export async function fetchListingImage(url: string): Promise<string | null> {
     }
     reader.cancel();
 
-    // 1. Try JSON-LD — most reliable on Luxembourg portals
+    // Extract image: JSON-LD → og:image → twitter:image
+    let imageUrl: string | null = null;
     const imageFromJsonLd = extractImageFromJsonLd(html);
-    if (imageFromJsonLd && isPropertyImage(imageFromJsonLd)) return imageFromJsonLd;
+    if (imageFromJsonLd && isPropertyImage(imageFromJsonLd)) imageUrl = imageFromJsonLd;
+    if (!imageUrl) {
+      const imageFromOg = extractMetaImage(html, "og:image");
+      if (imageFromOg && isPropertyImage(imageFromOg)) imageUrl = imageFromOg;
+    }
+    if (!imageUrl) {
+      const imageFromTwitter = extractMetaImage(html, "twitter:image");
+      if (imageFromTwitter && isPropertyImage(imageFromTwitter)) imageUrl = imageFromTwitter;
+    }
 
-    // 2. Try og:image
-    const imageFromOg = extractMetaImage(html, "og:image");
-    if (imageFromOg && isPropertyImage(imageFromOg)) return imageFromOg;
+    // Extract title and description
+    const title = extractMetaImage(html, "og:title") || extractMetaImage(html, "title") || null;
+    const description = extractMetaImage(html, "og:description") || extractMetaImage(html, "description") || null;
 
-    // 3. Try twitter:image
-    const imageFromTwitter = extractMetaImage(html, "twitter:image");
-    if (imageFromTwitter && isPropertyImage(imageFromTwitter)) return imageFromTwitter;
-
-    return null;
+    return { imageUrl, title, description };
   } catch {
     return null;
   }
+}
+
+/**
+ * Scrape multiple listing pages in parallel (max 6 concurrent).
+ */
+async function scrapeListingPages(
+  urls: { id: string; url: string }[]
+): Promise<Record<string, ScrapedListingData>> {
+  const results: Record<string, ScrapedListingData> = {};
+
+  const batches: { id: string; url: string }[][] = [];
+  for (let i = 0; i < urls.length; i += 6) {
+    batches.push(urls.slice(i, i + 6));
+  }
+
+  for (const batch of batches) {
+    const settled = await Promise.allSettled(
+      batch.map(async ({ id, url }) => {
+        const data = await scrapeListingPage(url);
+        if (data) results[id] = data;
+      })
+    );
+    void settled;
+  }
+
+  return results;
 }
 
 /**
@@ -250,31 +369,6 @@ function extractMetaImage(html: string, property: string): string | null {
   return null;
 }
 
-export async function fetchListingImages(
-  urls: { id: string; url: string }[]
-): Promise<Record<string, string>> {
-  const results: Record<string, string> = {};
-
-  // Fetch in parallel, max 6 concurrent
-  const batches: { id: string; url: string }[][] = [];
-  for (let i = 0; i < urls.length; i += 6) {
-    batches.push(urls.slice(i, i + 6));
-  }
-
-  for (const batch of batches) {
-    const settled = await Promise.allSettled(
-      batch.map(async ({ id, url }) => {
-        const imageUrl = await fetchListingImage(url);
-        if (imageUrl) results[id] = imageUrl;
-      })
-    );
-    // settled is used implicitly — results are populated via closure
-    void settled;
-  }
-
-  return results;
-}
-
 export async function refineSearchAction(
   query: string,
   previousTurns: ConversationTurn[],
@@ -295,7 +389,7 @@ export async function refineSearchAction(
   const result = await searchWithContext(query, previousTurns, mode);
 
   // Enrich with listing images server-side
-  await enrichResultImages(result);
+  await enrichFromListingPages(result);
 
   // Cache the result
   searchCache.set(cacheKey, { result, timestamp: Date.now() });
