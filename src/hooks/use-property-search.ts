@@ -57,7 +57,7 @@ export function usePropertySearch() {
     setConversationTurns([{ role: "user", content: query }]);
 
     try {
-      const data = await searchAction(query);
+      const data = await searchAction(query, searchMode);
       setResults(data);
       setSuggestedChips(data.suggestedFollowUps || []);
       setMarketContext(data.marketContext || "");
@@ -78,7 +78,7 @@ export function usePropertySearch() {
     setIsExpandedLoading(true);
     const preferenceHints = getPreferenceHints();
     try {
-      const data = await expandedSearchAction(lastQuery, preferenceHints);
+      const data = await expandedSearchAction(lastQuery, preferenceHints, searchMode);
       setExpandedResults(data);
     } catch {
       setExpandedResults(null);

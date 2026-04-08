@@ -1,7 +1,8 @@
 "use server";
 
 import { headers } from "next/headers";
-import { searchProperties, searchExpandedProperties, searchWithContext, compareProperties, getNeighborhoodAnalysis } from "@/lib/perplexity";
+import { compareProperties, getNeighborhoodAnalysis } from "@/lib/perplexity";
+import { braveSearchProperties, braveExpandedSearch } from "@/lib/brave-search";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { SearchResult, NeighborhoodData, ConversationTurn } from "@/lib/types";
 
@@ -39,23 +40,21 @@ async function enforceRateLimit() {
   }
 }
 
-export async function searchAction(query: string): Promise<SearchResult> {
+export async function searchAction(query: string, mode: "buy" | "rent" = "buy"): Promise<SearchResult> {
   if (!query.trim()) {
     return { properties: [], summary: "", citations: [] };
   }
   await enforceRateLimit();
 
   // Check cache first
-  const cacheKey = `search:${query.trim().toLowerCase()}`;
+  const cacheKey = `search:${query.trim().toLowerCase()}:${mode}`;
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.result;
   }
 
-  const result = await searchProperties(query);
-
-  // Enrich with listing images server-side before returning
-  await enrichResultImages(result);
+  // Use Brave Search → JSON-LD scraping → cheap LLM summary
+  const result = await braveSearchProperties(query, mode);
 
   // Cache the result
   searchCache.set(cacheKey, { result, timestamp: Date.now() });
@@ -65,18 +64,14 @@ export async function searchAction(query: string): Promise<SearchResult> {
 
 export async function expandedSearchAction(
   query: string,
-  preferenceHints: string | null
+  _preferenceHints: string | null,
+  mode: "buy" | "rent" = "buy"
 ): Promise<SearchResult> {
   if (!query.trim()) {
     return { properties: [], summary: "", citations: [] };
   }
   await enforceRateLimit();
-  const result = await searchExpandedProperties(query, preferenceHints);
-
-  // Enrich with listing images server-side (no cache for expanded — too variable)
-  await enrichResultImages(result);
-
-  return result;
+  return braveExpandedSearch(query, mode);
 }
 
 /**
@@ -276,7 +271,7 @@ export async function fetchListingImages(
 
 export async function refineSearchAction(
   query: string,
-  previousTurns: ConversationTurn[],
+  _previousTurns: ConversationTurn[],
   mode: "rent" | "buy"
 ): Promise<SearchResult> {
   if (!query.trim()) {
@@ -291,10 +286,8 @@ export async function refineSearchAction(
     return cached.result;
   }
 
-  const result = await searchWithContext(query, previousTurns, mode);
-
-  // Enrich with listing images server-side
-  await enrichResultImages(result);
+  // Brave search — refine is just a new search with the refined query
+  const result = await braveSearchProperties(query, mode);
 
   // Cache the result
   searchCache.set(cacheKey, { result, timestamp: Date.now() });
