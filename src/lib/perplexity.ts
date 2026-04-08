@@ -192,7 +192,7 @@ Return data as JSON matching the provided schema.`;
 function buildApiOptions(domains: string[]) {
   return {
     search_domain_filter: domains.length > 0 ? domains : undefined,
-    search_recency_filter: "month" as const,
+    // No recency filter — listings stay up for months, filtering would exclude valid results
     web_search_options: {
       search_context_size: "high" as const,
       user_location: {
