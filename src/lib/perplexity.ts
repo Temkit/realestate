@@ -22,6 +22,7 @@ function getClient() {
 interface QueryContext {
   enrichedQuery: string;
   domains: string[];
+  parsed: ParsedQuery;
 }
 
 const LUXEMBOURG_PORTALS = [
@@ -35,74 +36,84 @@ const LUXEMBOURG_PORTALS = [
   "engelvoelkers.com",
 ];
 
-function analyzeQuery(rawQuery: string): QueryContext {
-  const locationFixes: [RegExp, string][] = [
-    [/\b[mn]o[nd]?dorf[\s-]les[\s-]bains\b/i, "Mondorf-les-Bains, Luxembourg"],
-    [/\bmondorf\b/i, "Mondorf-les-Bains, Luxembourg"],
-    [/\besch[\s-]sur[\s-]alzette\b/i, "Esch-sur-Alzette, Luxembourg"],
-    [/\besch[\s-]alzette\b/i, "Esch-sur-Alzette, Luxembourg"],
-    [/\besch\b(?=.*\b(?:appart|maison|house|bureau|louer|rent|buy|acheter|terrain|immob))/i, "Esch-sur-Alzette, Luxembourg"],
-    [/\bluxembourg[\s-]ville\b/i, "Luxembourg City, Luxembourg"],
-    [/\blux[\s-]ville\b/i, "Luxembourg City, Luxembourg"],
-    [/\bdudelange\b/i, "Dudelange, Luxembourg"],
-    [/\bdüdelingen\b/i, "Dudelange, Luxembourg"],
-    [/\bdifferdange\b/i, "Differdange, Luxembourg"],
-    [/\bdifferdingen\b/i, "Differdange, Luxembourg"],
-    [/\bpétange\b/i, "Pétange, Luxembourg"],
-    [/\bpetange\b/i, "Pétange, Luxembourg"],
-    [/\bettelbr[uü]ck\b/i, "Ettelbruck, Luxembourg"],
-    [/\bwiltz\b/i, "Wiltz, Luxembourg"],
-    [/\bvianden\b/i, "Vianden, Luxembourg"],
-    [/\bmersch\b/i, "Mersch, Luxembourg"],
-    [/\bclervaux\b/i, "Clervaux, Luxembourg"],
-    [/\bechternach\b/i, "Echternach, Luxembourg"],
-    [/\bgrevenmacher\b/i, "Grevenmacher, Luxembourg"],
-    [/\bremich\b/i, "Remich, Luxembourg"],
-    [/\bdiekirch\b/i, "Diekirch, Luxembourg"],
-    [/\bstrassen\b/i, "Strassen, Luxembourg"],
-    [/\bbertrange\b/i, "Bertrange, Luxembourg"],
-    [/\bhesperange\b/i, "Hesperange, Luxembourg"],
-    [/\bwalferdange\b/i, "Walferdange, Luxembourg"],
-    [/\bsteinsel\b/i, "Steinsel, Luxembourg"],
-    [/\bsandweiler\b/i, "Sandweiler, Luxembourg"],
-    [/\bniederkorn\b/i, "Niederkorn, Luxembourg"],
-    [/\bschifflange\b/i, "Schifflange, Luxembourg"],
-    [/\bkayl\b/i, "Kayl, Luxembourg"],
-    [/\brumelange\b/i, "Rumelange, Luxembourg"],
-    [/\bbelvaux\b/i, "Belvaux, Luxembourg"],
-    [/\bbelval\b/i, "Belval, Luxembourg"],
-    [/\bsanem\b/i, "Sanem, Luxembourg"],
-    [/\bbettembourg\b/i, "Bettembourg, Luxembourg"],
-    [/\bleudelange\b/i, "Leudelange, Luxembourg"],
-    [/\bmamer\b/i, "Mamer, Luxembourg"],
-    [/\bcapellen\b/i, "Capellen, Luxembourg"],
-    [/\bkopstal\b/i, "Kopstal, Luxembourg"],
-    [/\bjunglinster\b/i, "Junglinster, Luxembourg"],
-    [/\bwasserbillig\b/i, "Wasserbillig, Luxembourg"],
-    [/\bkirchberg\b/i, "Kirchberg, Luxembourg City"],
-    [/\bbonnevoie\b/i, "Bonnevoie, Luxembourg City"],
-    [/\bgasperich\b/i, "Gasperich, Luxembourg City"],
-    [/\bbelair\b/i, "Belair, Luxembourg City"],
-    [/\blimpertsberg\b/i, "Limpertsberg, Luxembourg City"],
-    [/\bhollerich\b/i, "Hollerich, Luxembourg City"],
-    [/\bgrund\b/i, "Grund, Luxembourg City"],
-    [/\bclausen\b/i, "Clausen, Luxembourg City"],
-    [/\bmerl\b/i, "Merl, Luxembourg City"],
-    [/\bcessange\b/i, "Cessange, Luxembourg City"],
-  ];
+// ── Query parsing via Perplexity ─────────────────────────────────────────────
 
-  let enriched = rawQuery;
-  for (const [pattern, replacement] of locationFixes) {
-    if (pattern.test(enriched)) {
-      enriched = enriched.replace(pattern, replacement);
-      break;
-    }
+interface ParsedQuery {
+  commune: string | null;
+  neighborhood: string | null;
+  propertyType: string | null;
+  transactionType: "buy" | "rent" | "any";
+  cleanedQuery: string;
+}
+
+const QUERY_PARSE_SCHEMA = {
+  type: "object" as const,
+  required: ["commune", "neighborhood", "propertyType", "transactionType", "cleanedQuery"],
+  additionalProperties: false,
+  properties: {
+    commune: { type: ["string", "null"] as const, description: "The Luxembourg commune name, properly spelled. null if not identifiable." },
+    neighborhood: { type: ["string", "null"] as const, description: "Neighborhood within Luxembourg City (Kirchberg, Bonnevoie, Gasperich, etc.) if applicable. null otherwise." },
+    propertyType: { type: ["string", "null"] as const, description: "apartment, house, office, land, commercial, studio, or null" },
+    transactionType: { type: "string" as const, enum: ["buy", "rent", "any"], description: "buy, rent, or any if unclear" },
+    cleanedQuery: { type: "string" as const, description: "The user query rewritten as a clean real estate search query for Luxembourg portals" },
+  },
+};
+
+/**
+ * Parse a user's search query using Perplexity to extract:
+ * - Correct commune name (handles misspellings, abbreviations, all languages)
+ * - Neighborhood within Luxembourg City
+ * - Property type and transaction type
+ * - A cleaned/normalized search query
+ */
+async function parseQuery(rawQuery: string): Promise<ParsedQuery> {
+  const client = getClient();
+
+  const response = await (client.chat.completions.create as Function)({
+    model: "sonar",
+    web_search_options: { search_context_size: "low" },
+    response_format: {
+      type: "json_schema",
+      json_schema: { name: "query_parse", schema: QUERY_PARSE_SCHEMA, strict: true },
+    },
+    max_tokens: 256,
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: "Extract the Luxembourg location and intent from a real estate search query. Correct misspellings. Identify the commune (one of the 100 Luxembourg communes), any neighborhood within Luxembourg City, property type, and whether the user wants to buy or rent. Rewrite the query as a clean search for Luxembourg real estate portals.",
+      },
+      { role: "user", content: rawQuery },
+    ],
+  });
+
+  const content = response.choices[0]?.message?.content || "{}";
+  try {
+    return JSON.parse(content) as ParsedQuery;
+  } catch {
+    return {
+      commune: null,
+      neighborhood: null,
+      propertyType: null,
+      transactionType: "any",
+      cleanedQuery: rawQuery + " Luxembourg",
+    };
   }
-  if (!/luxembourg/i.test(enriched)) {
-    enriched += " Luxembourg";
+}
+
+/**
+ * Analyze a raw user query: parse it with Perplexity, then build the enriched query and context.
+ */
+async function analyzeQuery(rawQuery: string): Promise<QueryContext & { parsed: ParsedQuery }> {
+  const parsed = await parseQuery(rawQuery);
+
+  // Use the cleaned query from Perplexity, ensure "Luxembourg" is present
+  let enrichedQuery = parsed.cleanedQuery;
+  if (!/luxemb/i.test(enrichedQuery)) {
+    enrichedQuery += " Luxembourg";
   }
 
-  return { enrichedQuery: enriched, domains: LUXEMBOURG_PORTALS };
+  return { enrichedQuery, domains: LUXEMBOURG_PORTALS, parsed };
 }
 
 // ── Perplexity response types ────────────────────────────────────────────────
@@ -372,9 +383,12 @@ function parseProperties(
 
 export async function searchProperties(query: string, mode: "buy" | "rent" = "buy"): Promise<SearchResult> {
   const client = getClient();
-  const { enrichedQuery, domains } = analyzeQuery(query);
+  const { enrichedQuery, domains, parsed } = await analyzeQuery(query);
 
-  const modeInstruction = mode === "rent"
+  // Use parsed transaction type if user's query has clear intent, otherwise use UI mode
+  const effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
+
+  const modeInstruction = effectiveMode === "rent"
     ? "\n\nThe user is looking to RENT. Only return RENTAL listings. Do NOT include properties for sale."
     : "\n\nThe user is looking to BUY. Only return properties for SALE. Do NOT include rental listings.";
 
@@ -421,11 +435,10 @@ export async function searchExpandedProperties(
   preferenceHints: string | null
 ): Promise<SearchResult> {
   const client = getClient();
-  const { enrichedQuery, domains } = analyzeQuery(originalQuery);
+  const { enrichedQuery, domains, parsed } = await analyzeQuery(originalQuery);
 
-  // Extract commune from query and get nearby communes for targeted expansion
-  const communeMatch = enrichedQuery.match(/([A-Za-zÀ-ÿ-]+(?:[\s-][A-Za-zÀ-ÿ-]+)*),?\s*(?:Luxembourg|Luxembourg City)/i);
-  const commune = communeMatch ? communeMatch[1].trim() : "";
+  // Use parsed commune for reliable nearby lookup
+  const commune = parsed.neighborhood || parsed.commune || "";
   const nearby = getNearbyCommunes(commune);
   const nearbyText = nearby.length > 0
     ? `Search specifically in these nearby communes: ${nearby.join(", ")}.`
@@ -482,9 +495,10 @@ export async function searchWithContext(
   mode: "rent" | "buy"
 ): Promise<SearchResult> {
   const client = getClient();
-  const { enrichedQuery, domains } = analyzeQuery(query);
+  const { enrichedQuery, domains, parsed } = await analyzeQuery(query);
 
-  const modeInstruction = mode === "rent"
+  const effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
+  const modeInstruction = effectiveMode === "rent"
     ? "The user is looking to RENT. Only return rental listings."
     : "The user is looking to BUY. Only return properties for sale.";
 
