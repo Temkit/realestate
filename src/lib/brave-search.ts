@@ -45,7 +45,7 @@ async function braveSearch(query: string, count: number = 20): Promise<BraveWebR
     q: query,
     count: String(count),
     search_lang: "fr",
-    country: "LU",
+    country: "ALL",
     result_filter: "web",
   });
 
