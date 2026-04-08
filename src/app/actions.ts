@@ -178,9 +178,9 @@ export async function searchAction(query: string, mode: "buy" | "rent" = "buy"):
     return cached.result;
   }
 
-  const result = await searchProperties(query);
+  const result = await searchProperties(query, mode);
 
-  // Enrich with listing images server-side before returning
+  // Enrich with listing page data server-side before returning
   await enrichFromListingPages(result);
 
   // Cache the result

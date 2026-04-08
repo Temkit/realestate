@@ -139,8 +139,9 @@ CRITICAL RULES:
 - NEVER return real estate agencies, agents, brokers, or agency directories
 - NEVER invent or guess data — if you cannot find a specific detail, use null or 0
 - Each property MUST reference a specific citation using [N] markers in the description — this is how we link properties to their source URLs
-- Each property MUST have an accurate price EXACTLY as shown on the listing — do NOT round (e.g. €2,600 not €3,000)
+- Prices MUST be the EXACT number from the listing — NEVER round or approximate. Write 2600 not 3000, write 475000 not 500000. Copy the number exactly as it appears on the listing page.
 - Each property MUST clearly indicate if it's for SALE or RENT — check the listing carefully
+- Return data EXACTLY as it appears on the source — do not interpret, summarize, or modify any values
 - Include the portal name in the "source" field (e.g. athome.lu, immotop.lu, wortimmo.lu)
 - Prioritize ACCURACY over quantity — only include properties you found on a specific listing page with a verifiable URL
 - Do NOT return properties from search result/category pages — only from individual listing detail pages
@@ -455,9 +456,13 @@ function parseProperties(
 
 // ── Search functions ─────────────────────────────────────────────────────────
 
-export async function searchProperties(query: string): Promise<SearchResult> {
+export async function searchProperties(query: string, mode: "buy" | "rent" = "buy"): Promise<SearchResult> {
   const client = getClient();
   const { enrichedQuery, domains } = analyzeQuery(query);
+
+  const modeInstruction = mode === "rent"
+    ? "\n\nIMPORTANT: The user is looking to RENT. Only return RENTAL listings. Do NOT include properties for sale."
+    : "\n\nIMPORTANT: The user is looking to BUY. Only return properties for SALE. Do NOT include rental listings.";
 
   const response = await client.chat.completions.create({
     model: "sonar",
@@ -467,7 +472,7 @@ export async function searchProperties(query: string): Promise<SearchResult> {
       search_context_size: "high",
     },
     messages: [
-      { role: "system", content: SEARCH_SYSTEM_PROMPT },
+      { role: "system", content: SEARCH_SYSTEM_PROMPT + modeInstruction },
       { role: "user", content: enrichedQuery },
     ],
     temperature: 0,
