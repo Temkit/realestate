@@ -152,6 +152,9 @@ async function extractListingUrlsFromCategoryPage(url: string): Promise<string[]
     let match;
     while ((match = hrefPattern.exec(html)) !== null) {
       let href = match[1];
+      // Skip asset URLs (CSS, JS, images, fonts)
+      if (/\.(css|js|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico)(\?|$)/i.test(href)) continue;
+      if (/\/_next\/|\/static\/|\/assets\/|\/bundles\/|\/css\//i.test(href)) continue;
       // Resolve relative URLs
       if (href.startsWith("/")) {
         href = `https://${hostname}${href}`;
@@ -240,14 +243,17 @@ async function scrapeListing(url: string, mode: "buy" | "rent"): Promise<Scraped
     const ogDescription = extractMetaContent(html, "og:description");
     const metaPrice = extractPriceFromHtml(html);
 
-    // Merge JSON-LD + meta fallbacks
-    const address = propertyData.address || ogTitle?.replace(/\s*[-–|].*$/, "") || null;
+    // Parse og:title for structured info (e.g. "2-room flat, Kirchberg | 2 rooms | 75 m²")
+    const titleParsed = parseOgTitle(ogTitle);
+
+    // Merge JSON-LD + og:title + meta fallbacks
+    const address = propertyData.address || titleParsed.address || null;
     const imageUrl = propertyData.imageUrl || (ogImage && isPropertyImage(ogImage) ? ogImage : null);
     const description = propertyData.description || ogDescription || null;
     const price = propertyData.price || metaPrice || 0;
 
-    // Determine city from address or URL
-    const city = propertyData.city || extractCityFromUrl(url) || null;
+    // Determine city from JSON-LD, og:title, or URL
+    const city = propertyData.city || titleParsed.city || extractCityFromUrl(url) || null;
 
     return {
       url,
@@ -256,10 +262,10 @@ async function scrapeListing(url: string, mode: "buy" | "rent"): Promise<Scraped
       city,
       zipCode: propertyData.zipCode || null,
       price,
-      bedrooms: propertyData.bedrooms || 0,
+      bedrooms: propertyData.bedrooms || titleParsed.rooms || 0,
       bathrooms: propertyData.bathrooms || 0,
-      sqft: propertyData.sqft || 0,
-      propertyType: propertyData.propertyType || guessPropertyType(url, description || ""),
+      sqft: propertyData.sqft || titleParsed.sqm || 0,
+      propertyType: propertyData.propertyType || titleParsed.type || guessPropertyType(url, description || ""),
       yearBuilt: propertyData.yearBuilt || null,
       description,
       features: propertyData.features || [],
@@ -467,6 +473,69 @@ function isPropertyImage(url: string): boolean {
   if (/\/\d{1,2}x\d{1,2}[/.]/i.test(lower)) return false;
   if (lower.endsWith(".svg")) return false;
   return lower.startsWith("http");
+}
+
+/**
+ * Parse immotop.lu og:title format for property details.
+ * Examples:
+ *   "2-room flat first floor, Kirchberg, Luxembourg | 2 rooms | 75 m²"
+ *   "Apartment for rent, Kirchberg | 3 rooms | 120 m² | €2,500/month"
+ *   "Bureau à louer à Mondorf-les-Bains | 109 m²"
+ */
+function parseOgTitle(title: string | null): {
+  address: string | null;
+  city: string | null;
+  rooms: number;
+  sqm: number;
+  type: string | null;
+} {
+  if (!title) return { address: null, city: null, rooms: 0, sqm: 0, type: null };
+
+  const parts = title.split("|").map((s) => s.trim());
+
+  // Extract rooms: "2 rooms", "3 chambres", "2-room"
+  let rooms = 0;
+  for (const part of parts) {
+    const roomMatch = part.match(/(\d+)\s*(?:rooms?|chambres?|pièces?)/i);
+    if (roomMatch) { rooms = parseInt(roomMatch[1]); break; }
+  }
+  // Also try "X-room" in the title
+  if (!rooms) {
+    const dashRoom = title.match(/(\d+)-room/i);
+    if (dashRoom) rooms = parseInt(dashRoom[1]);
+  }
+
+  // Extract sqm: "75 m²", "120m²"
+  let sqm = 0;
+  for (const part of parts) {
+    const sqmMatch = part.match(/([\d.,]+)\s*m²/i);
+    if (sqmMatch) { sqm = parseFloat(sqmMatch[1].replace(",", ".")); break; }
+  }
+
+  // Extract type
+  let type: string | null = null;
+  const titleLower = title.toLowerCase();
+  if (titleLower.includes("appartement") || titleLower.includes("apartment") || titleLower.includes("flat")) type = "Apartment";
+  else if (titleLower.includes("maison") || titleLower.includes("house")) type = "House";
+  else if (titleLower.includes("bureau") || titleLower.includes("office")) type = "Office";
+  else if (titleLower.includes("studio")) type = "Studio";
+  else if (titleLower.includes("terrain") || titleLower.includes("land")) type = "Land";
+  else if (titleLower.includes("commerce") || titleLower.includes("retail")) type = "Commercial";
+
+  // Extract address/city from first part: "2-room flat, Kirchberg, Luxembourg"
+  const firstPart = parts[0] || "";
+  const locationParts = firstPart.split(",").map((s) => s.trim());
+  let city: string | null = null;
+  let address: string | null = firstPart || null;
+
+  // Last meaningful part before "Luxembourg" is usually the city
+  for (let i = locationParts.length - 1; i >= 0; i--) {
+    const part = locationParts[i];
+    if (/luxemb/i.test(part)) continue;
+    if (part.length > 2) { city = part; break; }
+  }
+
+  return { address, city, rooms, sqm, type };
 }
 
 function extractCityFromUrl(url: string): string | null {

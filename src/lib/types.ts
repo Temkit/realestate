@@ -54,3 +54,25 @@ export interface ConversationTurn {
   role: "user" | "assistant";
   content: string;
 }
+
+export interface ScrapedListing {
+  url: string;
+  source: string;
+  price: number;
+  surface: number;
+  rooms: number;
+  bathrooms: number;
+  propertyType: string;
+  city: string;
+  address: string;
+  imageUrl: string | null;
+  contractType: "rent" | "buy";
+  description: string;
+}
+
+export interface DiscoveryResult {
+  searchResults: { url: string; title?: string; snippet?: string }[];
+  summary: string;
+  suggestedFollowUps: string[];
+  marketContext: string;
+}
