@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Heart, Home, Bed, Bath, Ruler, ExternalLink, Sparkles } from "lucide-react";
+import { Heart, Home, Bed, Bath, Ruler, ExternalLink } from "lucide-react";
 import type { Property } from "@/lib/types";
 import { getProxiedImageUrl } from "@/lib/image-proxy";
 import { formatPriceCompact, formatNumber } from "@/lib/format";
@@ -142,11 +142,10 @@ export function PropertyCard({
 
       {/* Content */}
       <div className="p-3.5 sm:p-5 min-h-[140px] sm:min-h-[160px] flex flex-col">
-        {/* AI Insight */}
+        {/* Context Insight */}
         {property.aiInsight && (
-          <div className="flex items-center gap-1.5 mb-2">
-            <Sparkles className="h-3 w-3 text-primary shrink-0" />
-            <span className="text-xs text-primary font-medium truncate">
+          <div className="flex items-center gap-1.5 mb-2 min-w-0">
+            <span className="text-[11px] text-primary font-semibold bg-primary/8 px-2 py-0.5 rounded-md truncate">
               {property.aiInsight}
             </span>
           </div>
