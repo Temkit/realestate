@@ -52,11 +52,11 @@ export async function parseQuery(rawQuery: string): Promise<ParsedQuery> {
   try {
     return await geminiJSON<ParsedQuery>(
       `Extract from this Luxembourg real estate search query:
-- commune: the Luxembourg commune name, properly spelled (one of the 100 communes). null if not identifiable.
+- commune: the FULL official Luxembourg commune name, properly spelled. Examples: "Mondorf-les-Bains" (not "Mondorf"), "Esch-sur-Alzette" (not "Esch"), "Luxembourg" for the city. null if not identifiable.
 - neighborhood: neighborhood within Luxembourg City (Kirchberg, Bonnevoie, Gasperich, Belair, Limpertsberg, etc.) if applicable. null otherwise.
 - propertyType: apartment, house, office, studio, land, commercial, or null
 - transactionType: buy, rent, or any if unclear
-- cleanedQuery: the user query rewritten as a clean real estate search query for Luxembourg portals
+- cleanedQuery: rewrite with the FULL commune name for Luxembourg real estate portals. Example: "bureau mondorf" → "bureau Mondorf-les-Bains Luxembourg"
 
 Query: "${rawQuery}"
 

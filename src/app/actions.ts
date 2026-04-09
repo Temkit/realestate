@@ -6,7 +6,7 @@ import {
   compareProperties,
   getNeighborhoodAnalysis,
 } from "@/lib/perplexity";
-import { scrapeMultipleUrls } from "@/lib/firecrawl-scraper";
+import { scrapeMultipleUrls, scrapeImmotopCategoryPage } from "@/lib/firecrawl-scraper";
 import {
   buildSearchCacheKey,
   getSearchCache,
@@ -94,20 +94,27 @@ async function braveSearch(query: string): Promise<BraveResult[]> {
 
 async function discoverUrls(
   query: string,
-  mode: string
+  _mode: string
 ): Promise<BraveResult[]> {
-  const modeKeyword = mode === "rent" ? "louer location" : "vendre achat";
-
+  // Don't add mode keywords to Brave query — let Brave find ALL listings.
+  // Mode filtering happens after scraping, where we have accurate contract type.
+  // Adding "louer" or "vendre" to Brave excludes valid results.
   const searches = PORTALS.map((portal) =>
-    braveSearch(`site:${portal} ${query} Luxembourg ${modeKeyword}`)
+    braveSearch(`site:${portal} ${query} Luxembourg`)
   );
 
   const results = await Promise.allSettled(searches);
   const allResults: BraveResult[] = [];
+  const seen = new Set<string>();
 
   for (const result of results) {
     if (result.status === "fulfilled") {
-      allResults.push(...result.value);
+      for (const r of result.value) {
+        if (!seen.has(r.url)) {
+          seen.add(r.url);
+          allResults.push(r);
+        }
+      }
     }
   }
 
@@ -135,6 +142,14 @@ function isListingUrl(url: string): boolean {
     // ignore
   }
   return false;
+}
+
+function isImmotopCategoryUrl(url: string): boolean {
+  try {
+    const h = new URL(url).hostname.toLowerCase();
+    const p = new URL(url).pathname;
+    return h.includes("immotop.lu") && !isListingUrl(url) && !/agences|prix-immobilier|communes/.test(p) && p.length > 5;
+  } catch { return false; }
 }
 
 function filterListingUrls(results: BraveResult[]): string[] {
@@ -377,29 +392,62 @@ async function runBraveFirecrawlPipeline(
   query: string,
   mode: "buy" | "rent"
 ): Promise<SearchResult> {
-  // 1. Parse query with Perplexity
+  // 1. Parse query with Gemini
   const { enrichedQuery, parsed } = await analyzeQuery(query);
+  // If user's query has clear intent (louer/acheter), use that. Otherwise use UI mode.
+  // If UI mode is also default and query says "any", search for both.
   const effectiveMode =
     parsed.transactionType !== "any" ? parsed.transactionType : mode;
 
   // 2. Run 4 Brave searches in parallel
   const braveResults = await discoverUrls(enrichedQuery, effectiveMode);
 
-  // 3. Filter to listing URLs
+  // 3. Separate listing URLs from category pages
   const listingUrls = filterListingUrls(braveResults);
+  const immotopCategories = braveResults
+    .filter((r) => isImmotopCategoryUrl(r.url))
+    .map((r) => r.url);
 
-  // 4. Check scrape cache
+  // 4. Scrape immotop category pages for listings (__NEXT_DATA__, free)
+  const categoryListings: ScrapedListing[] = [];
+  const uniqueCategories = [...new Set(immotopCategories)].slice(0, 3);
+  if (uniqueCategories.length > 0) {
+    const catResults = await Promise.allSettled(
+      uniqueCategories.map(scrapeImmotopCategoryPage)
+    );
+    for (const result of catResults) {
+      if (result.status === "fulfilled") {
+        categoryListings.push(...result.value);
+      }
+    }
+  }
+
+  // 5. Check scrape cache for individual listing URLs
+  const allListingUrls = [
+    ...listingUrls,
+    // Add category listing URLs that aren't already in the list
+    ...categoryListings.map((l) => l.url).filter((u) => !listingUrls.includes(u)),
+  ];
   const { cached: cachedListings, uncached: urlsToScrape } =
-    checkScrapeCache(listingUrls);
+    checkScrapeCache(listingUrls); // Only Firecrawl the Brave-found listing URLs
 
-  // 5. Firecrawl uncached URLs
+  // 6. Firecrawl uncached individual listing URLs (athome, vivi, wortimmo)
   const freshListings = await scrapeMultipleUrls(urlsToScrape);
   for (const listing of freshListings) {
     setScrapeCache(listing.url, listing);
   }
 
-  // 6. Merge, filter by mode, convert
-  const allListings = [...cachedListings, ...freshListings];
+  // 7. Merge: category listings (immotop) + cached + fresh (other portals)
+  const seenUrls = new Set<string>();
+  const allListings: ScrapedListing[] = [];
+  // Category listings first (most accurate — from __NEXT_DATA__)
+  for (const l of categoryListings) {
+    if (!seenUrls.has(l.url)) { seenUrls.add(l.url); allListings.push(l); }
+  }
+  // Then individual listings
+  for (const l of [...cachedListings, ...freshListings]) {
+    if (!seenUrls.has(l.url)) { seenUrls.add(l.url); allListings.push(l); }
+  }
   const filtered = allListings.filter(
     (l) => l.contractType === effectiveMode
   );

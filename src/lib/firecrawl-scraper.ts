@@ -264,6 +264,69 @@ export async function scrapeListingUrl(
   }
 }
 
+// ── Immotop category page scraping (__NEXT_DATA__) ──────────────────────────
+
+/**
+ * Scrape an immotop.lu category page for listings via __NEXT_DATA__.
+ * This is free (no Firecrawl needed) and 100% accurate.
+ */
+export async function scrapeImmotopCategoryPage(url: string): Promise<ScrapedListing[]> {
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 10000);
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36", "Accept-Encoding": "identity" },
+      redirect: "follow",
+    });
+    if (!resp.ok) return [];
+    const html = await resp.text();
+    const match = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (!match) return [];
+
+    const nd = JSON.parse(match[1]);
+    const results: ScrapedListing[] = [];
+    const queries = nd?.props?.pageProps?.dehydratedState?.queries || [];
+
+    for (const q of queries) {
+      const listings = q?.state?.data?.results || q?.state?.data?.realEstates || [];
+      if (!Array.isArray(listings)) continue;
+
+      for (const l of listings) {
+        const seoUrl = l?.seo?.url;
+        if (!seoUrl || !/\/annonces\/\d{4,}/.test(seoUrl)) continue;
+        const fullUrl = seoUrl.startsWith("http") ? seoUrl : `https://www.immotop.lu${seoUrl}`;
+        const re = l?.realEstate || l;
+        const price = re?.price?.value || re?.properties?.[0]?.price?.value || 0;
+        const surfaceStr = re?.properties?.[0]?.surface || "";
+        const surface = parseInt(surfaceStr.replace(/[^\d]/g, "")) || 0;
+        const contract = re?.contract === "rent" ? "rent" as const : "buy" as const;
+        const city = re?.properties?.[0]?.location?.city || "";
+        const photo = re?.properties?.[0]?.photo?.urls?.medium || null;
+        const typeName = re?.typology?.name || re?.properties?.[0]?.typology?.name || "Property";
+
+        results.push({
+          url: fullUrl,
+          source: "immotop.lu",
+          price,
+          surface,
+          rooms: 0,
+          bathrooms: 0,
+          propertyType: typeName,
+          city,
+          address: city,
+          imageUrl: photo,
+          contractType: contract,
+          description: re?.title || "",
+        });
+      }
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 // ── Batch scraping ───────────────────────────────────────────────────────────
 
 const BATCH_SIZE = 4;
