@@ -229,12 +229,14 @@ function buildApiOptions(domains: string[]) {
 
 /**
  * Match a property to the best search_result URL.
- * Priority: citation markers [N] → address keyword match → source domain fallback.
+ * Priority: citation markers [N] → price match in title.
+ * Only assigns a URL if we're confident it's the right listing.
  */
 function extractListingUrl(
   address: string,
   description: string,
   source: string | null,
+  price: number,
   searchResults: PerplexitySearchResult[],
   usedUrls: Set<string>
 ): string | null {
@@ -259,41 +261,19 @@ function extractListingUrl(
     }
   }
 
-  // 2. Match address keywords against search_results (title + snippet + url)
-  if (addressWords.length > 0 && searchResults.length > 0) {
-    let bestMatch: PerplexitySearchResult | null = null;
-    let bestScore = 0;
-
+  // 2. Match by price in search_results title (e.g. "Bureau • 165 m² • 3 900")
+  // Only match if the title contains the property's exact price — prevents wrong URL assignment
+  if (price > 0 && searchResults.length > 0) {
     for (const sr of searchResults) {
       if (usedUrls.has(sr.url)) continue;
       if (!looksLikeListingUrl(sr.url)) continue;
-      const haystack = [sr.title || "", sr.snippet || "", sr.url].join(" ").toLowerCase();
-      const score = addressWords.filter((w) => haystack.includes(w)).length;
-      if (score > bestScore && score >= 1) {
-        bestScore = score;
-        bestMatch = sr;
+      const title = (sr.title || "").replace(/\s/g, "");
+      const priceStr = String(price);
+      // Check if title contains the price
+      if (title.includes(priceStr) || title.includes(price.toLocaleString("de-LU"))) {
+        usedUrls.add(sr.url);
+        return sr.url;
       }
-    }
-
-    if (bestMatch) {
-      usedUrls.add(bestMatch.url);
-      return bestMatch.url;
-    }
-  }
-
-  // 3. Fall back to source domain match
-  if (source) {
-    const sourceDomain = source.toLowerCase().replace(/\s+/g, "");
-    for (const sr of searchResults) {
-      if (usedUrls.has(sr.url)) continue;
-      if (!looksLikeListingUrl(sr.url)) continue;
-      try {
-        const hostname = new URL(sr.url).hostname.toLowerCase();
-        if (hostname.includes(sourceDomain.split(".")[0])) {
-          usedUrls.add(sr.url);
-          return sr.url;
-        }
-      } catch { /* skip */ }
     }
   }
 
@@ -346,10 +326,9 @@ function parseProperties(
     const city = p.city || "";
     const description = p.description || "";
     const source = typeof p.source === "string" ? p.source.replace(/\[\d+\]/g, "").trim() || null : null;
-
-    const listingUrl = extractListingUrl(address, description, source, searchResults, usedUrls);
-
     const price = typeof p.price === "number" ? p.price : parseFloat(String(p.price || "0").replace(/[^0-9.]/g, "")) || 0;
+
+    const listingUrl = extractListingUrl(address, description, source, price, searchResults, usedUrls);
     const sqft = p.sqft || 0;
 
     return {

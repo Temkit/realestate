@@ -284,7 +284,8 @@ async function resolveListingUrlsFromCategoryPages(result: SearchResult): Promis
       }
     }
 
-    if (bestUrl && bestScore >= 3) {
+    if (bestUrl && bestScore >= 5) {
+      // Only accept exact price match (score 5+) — prevents wrong URL assignment
       p.listingUrl = bestUrl;
       usedUrls.add(bestUrl);
     }
