@@ -16,6 +16,35 @@ interface PropertyCardProps {
   index?: number;
 }
 
+function getInsightStyle(text: string): string {
+  const t = text.toLowerCase();
+  // Green: good value indicators
+  if (t.includes("lowest") || t.includes("best") || t.includes("below avg"))
+    return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
+  // Blue: size/space indicators
+  if (t.includes("spacious") || t.includes("largest"))
+    return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
+  // Amber: above average / premium
+  if (t.includes("above avg"))
+    return "bg-amber-500/10 text-amber-700 dark:text-amber-400";
+  // Purple: scarcity
+  if (t.includes("only listing"))
+    return "bg-violet-500/10 text-violet-700 dark:text-violet-400";
+  // Orange: compact
+  if (t.includes("compact"))
+    return "bg-orange-500/10 text-orange-700 dark:text-orange-400";
+  // Default
+  return "bg-primary/8 text-primary";
+}
+
+function InsightBadge({ text }: { text: string }) {
+  return (
+    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${getInsightStyle(text)}`}>
+      {text}
+    </span>
+  );
+}
+
 function getStatusStyle(status: string): string {
   const s = status.toLowerCase();
   if (s.includes("active") || s.includes("sale")) {
@@ -142,12 +171,12 @@ export function PropertyCard({
 
       {/* Content */}
       <div className="p-3.5 sm:p-5 min-h-[140px] sm:min-h-[160px] flex flex-col">
-        {/* Context Insight */}
+        {/* Context Insights */}
         {property.aiInsight && (
-          <div className="flex items-center gap-1.5 mb-2 min-w-0">
-            <span className="text-[11px] text-primary font-semibold bg-primary/8 px-2 py-0.5 rounded-md truncate">
-              {property.aiInsight}
-            </span>
+          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+            {property.aiInsight.split(" · ").map((insight) => (
+              <InsightBadge key={insight} text={insight} />
+            ))}
           </div>
         )}
 
