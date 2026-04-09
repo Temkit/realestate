@@ -280,6 +280,104 @@ function scrapedListingToProperty(
   };
 }
 
+// ── AI enrichment (GPT-4.1 nano) ────────────────────────────────────────────
+
+interface AIEnrichment {
+  summary: string;
+  marketContext: string;
+  suggestedFollowUps: string[];
+}
+
+async function enrichWithAI(
+  properties: Property[],
+  userQuery: string,
+  mode: "buy" | "rent"
+): Promise<AIEnrichment> {
+  const fallback: AIEnrichment = {
+    summary: properties.length > 0
+      ? `Found ${properties.length} ${mode === "rent" ? "rental" : ""} properties.`
+      : "No properties found. Try broadening your search.",
+    marketContext: "",
+    suggestedFollowUps: [],
+  };
+
+  if (properties.length === 0) return fallback;
+
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) return fallback;
+
+  try {
+    const propList = properties.slice(0, 12).map((p, i) =>
+      `${i + 1}. ${p.address}, ${p.city} — €${p.price.toLocaleString()}${mode === "rent" ? "/mo" : ""}, ${p.sqft}m², ${p.bedrooms}bd, ${p.propertyType} [${p.source}]${p.aiInsight ? ` (${p.aiInsight})` : ""}`
+    ).join("\n");
+
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openaiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-nano",
+        temperature: 0,
+        max_tokens: 800,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `You enrich Luxembourg real estate search results. Given a list of properties, return JSON:
+{
+  "summary": "1-2 sentences: count, price range, highlight the best value. In the same language as the user query.",
+  "marketContext": "One short market insight, max 15 words. E.g. 'Kirchberg averages €10,500/m² — these are 15% below'",
+  "suggestedFollowUps": ["3-4 natural follow-up queries"],
+  "insights": {"1": "short insight for property 1", "2": "...", ...}
+}
+
+For insights: mention location advantages, value compared to area, notable features from the description. Keep each insight under 8 words. Skip properties that already have good data-driven insights.`,
+          },
+          {
+            role: "user",
+            content: `User searched: "${userQuery}" (${mode})\n\nResults:\n${propList}`,
+          },
+        ],
+      }),
+    });
+
+    if (!resp.ok) return fallback;
+
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    const parsed = JSON.parse(content);
+
+    // Apply per-property AI insights — merge with existing data-driven ones
+    if (parsed.insights && typeof parsed.insights === "object") {
+      for (const [key, insight] of Object.entries(parsed.insights)) {
+        const idx = parseInt(key) - 1;
+        if (idx >= 0 && idx < properties.length && typeof insight === "string" && insight.trim()) {
+          const p = properties[idx];
+          if (p.aiInsight) {
+            // Append AI insight after data-driven ones (max 3 total)
+            const existing = p.aiInsight.split(" · ");
+            if (existing.length < 3) {
+              p.aiInsight = [...existing, insight.trim()].join(" · ");
+            }
+          } else {
+            p.aiInsight = insight.trim();
+          }
+        }
+      }
+    }
+
+    return {
+      summary: parsed.summary || fallback.summary,
+      marketContext: parsed.marketContext || "",
+      suggestedFollowUps: Array.isArray(parsed.suggestedFollowUps) ? parsed.suggestedFollowUps : [],
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 // ── Core pipeline ────────────────────────────────────────────────────────────
 
 async function runBraveFirecrawlPipeline(
@@ -316,27 +414,18 @@ async function runBraveFirecrawlPipeline(
     scrapedListingToProperty(listing, `prop-${Date.now()}-${i}`)
   );
 
-  // 7. Compute insights
+  // 7. Compute data-driven insights
   computeInsights(properties);
 
-  // 8. Build summary
-  const cityCounts: Record<string, number> = {};
-  for (const p of properties) {
-    if (p.city) cityCounts[p.city] = (cityCounts[p.city] || 0) + 1;
-  }
-  const cityInfo = Object.entries(cityCounts)
-    .map(([city, count]) => `${count} in ${city}`)
-    .join(", ");
-  const summary = properties.length > 0
-    ? `Found ${properties.length} ${effectiveMode === "rent" ? "rental" : ""} properties${cityInfo ? `: ${cityInfo}` : ""}.`
-    : `No properties found matching your search. Try broadening your criteria.`;
+  // 8. AI enrichment (GPT-4.1 nano — cheap, adds summary + context + per-property insights)
+  const aiEnrichment = await enrichWithAI(properties, query, effectiveMode);
 
   return {
     properties,
-    summary,
+    summary: aiEnrichment.summary || `Found ${properties.length} properties`,
     citations: listingUrls,
-    suggestedFollowUps: [],
-    marketContext: "",
+    suggestedFollowUps: aiEnrichment.suggestedFollowUps,
+    marketContext: aiEnrichment.marketContext,
   };
 }
 
