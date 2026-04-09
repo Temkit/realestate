@@ -1,6 +1,5 @@
 import OpenAI from "openai";
-import type { NeighborhoodData, ConversationTurn, DiscoveryResult } from "./types";
-import { getNearbyCommunes } from "./communes";
+import type { NeighborhoodData } from "./types";
 
 let clientInstance: OpenAI | null = null;
 
@@ -17,28 +16,9 @@ function getClient() {
   return clientInstance;
 }
 
-// ── Location & domain detection ──────────────────────────────────────────────
-
-interface QueryContext {
-  enrichedQuery: string;
-  domains: string[];
-  parsed: ParsedQuery;
-}
-
-const LUXEMBOURG_PORTALS = [
-  "athome.lu",
-  "immotop.lu",
-  "wortimmo.lu",
-  "immobilier.lu",
-  "vivi.lu",
-  "habiter.lu",
-  "remax.lu",
-  "engelvoelkers.com",
-];
-
 // ── Query parsing via Perplexity ─────────────────────────────────────────────
 
-interface ParsedQuery {
+export interface ParsedQuery {
   commune: string | null;
   neighborhood: string | null;
   propertyType: string | null;
@@ -59,7 +39,7 @@ const QUERY_PARSE_SCHEMA = {
   },
 };
 
-async function parseQuery(rawQuery: string): Promise<ParsedQuery> {
+export async function parseQuery(rawQuery: string): Promise<ParsedQuery> {
   const client = getClient();
 
   const response = await (client.chat.completions.create as Function)({
@@ -94,7 +74,7 @@ async function parseQuery(rawQuery: string): Promise<ParsedQuery> {
   }
 }
 
-async function analyzeQuery(rawQuery: string): Promise<QueryContext & { parsed: ParsedQuery }> {
+export async function analyzeQuery(rawQuery: string): Promise<{ enrichedQuery: string; parsed: ParsedQuery }> {
   const parsed = await parseQuery(rawQuery);
 
   let enrichedQuery = parsed.cleanedQuery;
@@ -102,257 +82,10 @@ async function analyzeQuery(rawQuery: string): Promise<QueryContext & { parsed: 
     enrichedQuery += " Luxembourg";
   }
 
-  return { enrichedQuery, domains: LUXEMBOURG_PORTALS, parsed };
+  return { enrichedQuery, parsed };
 }
 
-// ── Perplexity response types ────────────────────────────────────────────────
-
-interface PerplexitySearchResult {
-  url: string;
-  title?: string;
-  snippet?: string;
-  date?: string;
-}
-
-interface PerplexityRawResponse {
-  citations?: string[];
-  search_results?: PerplexitySearchResult[];
-}
-
-// ── Discovery schema (simple — no property extraction) ──────────────────────
-
-const DISCOVERY_SCHEMA = {
-  type: "object" as const,
-  required: ["summary", "marketContext", "suggestedFollowUps"],
-  additionalProperties: false,
-  properties: {
-    summary: { type: "string" as const, description: "1-2 sentence summary of what was found." },
-    marketContext: { type: ["string", "null"] as const, description: "One short market stat, max 15 words." },
-    suggestedFollowUps: {
-      type: "array" as const,
-      items: { type: "string" as const },
-      description: "3-4 follow-up queries the user might try.",
-    },
-  },
-};
-
-// ── System prompts ───────────────────────────────────────────────────────────
-
-const DISCOVERY_SYSTEM_PROMPT = `You are a Luxembourg real estate search assistant. Search Luxembourg real estate portals (athome.lu, immotop.lu, wortimmo.lu, vivi.lu) for the user's query.
-
-Your job is to FIND listing URLs — not to extract property details. Provide a brief summary of what you found and any market context.
-
-Focus on finding as many relevant listing pages as possible from Luxembourg real estate portals.`;
-
-// ── Shared API call options ─────────────────────────────────────────────────
-
-function buildApiOptions(domains: string[]) {
-  return {
-    search_domain_filter: domains.length > 0 ? domains : undefined,
-    web_search_options: {
-      search_context_size: "high" as const,
-      user_location: {
-        country: "LU",
-        city: "Luxembourg",
-      },
-    },
-    response_format: {
-      type: "json_schema" as const,
-      json_schema: {
-        name: "discovery_results",
-        schema: DISCOVERY_SCHEMA,
-        strict: true,
-      },
-    },
-    max_tokens: 2048,
-    temperature: 0,
-  };
-}
-
-function extractSearchResults(response: unknown): PerplexitySearchResult[] {
-  const raw = response as PerplexityRawResponse;
-  const searchResults = raw.search_results || [];
-  if (searchResults.length === 0 && raw.citations) {
-    for (const url of raw.citations) {
-      searchResults.push({ url });
-    }
-  }
-  return searchResults;
-}
-
-// ── Search functions ─────────────────────────────────────────────────────────
-
-export async function searchProperties(query: string, mode: "buy" | "rent" = "buy"): Promise<DiscoveryResult> {
-  const client = getClient();
-  const { enrichedQuery, domains, parsed } = await analyzeQuery(query);
-
-  const effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
-  const modeInstruction = effectiveMode === "rent"
-    ? "\n\nThe user is looking to RENT. Focus on rental listings."
-    : "\n\nThe user is looking to BUY. Focus on properties for sale.";
-
-  // @ts-expect-error -- Perplexity-specific params not in OpenAI types
-  const response = await client.chat.completions.create({
-    model: "sonar",
-    ...buildApiOptions(domains),
-    messages: [
-      { role: "system", content: DISCOVERY_SYSTEM_PROMPT + modeInstruction },
-      { role: "user", content: `Search Luxembourg real estate portals for: ${enrichedQuery}. Provide a summary of what you found.` },
-    ],
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
-  const searchResults = extractSearchResults(response);
-
-  try {
-    const parsed_response = JSON.parse(content);
-    return {
-      searchResults: searchResults.map((sr) => ({
-        url: sr.url,
-        title: sr.title,
-        snippet: sr.snippet,
-      })),
-      summary: parsed_response.summary || "",
-      suggestedFollowUps: Array.isArray(parsed_response.suggestedFollowUps) ? parsed_response.suggestedFollowUps : [],
-      marketContext: parsed_response.marketContext || "",
-    };
-  } catch {
-    return {
-      searchResults: searchResults.map((sr) => ({
-        url: sr.url,
-        title: sr.title,
-        snippet: sr.snippet,
-      })),
-      summary: "",
-      suggestedFollowUps: [],
-      marketContext: "",
-    };
-  }
-}
-
-export async function searchExpandedProperties(
-  originalQuery: string,
-  preferenceHints: string | null,
-  mode: "buy" | "rent" = "buy"
-): Promise<DiscoveryResult> {
-  const client = getClient();
-  const { enrichedQuery, domains, parsed } = await analyzeQuery(originalQuery);
-
-  const commune = parsed.neighborhood || parsed.commune || "";
-  const nearby = getNearbyCommunes(commune);
-  const nearbyText = nearby.length > 0
-    ? `Search specifically in these nearby communes: ${nearby.join(", ")}.`
-    : "Search in nearby communes.";
-
-  const effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
-  const modeInstruction = effectiveMode === "rent"
-    ? "Focus on rental listings."
-    : "Focus on properties for sale.";
-
-  let expandedPrompt = `Based on this original search: "${enrichedQuery}"
-
-Find ADDITIONAL properties in the area. ${nearbyText} ${modeInstruction}`;
-
-  if (preferenceHints) {
-    expandedPrompt += `\n\nUser preferences: ${preferenceHints}`;
-  }
-
-  // @ts-expect-error -- Perplexity-specific params not in OpenAI types
-  const response = await client.chat.completions.create({
-    model: "sonar",
-    ...buildApiOptions(domains),
-    messages: [
-      { role: "system", content: DISCOVERY_SYSTEM_PROMPT },
-      { role: "user", content: expandedPrompt },
-    ],
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
-  const searchResults = extractSearchResults(response);
-
-  try {
-    const parsed_response = JSON.parse(content);
-    return {
-      searchResults: searchResults.map((sr) => ({
-        url: sr.url,
-        title: sr.title,
-        snippet: sr.snippet,
-      })),
-      summary: parsed_response.summary || "",
-      suggestedFollowUps: Array.isArray(parsed_response.suggestedFollowUps) ? parsed_response.suggestedFollowUps : [],
-      marketContext: parsed_response.marketContext || "",
-    };
-  } catch {
-    return {
-      searchResults: searchResults.map((sr) => ({
-        url: sr.url,
-        title: sr.title,
-        snippet: sr.snippet,
-      })),
-      summary: "",
-      suggestedFollowUps: [],
-      marketContext: "",
-    };
-  }
-}
-
-export async function searchWithContext(
-  query: string,
-  previousTurns: ConversationTurn[],
-  mode: "rent" | "buy"
-): Promise<DiscoveryResult> {
-  const client = getClient();
-  const { enrichedQuery, domains, parsed } = await analyzeQuery(query);
-
-  const effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
-  const modeInstruction = effectiveMode === "rent"
-    ? "Focus on rental listings."
-    : "Focus on properties for sale.";
-
-  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
-    { role: "system", content: `${DISCOVERY_SYSTEM_PROMPT}\n\n${modeInstruction}\n\nThis is a follow-up query. Use conversation history for context.` },
-  ];
-
-  for (const turn of previousTurns) {
-    messages.push({ role: turn.role, content: turn.content });
-  }
-  messages.push({ role: "user", content: `Search Luxembourg real estate portals for: ${enrichedQuery}. Provide a summary of what you found.` });
-
-  // @ts-expect-error -- Perplexity-specific params not in OpenAI types
-  const response = await client.chat.completions.create({
-    model: "sonar",
-    ...buildApiOptions(domains),
-    messages,
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
-  const searchResults = extractSearchResults(response);
-
-  try {
-    const parsed_response = JSON.parse(content);
-    return {
-      searchResults: searchResults.map((sr) => ({
-        url: sr.url,
-        title: sr.title,
-        snippet: sr.snippet,
-      })),
-      summary: parsed_response.summary || "",
-      suggestedFollowUps: Array.isArray(parsed_response.suggestedFollowUps) ? parsed_response.suggestedFollowUps : [],
-      marketContext: parsed_response.marketContext || "",
-    };
-  } catch {
-    return {
-      searchResults: searchResults.map((sr) => ({
-        url: sr.url,
-        title: sr.title,
-        snippet: sr.snippet,
-      })),
-      summary: "",
-      suggestedFollowUps: [],
-      marketContext: "",
-    };
-  }
-}
+// ── Compare properties ───────────────────────────────────────────────────────
 
 export async function compareProperties(
   properties: { address: string; city: string; price: number; sqft: number; bedrooms: number; bathrooms: number; propertyType: string; features: string[] }[]
@@ -379,6 +112,19 @@ export async function compareProperties(
   });
 
   return response.choices[0]?.message?.content || "Unable to generate comparison.";
+}
+
+// ── Neighborhood analysis ────────────────────────────────────────────────────
+
+interface PerplexitySearchResult {
+  url: string;
+  title?: string;
+  snippet?: string;
+}
+
+interface PerplexityRawResponse {
+  citations?: string[];
+  search_results?: PerplexitySearchResult[];
 }
 
 export async function getNeighborhoodAnalysis(
