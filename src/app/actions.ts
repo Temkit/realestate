@@ -303,50 +303,43 @@ async function enrichWithAI(
 
   if (properties.length === 0) return fallback;
 
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (!openaiKey) return fallback;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) return fallback;
 
   try {
     const propList = properties.slice(0, 12).map((p, i) =>
       `${i + 1}. ${p.address}, ${p.city} — €${p.price.toLocaleString()}${mode === "rent" ? "/mo" : ""}, ${p.sqft}m², ${p.bedrooms}bd, ${p.propertyType} [${p.source}]${p.aiInsight ? ` (${p.aiInsight})` : ""}`
     ).join("\n");
 
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-nano",
-        temperature: 0,
-        max_tokens: 800,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: `You enrich Luxembourg real estate search results. Given a list of properties, return JSON:
-{
-  "summary": "1-2 sentences: count, price range, highlight the best value. In the same language as the user query.",
-  "marketContext": "One short market insight, max 15 words. E.g. 'Kirchberg averages €10,500/m² — these are 15% below'",
-  "suggestedFollowUps": ["3-4 natural follow-up queries"],
-  "insights": {"1": "short insight for property 1", "2": "...", ...}
-}
+    const prompt = `You enrich Luxembourg real estate search results. Return JSON:
+{"summary": "1-2 sentences: count, price range, best value. Same language as user query.", "marketContext": "One short market insight, max 15 words.", "suggestedFollowUps": ["3-4 follow-up queries"], "insights": {"1": "short insight for property 1", "2": "..."}}
 
-For insights: mention location advantages, value compared to area, notable features from the description. Keep each insight under 8 words. Skip properties that already have good data-driven insights.`,
+For insights: location advantages, value context, notable features. Max 8 words each. Skip properties with good existing insights.
+
+User: "${userQuery}" (${mode})
+
+${propList}`;
+
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 600,
+            responseMimeType: "application/json",
           },
-          {
-            role: "user",
-            content: `User searched: "${userQuery}" (${mode})\n\nResults:\n${propList}`,
-          },
-        ],
-      }),
-    });
+        }),
+      }
+    );
 
     if (!resp.ok) return fallback;
 
     const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content || "";
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const parsed = JSON.parse(content);
 
     // Apply per-property AI insights — merge with existing data-driven ones
