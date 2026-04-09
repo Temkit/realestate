@@ -196,7 +196,7 @@ async function resolveListingUrlsFromCategoryPages(result: SearchResult): Promis
             const nextData = JSON.parse(nextDataMatch[1]);
             const queries = nextData?.props?.pageProps?.dehydratedState?.queries || [];
             for (const q of queries) {
-              const listings = q?.state?.data?.realEstates || q?.state?.data?.results || [];
+              const listings = q?.state?.data?.results || q?.state?.data?.realEstates || [];
               if (!Array.isArray(listings)) continue;
               for (const listing of listings) {
                 // URL is at listing.seo.url, data at listing.realEstate
