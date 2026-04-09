@@ -156,6 +156,141 @@ function parseListingTitle(title: string): {
   return { type, rooms, sqm, isRental };
 }
 
+/**
+ * Scrape category pages to find individual listing URLs for properties that have none.
+ * Category pages (e.g. immotop.lu/location-bureaux/mondorf/) list individual listings
+ * with their prices in the HTML. We match them to our properties by price + city.
+ */
+async function resolveListingUrlsFromCategoryPages(result: SearchResult): Promise<void> {
+  const unmatched = result.properties.filter((p) => !p.listingUrl);
+  const categoryUrls = result.categoryUrls || [];
+
+  if (unmatched.length === 0 || categoryUrls.length === 0) return;
+
+  // Scrape category pages (max 3, in parallel)
+  const pages = categoryUrls.slice(0, 3);
+  const allListingUrls: { url: string; title: string; price: number; sqm: number }[] = [];
+
+  const settled = await Promise.allSettled(
+    pages.map(async (pageUrl) => {
+      try {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 8000);
+        const resp = await fetch(pageUrl, {
+          signal: controller.signal,
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept": "text/html",
+            "Accept-Encoding": "identity",
+          },
+          redirect: "follow",
+        });
+        if (!resp.ok) return;
+        const html = await resp.text();
+        const hostname = new URL(pageUrl).hostname;
+
+        // immotop.lu embeds __NEXT_DATA__ with full listing data including prices
+        const nextDataMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+        if (nextDataMatch) {
+          try {
+            const nextData = JSON.parse(nextDataMatch[1]);
+            const queries = nextData?.props?.pageProps?.dehydratedState?.queries || [];
+            for (const q of queries) {
+              const listings = q?.state?.data?.realEstates || q?.state?.data?.results || [];
+              if (!Array.isArray(listings)) continue;
+              for (const listing of listings) {
+                // URL is at listing.seo.url, data at listing.realEstate
+                const seoUrl = listing?.seo?.url;
+                if (!seoUrl) continue;
+                const url = seoUrl.startsWith("http") ? seoUrl : `https://${hostname}${seoUrl}`;
+                const re = listing?.realEstate || listing;
+                const price = re?.price?.value || re?.properties?.[0]?.price?.value || 0;
+                const surface = re?.properties?.[0]?.surface || "";
+                const sqm = parseInt(surface.replace(/[^\d]/g, "")) || 0;
+                const title = `${re?.title || ""} ${price} ${surface}`;
+                if (/\/annonces\/\d{4,}/.test(url)) {
+                  allListingUrls.push({ url, title, price, sqm });
+                }
+              }
+            }
+          } catch { /* skip malformed JSON */ }
+        }
+
+        // Fallback: extract listing links from HTML for other portals
+        if (allListingUrls.length === 0) {
+          const linkPattern = /<a[^>]*href=["']((?:https?:\/\/[^"']+|\/[^"']+))["'][^>]*>([\s\S]*?)<\/a>/gi;
+          let match;
+          while ((match = linkPattern.exec(html)) !== null) {
+            let href = match[1];
+            const linkText = match[2].replace(/<[^>]+>/g, " ").trim();
+            if (href.startsWith("/")) href = `https://${hostname}${href}`;
+            if (/\.(css|js|png|jpg|svg|woff)/i.test(href)) continue;
+            if (/agences-immobilieres/i.test(href)) continue;
+            try {
+              const path = new URL(href).pathname;
+              if (/\d{4,}/.test(path)) {
+                allListingUrls.push({ url: href, title: linkText, price: 0, sqm: 0 });
+              }
+            } catch { /* skip */ }
+          }
+        }
+      } catch { /* skip failed pages */ }
+    })
+  );
+  void settled;
+
+  if (allListingUrls.length === 0) return;
+
+  // Deduplicate
+  const seen = new Set<string>();
+  const uniqueListings = allListingUrls.filter((l) => {
+    if (seen.has(l.url)) return false;
+    seen.add(l.url);
+    return true;
+  });
+
+  // Match unmatched properties to scraped listing URLs by price (exact match from embedded JSON)
+  const usedUrls = new Set(result.properties.filter((p) => p.listingUrl).map((p) => p.listingUrl!));
+
+  for (const p of unmatched) {
+    let bestUrl: string | null = null;
+    let bestScore = 0;
+
+    for (const listing of uniqueListings) {
+      if (usedUrls.has(listing.url)) continue;
+      let score = 0;
+
+      // Direct price match from embedded JSON data (most reliable)
+      if (listing.price > 0 && p.price > 0 && listing.price === p.price) {
+        score += 5;
+      }
+
+      // Direct sqm match from embedded JSON
+      if (listing.sqm > 0 && p.sqft > 0 && listing.sqm === p.sqft) {
+        score += 3;
+      }
+
+      // Fallback: text matching in title
+      if (score === 0) {
+        const titleLower = listing.title.toLowerCase();
+        if (p.price > 0 && titleLower.includes(String(p.price))) score += 3;
+        if (p.sqft > 0 && titleLower.includes(String(p.sqft))) score += 2;
+        if (p.city && titleLower.includes(p.city.toLowerCase())) score += 1;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestUrl = listing.url;
+      }
+    }
+
+    if (bestUrl && bestScore >= 3) {
+      p.listingUrl = bestUrl;
+      usedUrls.add(bestUrl);
+    }
+  }
+}
+
 async function enforceRateLimit() {
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
@@ -179,6 +314,9 @@ export async function searchAction(query: string, mode: "buy" | "rent" = "buy"):
   }
 
   const result = await searchProperties(query, mode);
+
+  // For properties without listing URLs, scrape category pages to find individual listing URLs
+  await resolveListingUrlsFromCategoryPages(result);
 
   // Enrich with listing page data server-side before returning
   await enrichFromListingPages(result);

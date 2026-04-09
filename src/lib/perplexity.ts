@@ -331,7 +331,7 @@ function parseProperties(
   content: string,
   searchResults: PerplexitySearchResult[],
   idPrefix: string
-): { properties: Property[]; summary: string; suggestedFollowUps: string[]; marketContext: string } {
+): { properties: Property[]; summary: string; suggestedFollowUps: string[]; marketContext: string; categoryUrls: string[] } {
   const parsed = JSON.parse(content);
   const rawProperties: unknown[] = Array.isArray(parsed.properties) ? parsed.properties : [];
   const summary: string = parsed.summary || "";
@@ -376,7 +376,52 @@ function parseProperties(
     };
   });
 
-  return { properties, summary, suggestedFollowUps, marketContext };
+  // Second pass: match properties without URLs by price/sqft against search_results titles
+  for (const p of properties) {
+    if (p.listingUrl) continue;
+
+    let bestUrl: string | null = null;
+    let bestScore = 0;
+
+    for (const sr of searchResults) {
+      if (usedUrls.has(sr.url)) continue;
+      if (!looksLikeListingUrl(sr.url)) continue;
+
+      const haystack = ((sr.title || "") + " " + (sr.snippet || "")).toLowerCase();
+      let score = 0;
+
+      if (p.price > 0 && haystack.includes(String(p.price))) score += 2;
+      if (p.sqft > 0 && haystack.includes(String(p.sqft))) score += 2;
+      if (p.city && haystack.includes(p.city.toLowerCase())) score += 1;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestUrl = sr.url;
+      }
+    }
+
+    if (bestUrl && bestScore >= 2) {
+      p.listingUrl = bestUrl;
+      usedUrls.add(bestUrl);
+    }
+  }
+
+  // Collect category page URLs that properties reference but couldn't use
+  // We'll return these so the actions layer can scrape them for listing URLs
+  const categoryUrls: string[] = [];
+  for (const sr of searchResults) {
+    if (usedUrls.has(sr.url)) continue;
+    if (looksLikeListingUrl(sr.url)) continue;
+    // It's a category page from a known portal
+    try {
+      const hostname = new URL(sr.url).hostname.toLowerCase();
+      if (hostname.includes("immotop.lu") || hostname.includes("wortimmo.lu")) {
+        categoryUrls.push(sr.url);
+      }
+    } catch { /* skip */ }
+  }
+
+  return { properties, summary, suggestedFollowUps, marketContext, categoryUrls };
 }
 
 // ── Search functions ─────────────────────────────────────────────────────────
@@ -413,13 +458,14 @@ export async function searchProperties(query: string, mode: "buy" | "rent" = "bu
   }
 
   try {
-    const { properties, summary, suggestedFollowUps, marketContext } = parseProperties(content, searchResults, "prop");
+    const { properties, summary, suggestedFollowUps, marketContext, categoryUrls } = parseProperties(content, searchResults, "prop");
     return {
       properties,
       summary: summary || `Found ${properties.length} results`,
       citations: searchResults.map((sr) => sr.url),
       suggestedFollowUps,
       marketContext,
+      categoryUrls,
     };
   } catch {
     return {

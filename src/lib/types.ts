@@ -47,6 +47,7 @@ export interface SearchResult {
   citations: string[];
   suggestedFollowUps?: string[];
   marketContext?: string;
+  categoryUrls?: string[];
 }
 
 export interface ConversationTurn {
