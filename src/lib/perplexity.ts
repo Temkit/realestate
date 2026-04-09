@@ -16,76 +16,7 @@ function getClient() {
   return clientInstance;
 }
 
-// ── Query parsing via Perplexity ─────────────────────────────────────────────
-
-export interface ParsedQuery {
-  commune: string | null;
-  neighborhood: string | null;
-  propertyType: string | null;
-  transactionType: "buy" | "rent" | "any";
-  cleanedQuery: string;
-}
-
-const QUERY_PARSE_SCHEMA = {
-  type: "object" as const,
-  required: ["commune", "neighborhood", "propertyType", "transactionType", "cleanedQuery"],
-  additionalProperties: false,
-  properties: {
-    commune: { type: ["string", "null"] as const, description: "The Luxembourg commune name, properly spelled. null if not identifiable." },
-    neighborhood: { type: ["string", "null"] as const, description: "Neighborhood within Luxembourg City (Kirchberg, Bonnevoie, Gasperich, etc.) if applicable. null otherwise." },
-    propertyType: { type: ["string", "null"] as const, description: "apartment, house, office, land, commercial, studio, or null" },
-    transactionType: { type: "string" as const, enum: ["buy", "rent", "any"], description: "buy, rent, or any if unclear" },
-    cleanedQuery: { type: "string" as const, description: "The user query rewritten as a clean real estate search query for Luxembourg portals" },
-  },
-};
-
-export async function parseQuery(rawQuery: string): Promise<ParsedQuery> {
-  const client = getClient();
-
-  const response = await (client.chat.completions.create as Function)({
-    model: "sonar",
-    web_search_options: { search_context_size: "low" },
-    response_format: {
-      type: "json_schema",
-      json_schema: { name: "query_parse", schema: QUERY_PARSE_SCHEMA, strict: true },
-    },
-    max_tokens: 256,
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: "Extract the Luxembourg location and intent from a real estate search query. Correct misspellings. Identify the commune (one of the 100 Luxembourg communes), any neighborhood within Luxembourg City, property type, and whether the user wants to buy or rent. Rewrite the query as a clean search for Luxembourg real estate portals.",
-      },
-      { role: "user", content: rawQuery },
-    ],
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
-  try {
-    return JSON.parse(content) as ParsedQuery;
-  } catch {
-    return {
-      commune: null,
-      neighborhood: null,
-      propertyType: null,
-      transactionType: "any",
-      cleanedQuery: rawQuery + " Luxembourg",
-    };
-  }
-}
-
-export async function analyzeQuery(rawQuery: string): Promise<{ enrichedQuery: string; parsed: ParsedQuery }> {
-  const parsed = await parseQuery(rawQuery);
-
-  let enrichedQuery = parsed.cleanedQuery;
-  if (!/luxemb/i.test(enrichedQuery)) {
-    enrichedQuery += " Luxembourg";
-  }
-
-  return { enrichedQuery, parsed };
-}
-
-// ── Compare properties ───────────────────────────────────────────────────────
+// ── Compare properties (needs web search — stays on Perplexity) ─────────────
 
 export async function compareProperties(
   properties: { address: string; city: string; price: number; sqft: number; bedrooms: number; bathrooms: number; propertyType: string; features: string[] }[]

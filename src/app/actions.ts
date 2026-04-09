@@ -1,8 +1,8 @@
 "use server";
 
 import { headers } from "next/headers";
+import { analyzeQuery } from "@/lib/gemini";
 import {
-  analyzeQuery,
   compareProperties,
   getNeighborhoodAnalysis,
 } from "@/lib/perplexity";
