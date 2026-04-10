@@ -423,49 +423,63 @@ async function runPipeline(
   query: string,
   mode: "buy" | "rent"
 ): Promise<SearchResult> {
-  // Step 1: Parse query with Gemini
-  const { enrichedQuery, parsed } = await analyzeQuery(query);
-  const effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
+  // Step 1: Parse query with Gemini (fallback: use raw query)
+  let enrichedQuery = query + " Luxembourg";
+  let effectiveMode = mode;
+  try {
+    const { enrichedQuery: eq, parsed } = await analyzeQuery(query);
+    enrichedQuery = eq;
+    effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
+  } catch { /* use defaults */ }
 
-  // Step 2: Brave Search — find listing URLs from all 4 portals
-  const braveResults = await discoverUrls(enrichedQuery);
+  // Step 2: Brave Search (fallback: empty results, pipeline continues)
+  let braveResults: BraveResult[] = [];
+  try {
+    braveResults = await discoverUrls(enrichedQuery);
+  } catch { /* no URLs found */ }
+
   const listingUrls = filterListingUrls(braveResults);
   const immotopCategories = [...new Set(
     braveResults.filter((r) => isImmotopCategoryUrl(r.url)).map((r) => r.url)
   )].slice(0, 3);
 
-  // Step 3a: Free og:fetch — get og:image + parse title for price/surface
+  // Step 3: ALL data fetching in parallel — og:fetch + categories + Gemini + Firecrawl
   const ogResults: Record<string, OgData> = {};
-  const ogFetches = await Promise.allSettled(
-    listingUrls.map(async (url) => {
-      const og = await fetchOgTags(url);
-      if (og) ogResults[url] = og;
-    })
-  );
-  void ogFetches;
-
-  // Step 3 (parallel): Immotop category pages (__NEXT_DATA__, free)
   const categoryListings: ScrapedListing[] = [];
-  if (immotopCategories.length > 0) {
-    const catResults = await Promise.allSettled(
-      immotopCategories.map(scrapeImmotopCategoryPage)
-    );
-    for (const result of catResults) {
-      if (result.status === "fulfilled") categoryListings.push(...result.value);
-    }
-  }
+  let geminiListings: ScrapedListing[] = [];
+  let firecrawlImages: Record<string, string> = {};
 
-  // Step 3b: Gemini URL Context — read pages missing data (batch call)
+  // Run og:fetch and category scraping in parallel (both free)
+  const [ogSettled, catSettled] = await Promise.all([
+    // og:fetch all listing URLs
+    Promise.allSettled(
+      listingUrls.map(async (url) => {
+        try { const og = await fetchOgTags(url); if (og) ogResults[url] = og; } catch { /* skip */ }
+      })
+    ),
+    // Immotop category pages
+    immotopCategories.length > 0
+      ? Promise.allSettled(immotopCategories.map(async (url) => {
+          try { const listings = await scrapeImmotopCategoryPage(url); categoryListings.push(...listings); } catch { /* skip */ }
+        }))
+      : Promise.resolve([]),
+  ]);
+  void ogSettled;
+  void catSettled;
+
+  // Gemini URL Context for URLs still missing price (fallback: skip)
   const urlsNeedingData = listingUrls.filter((u) => !(ogResults[u]?.price > 0));
   const { cached: cachedListings, uncached: urlsToRead } = checkScrapeCache(urlsNeedingData);
-  const geminiListings = await geminiReadUrls(urlsToRead);
+  try {
+    geminiListings = await geminiReadUrls(urlsToRead);
+    for (const listing of geminiListings) setScrapeCache(listing.url, listing);
+  } catch { /* Gemini failed — continue with what we have */ }
 
-  // Cache Gemini results
-  for (const listing of geminiListings) setScrapeCache(listing.url, listing);
-
-  // Step 3c: Firecrawl — get images for URLs that have no og:image
+  // Firecrawl for images — only URLs missing og:image (fallback: no images)
   const urlsMissingImage = listingUrls.filter((u) => !ogResults[u]?.ogImage);
-  const firecrawlImages = await firecrawlForImages(urlsMissingImage);
+  try {
+    firecrawlImages = await firecrawlForImages(urlsMissingImage);
+  } catch { /* Firecrawl failed — continue without images */ }
 
   // Step 4: Merge all data sources
   const seenUrls = new Set<string>();
@@ -480,7 +494,6 @@ async function runPipeline(
   for (const l of [...geminiListings, ...cachedListings]) {
     if (seenUrls.has(l.url)) continue;
     seenUrls.add(l.url);
-    // Merge with og:data and Firecrawl images
     const og = ogResults[l.url];
     const fcImg = firecrawlImages[l.url];
     if (og?.ogImage) l.imageUrl = og.ogImage;
@@ -490,7 +503,7 @@ async function runPipeline(
     allListings.push(l);
   }
 
-  // URLs that only have og:data (no Gemini/category data) — build from og:title
+  // URLs that only have og:data — build from og:title
   for (const url of listingUrls) {
     if (seenUrls.has(url)) continue;
     const og = ogResults[url];
@@ -506,17 +519,24 @@ async function runPipeline(
     });
   }
 
-  // Step 5: Filter by mode, convert to Property[]
+  // Step 5: Filter + convert
   const filtered = allListings.filter((l) => l.contractType === effectiveMode);
   const properties = filtered.map((listing, i) =>
     scrapedListingToProperty(listing, `prop-${Date.now()}-${i}`)
   );
 
-  // Step 6: Compute data-driven insights
+  // Step 6: Insights (never fails — pure computation)
   computeInsights(properties);
 
-  // Step 7: AI enrichment
-  const aiEnrichment = await enrichWithAI(properties, query, effectiveMode);
+  // Step 7: AI enrichment (fallback: computed summary)
+  let aiEnrichment: AIEnrichment = {
+    summary: `Found ${properties.length} properties`,
+    marketContext: "",
+    suggestedFollowUps: [],
+  };
+  try {
+    aiEnrichment = await enrichWithAI(properties, query, effectiveMode);
+  } catch { /* use fallback summary */ }
 
   return {
     properties,
@@ -553,70 +573,18 @@ export async function expandedSearchAction(
   if (!query.trim()) return { properties: [], summary: "", citations: [] };
   await enforceRateLimit();
 
-  // Lightweight expanded search — only Brave + og:fetch for nearby communes
-  // No Gemini URL Context, no Firecrawl — keeps it fast and cheap
+  // Full pipeline for nearby communes — same quality as primary search
   try {
     const { parsed } = await analyzeQuery(query);
     const commune = parsed.neighborhood || parsed.commune || "";
     const nearby = getNearbyCommunes(commune);
     if (nearby.length === 0) return { properties: [], summary: "", citations: [] };
 
-    // Search nearby communes only (not the original)
     const nearbyQuery = `${parsed.propertyType || ""} ${nearby.slice(0, 3).join(" ")} Luxembourg`;
-    const braveResults = await discoverUrls(nearbyQuery);
-    const listingUrls = filterListingUrls(braveResults);
-
-    if (listingUrls.length === 0) return { properties: [], summary: "", citations: [] };
-
-    // Quick data: og:fetch + Gemini batch (skip Firecrawl for speed)
-    const ogResults: Record<string, OgData> = {};
-    await Promise.allSettled(
-      listingUrls.map(async (url) => {
-        const og = await fetchOgTags(url);
-        if (og) ogResults[url] = og;
-      })
-    );
-
-    const urlsNeedingData = listingUrls.filter((u) => !(ogResults[u]?.price > 0));
-    const geminiListings = urlsNeedingData.length > 0 ? await geminiReadUrls(urlsNeedingData) : [];
-
-    // Build properties quickly
-    const effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
-    const seenUrls = new Set<string>();
-    const allListings: ScrapedListing[] = [];
-
-    for (const l of geminiListings) {
-      if (!seenUrls.has(l.url)) {
-        seenUrls.add(l.url);
-        if (ogResults[l.url]?.ogImage) l.imageUrl = ogResults[l.url].ogImage;
-        allListings.push(l);
-      }
+    if (preferenceHints) {
+      return runPipeline(`${nearbyQuery} ${preferenceHints}`, mode);
     }
-    for (const url of listingUrls) {
-      if (seenUrls.has(url)) continue;
-      const og = ogResults[url];
-      if (!og || (!og.price && !og.surface)) continue;
-      seenUrls.add(url);
-      const hostname = new URL(url).hostname.replace("www.", "");
-      const titleMode = og.ogTitle && /louer|location|rent/i.test(og.ogTitle) ? "rent" as const : "buy" as const;
-      allListings.push({
-        url, source: hostname, price: og.price, surface: og.surface,
-        rooms: 0, bathrooms: 0, propertyType: "Property",
-        city: "", address: "", imageUrl: og.ogImage || null,
-        contractType: titleMode, description: og.ogTitle || "",
-      });
-    }
-
-    const filtered = allListings.filter((l) => l.contractType === effectiveMode);
-    const properties = filtered.map((listing, i) =>
-      scrapedListingToProperty(listing, `exp-${Date.now()}-${i}`)
-    );
-
-    return {
-      properties,
-      summary: properties.length > 0 ? `${properties.length} similar properties nearby` : "",
-      citations: listingUrls,
-    };
+    return runPipeline(nearbyQuery, mode);
   } catch {
     return { properties: [], summary: "", citations: [] };
   }
