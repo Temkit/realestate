@@ -23,6 +23,7 @@ import {
 import type { OgData } from "@/lib/search-cache";
 import { getNearbyCommunes } from "@/lib/communes";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { logSearch } from "@/lib/analytics";
 import type {
   Property,
   SearchResult,
@@ -579,13 +580,30 @@ export async function searchAction(
 ): Promise<SearchResult> {
   if (!query.trim()) return { properties: [], summary: "", citations: [] };
   await enforceRateLimit();
+  const start = Date.now();
 
   const cacheKey = buildSearchCacheKey(query, mode);
   const cached = await getSearchCache(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    // Log cache hit (fire and forget)
+    logSearch({ query, mode, commune: null, propertyType: null, resultCount: cached.properties.length, cacheHit: true, durationMs: Date.now() - start }).catch(() => {});
+    return cached;
+  }
 
   const result = await runPipeline(query, mode);
   await setSearchCache(cacheKey, result);
+
+  // Log cache miss with parsed data (fire and forget)
+  const parseData = await getParseCache(query);
+  logSearch({
+    query, mode,
+    commune: parseData?.parsed?.commune || parseData?.parsed?.neighborhood || null,
+    propertyType: parseData?.parsed?.propertyType || null,
+    resultCount: result.properties.length,
+    cacheHit: false,
+    durationMs: Date.now() - start,
+  }).catch(() => {});
+
   return result;
 }
 
@@ -626,13 +644,28 @@ export async function refineSearchAction(
 ): Promise<SearchResult> {
   if (!query.trim()) return { properties: [], summary: "", citations: [] };
   await enforceRateLimit();
+  const start = Date.now();
 
   const cacheKey = buildSearchCacheKey(query, mode);
   const cached = await getSearchCache(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    logSearch({ query, mode, commune: null, propertyType: null, resultCount: cached.properties.length, cacheHit: true, durationMs: Date.now() - start }).catch(() => {});
+    return cached;
+  }
 
   const result = await runPipeline(query, mode);
   await setSearchCache(cacheKey, result);
+
+  const parseData = await getParseCache(query);
+  logSearch({
+    query, mode,
+    commune: parseData?.parsed?.commune || parseData?.parsed?.neighborhood || null,
+    propertyType: parseData?.parsed?.propertyType || null,
+    resultCount: result.properties.length,
+    cacheHit: false,
+    durationMs: Date.now() - start,
+  }).catch(() => {});
+
   return result;
 }
 
