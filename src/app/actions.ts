@@ -13,7 +13,14 @@ import {
   setSearchCache,
   checkScrapeCache,
   setScrapeCache,
+  getOgCache,
+  setOgCache,
+  getImageCache,
+  setImageCache,
+  getParseCache,
+  setParseCache,
 } from "@/lib/search-cache";
+import type { OgData } from "@/lib/search-cache";
 import { getNearbyCommunes } from "@/lib/communes";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type {
@@ -145,16 +152,13 @@ function filterListingUrls(results: BraveResult[]): string[] {
   return urls.slice(0, 15);
 }
 
-// ── Step 3a: Free og:image fetch ────────────────────────────────────────────
-
-interface OgData {
-  ogImage: string | null;
-  ogTitle: string | null;
-  price: number;
-  surface: number;
-}
+// ── Step 3a: Free og:image fetch (cached 7d) ───────────────────────────────
 
 async function fetchOgTags(url: string): Promise<OgData | null> {
+  // Check cache first
+  const cached = await getOgCache(url);
+  if (cached) return cached;
+
   try {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 8000);
@@ -187,7 +191,9 @@ async function fetchOgTags(url: string): Promise<OgData | null> {
     }
 
     const validImg = ogImage && !/logo|favicon|icon/i.test(ogImage) ? ogImage : null;
-    return { ogImage: validImg, ogTitle, price, surface };
+    const result: OgData = { ogImage: validImg, ogTitle: ogTitle || null, price, surface };
+    await setOgCache(url, result);
+    return result;
   } catch { return null; }
 }
 
@@ -254,15 +260,25 @@ async function geminiReadUrls(urls: string[]): Promise<ScrapedListing[]> {
 
 async function firecrawlForImages(urls: string[]): Promise<Record<string, string>> {
   if (urls.length === 0) return {};
+  const images: Record<string, string> = {};
+
+  // Check image cache first
+  const uncachedUrls: string[] = [];
+  for (const url of urls) {
+    const cached = await getImageCache(url);
+    if (cached) { images[url] = cached; }
+    else { uncachedUrls.push(url); }
+  }
+  if (uncachedUrls.length === 0) return images;
+
   try {
     const Firecrawl = (await import("firecrawl")).default;
     const apiKey = process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) return {};
+    if (!apiKey) return images;
     const app = new Firecrawl({ apiKey });
-    const images: Record<string, string> = {};
 
     // Max 3 Firecrawl calls for images
-    for (const url of urls.slice(0, 3)) {
+    for (const url of uncachedUrls.slice(0, 3)) {
       try {
         const result = await app.scrape(url);
         const meta = result.metadata || {};
@@ -272,11 +288,12 @@ async function firecrawlForImages(urls: string[]): Promise<Record<string, string
         const img = ogImg || mdImg;
         if (img && !/logo|favicon|icon/i.test(img)) {
           images[url] = img;
+          await setImageCache(url, img);
         }
       } catch { /* skip failed */ }
     }
     return images;
-  } catch { return {}; }
+  } catch { return images; }
 }
 
 // ── AI Enrichment ───────────────────────────────────────────────────────────
@@ -423,13 +440,20 @@ async function runPipeline(
   query: string,
   mode: "buy" | "rent"
 ): Promise<SearchResult> {
-  // Step 1: Parse query with Gemini (fallback: use raw query)
+  // Step 1: Parse query with Gemini (cached 24h, fallback: raw query)
   let enrichedQuery = query + " Luxembourg";
   let effectiveMode = mode;
   try {
-    const { enrichedQuery: eq, parsed } = await analyzeQuery(query);
-    enrichedQuery = eq;
-    effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
+    const cachedParse = await getParseCache(query);
+    if (cachedParse) {
+      enrichedQuery = cachedParse.enrichedQuery;
+      effectiveMode = cachedParse.parsed.transactionType !== "any" ? cachedParse.parsed.transactionType : mode;
+    } else {
+      const { enrichedQuery: eq, parsed } = await analyzeQuery(query);
+      enrichedQuery = eq;
+      effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
+      await setParseCache(query, { enrichedQuery: eq, parsed });
+    }
   } catch { /* use defaults */ }
 
   // Step 2: Brave Search (fallback: empty results, pipeline continues)
@@ -469,10 +493,10 @@ async function runPipeline(
 
   // Gemini URL Context for URLs still missing price (fallback: skip)
   const urlsNeedingData = listingUrls.filter((u) => !(ogResults[u]?.price > 0));
-  const { cached: cachedListings, uncached: urlsToRead } = checkScrapeCache(urlsNeedingData);
+  const { cached: cachedListings, uncached: urlsToRead } = await checkScrapeCache(urlsNeedingData);
   try {
     geminiListings = await geminiReadUrls(urlsToRead);
-    for (const listing of geminiListings) setScrapeCache(listing.url, listing);
+    for (const listing of geminiListings) await setScrapeCache(listing.url, listing);
   } catch { /* Gemini failed — continue with what we have */ }
 
   // Firecrawl for images — only URLs missing og:image (fallback: no images)
@@ -557,11 +581,11 @@ export async function searchAction(
   await enforceRateLimit();
 
   const cacheKey = buildSearchCacheKey(query, mode);
-  const cached = getSearchCache(cacheKey);
+  const cached = await getSearchCache(cacheKey);
   if (cached) return cached;
 
   const result = await runPipeline(query, mode);
-  setSearchCache(cacheKey, result);
+  await setSearchCache(cacheKey, result);
   return result;
 }
 
@@ -573,18 +597,23 @@ export async function expandedSearchAction(
   if (!query.trim()) return { properties: [], summary: "", citations: [] };
   await enforceRateLimit();
 
-  // Full pipeline for nearby communes — same quality as primary search
+  // Full pipeline for nearby communes — cached + same quality as primary
   try {
     const { parsed } = await analyzeQuery(query);
     const commune = parsed.neighborhood || parsed.commune || "";
     const nearby = getNearbyCommunes(commune);
     if (nearby.length === 0) return { properties: [], summary: "", citations: [] };
 
-    const nearbyQuery = `${parsed.propertyType || ""} ${nearby.slice(0, 3).join(" ")} Luxembourg`;
-    if (preferenceHints) {
-      return runPipeline(`${nearbyQuery} ${preferenceHints}`, mode);
-    }
-    return runPipeline(nearbyQuery, mode);
+    let nearbyQuery = `${parsed.propertyType || ""} ${nearby.slice(0, 3).join(" ")} Luxembourg`;
+    if (preferenceHints) nearbyQuery += ` ${preferenceHints}`;
+
+    const cacheKey = buildSearchCacheKey(nearbyQuery, mode);
+    const cached = await getSearchCache(cacheKey);
+    if (cached) return cached;
+
+    const result = await runPipeline(nearbyQuery, mode);
+    await setSearchCache(cacheKey, result);
+    return result;
   } catch {
     return { properties: [], summary: "", citations: [] };
   }
@@ -599,11 +628,11 @@ export async function refineSearchAction(
   await enforceRateLimit();
 
   const cacheKey = buildSearchCacheKey(query, mode);
-  const cached = getSearchCache(cacheKey);
+  const cached = await getSearchCache(cacheKey);
   if (cached) return cached;
 
   const result = await runPipeline(query, mode);
-  setSearchCache(cacheKey, result);
+  await setSearchCache(cacheKey, result);
   return result;
 }
 
