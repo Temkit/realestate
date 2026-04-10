@@ -553,14 +553,73 @@ export async function expandedSearchAction(
   if (!query.trim()) return { properties: [], summary: "", citations: [] };
   await enforceRateLimit();
 
-  const { parsed } = await analyzeQuery(query);
-  const commune = parsed.neighborhood || parsed.commune || "";
-  const nearby = getNearbyCommunes(commune);
-  let expandedQuery = query;
-  if (nearby.length > 0) expandedQuery = `${query} ${nearby.slice(0, 3).join(" ")}`;
-  if (preferenceHints) expandedQuery += ` ${preferenceHints}`;
+  // Lightweight expanded search — only Brave + og:fetch for nearby communes
+  // No Gemini URL Context, no Firecrawl — keeps it fast and cheap
+  try {
+    const { parsed } = await analyzeQuery(query);
+    const commune = parsed.neighborhood || parsed.commune || "";
+    const nearby = getNearbyCommunes(commune);
+    if (nearby.length === 0) return { properties: [], summary: "", citations: [] };
 
-  return runPipeline(expandedQuery, mode);
+    // Search nearby communes only (not the original)
+    const nearbyQuery = `${parsed.propertyType || ""} ${nearby.slice(0, 3).join(" ")} Luxembourg`;
+    const braveResults = await discoverUrls(nearbyQuery);
+    const listingUrls = filterListingUrls(braveResults);
+
+    if (listingUrls.length === 0) return { properties: [], summary: "", citations: [] };
+
+    // Quick data: og:fetch + Gemini batch (skip Firecrawl for speed)
+    const ogResults: Record<string, OgData> = {};
+    await Promise.allSettled(
+      listingUrls.map(async (url) => {
+        const og = await fetchOgTags(url);
+        if (og) ogResults[url] = og;
+      })
+    );
+
+    const urlsNeedingData = listingUrls.filter((u) => !(ogResults[u]?.price > 0));
+    const geminiListings = urlsNeedingData.length > 0 ? await geminiReadUrls(urlsNeedingData) : [];
+
+    // Build properties quickly
+    const effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
+    const seenUrls = new Set<string>();
+    const allListings: ScrapedListing[] = [];
+
+    for (const l of geminiListings) {
+      if (!seenUrls.has(l.url)) {
+        seenUrls.add(l.url);
+        if (ogResults[l.url]?.ogImage) l.imageUrl = ogResults[l.url].ogImage;
+        allListings.push(l);
+      }
+    }
+    for (const url of listingUrls) {
+      if (seenUrls.has(url)) continue;
+      const og = ogResults[url];
+      if (!og || (!og.price && !og.surface)) continue;
+      seenUrls.add(url);
+      const hostname = new URL(url).hostname.replace("www.", "");
+      const titleMode = og.ogTitle && /louer|location|rent/i.test(og.ogTitle) ? "rent" as const : "buy" as const;
+      allListings.push({
+        url, source: hostname, price: og.price, surface: og.surface,
+        rooms: 0, bathrooms: 0, propertyType: "Property",
+        city: "", address: "", imageUrl: og.ogImage || null,
+        contractType: titleMode, description: og.ogTitle || "",
+      });
+    }
+
+    const filtered = allListings.filter((l) => l.contractType === effectiveMode);
+    const properties = filtered.map((listing, i) =>
+      scrapedListingToProperty(listing, `exp-${Date.now()}-${i}`)
+    );
+
+    return {
+      properties,
+      summary: properties.length > 0 ? `${properties.length} similar properties nearby` : "",
+      citations: listingUrls,
+    };
+  } catch {
+    return { properties: [], summary: "", citations: [] };
+  }
 }
 
 export async function refineSearchAction(
