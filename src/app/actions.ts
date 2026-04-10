@@ -6,7 +6,7 @@ import {
   compareProperties,
   getNeighborhoodAnalysis,
 } from "@/lib/perplexity";
-import { scrapeMultipleUrls, scrapeImmotopCategoryPage } from "@/lib/firecrawl-scraper";
+import { scrapeImmotopCategoryPage } from "@/lib/firecrawl-scraper";
 import {
   buildSearchCacheKey,
   getSearchCache,
@@ -73,32 +73,16 @@ async function braveSearch(query: string): Promise<BraveResult[]> {
     }
   );
 
-  if (!resp.ok) {
-    console.error(`Brave search failed: ${resp.status} ${resp.statusText}`);
-    return [];
-  }
-
+  if (!resp.ok) return [];
   const data = await resp.json();
-  const results: BraveResult[] = [];
-
-  for (const item of data.web?.results || []) {
-    results.push({
-      url: item.url || "",
-      title: item.title || "",
-      description: item.description || "",
-    });
-  }
-
-  return results;
+  return (data.web?.results || []).map((item: { url?: string; title?: string; description?: string }) => ({
+    url: item.url || "",
+    title: item.title || "",
+    description: item.description || "",
+  }));
 }
 
-async function discoverUrls(
-  query: string,
-  _mode: string
-): Promise<BraveResult[]> {
-  // Don't add mode keywords to Brave query — let Brave find ALL listings.
-  // Mode filtering happens after scraping, where we have accurate contract type.
-  // Adding "louer" or "vendre" to Brave excludes valid results.
+async function discoverUrls(query: string): Promise<BraveResult[]> {
   const searches = PORTALS.map((portal) =>
     braveSearch(`site:${portal} ${query} Luxembourg`)
   );
@@ -121,26 +105,22 @@ async function discoverUrls(
   return allResults;
 }
 
-// ── URL filtering ────────────────────────────────────────────────────────────
+// ── URL classification ──────────────────────────────────────────────────────
 
-const LISTING_URL_PATTERNS: Record<string, RegExp> = {
+const LISTING_PATTERNS: Record<string, RegExp> = {
   "athome.lu": /id-\d+/,
   "immotop.lu": /\/annonces\/\d+/,
   "wortimmo.lu": /id_\d+/,
-  "vivi.lu": /\/\d+\/?$/,
+  "vivi.lu": /\/\d{4,}\/?$/,
 };
 
 function isListingUrl(url: string): boolean {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
-    for (const [portal, pattern] of Object.entries(LISTING_URL_PATTERNS)) {
-      if (hostname.includes(portal)) {
-        return pattern.test(url);
-      }
+    for (const [portal, pattern] of Object.entries(LISTING_PATTERNS)) {
+      if (hostname.includes(portal)) return pattern.test(url) && !/agences/.test(url);
     }
-  } catch {
-    // ignore
-  }
+  } catch { /* ignore */ }
   return false;
 }
 
@@ -148,14 +128,13 @@ function isImmotopCategoryUrl(url: string): boolean {
   try {
     const h = new URL(url).hostname.toLowerCase();
     const p = new URL(url).pathname;
-    return h.includes("immotop.lu") && !isListingUrl(url) && !/agences|prix-immobilier|communes/.test(p) && p.length > 5;
+    return h.includes("immotop.lu") && !isListingUrl(url) && !/agences|prix-immobilier|communes|search/.test(p) && p.length > 5;
   } catch { return false; }
 }
 
 function filterListingUrls(results: BraveResult[]): string[] {
   const seen = new Set<string>();
   const urls: string[] = [];
-
   for (const result of results) {
     if (!result.url || seen.has(result.url)) continue;
     if (isListingUrl(result.url)) {
@@ -163,139 +142,144 @@ function filterListingUrls(results: BraveResult[]): string[] {
       urls.push(result.url);
     }
   }
-
   return urls.slice(0, 15);
 }
 
-// ── Insights computation ─────────────────────────────────────────────────────
+// ── Step 3a: Free og:image fetch ────────────────────────────────────────────
 
-function computeInsights(properties: Property[]): void {
-  if (properties.length === 0) return;
+interface OgData {
+  ogImage: string | null;
+  ogTitle: string | null;
+  price: number;
+  surface: number;
+}
 
-  const withPrice = properties.filter((p) => p.price > 0);
-  const withPpsqm = properties.filter(
-    (p) => p.pricePerSqm && p.pricePerSqm > 0
-  );
-  const withSqft = properties.filter((p) => p.sqft > 0);
-
-  const avgPrice =
-    withPrice.length > 0
-      ? withPrice.reduce((s, p) => s + p.price, 0) / withPrice.length
-      : 0;
-  const avgPpsqm =
-    withPpsqm.length > 0
-      ? withPpsqm.reduce((s, p) => s + (p.pricePerSqm || 0), 0) /
-        withPpsqm.length
-      : 0;
-
-  const lowestPrice =
-    withPrice.length > 0
-      ? withPrice.reduce((min, p) => (p.price < min.price ? p : min))
-      : null;
-  const bestPpsqm =
-    withPpsqm.length > 0
-      ? withPpsqm.reduce((min, p) =>
-          (p.pricePerSqm || Infinity) < (min.pricePerSqm || Infinity) ? p : min
-        )
-      : null;
-  const largestSurface =
-    withSqft.length > 0
-      ? withSqft.reduce((max, p) => (p.sqft > max.sqft ? p : max))
-      : null;
-
-  const cityCount: Record<string, number> = {};
-  for (const p of properties) {
-    if (p.city) cityCount[p.city] = (cityCount[p.city] || 0) + 1;
-  }
-
-  for (const p of properties) {
-    const insights: string[] = [];
-
-    if (lowestPrice && p.id === lowestPrice.id && withPrice.length > 2) {
-      insights.push("Lowest price");
+async function fetchOgTags(url: string): Promise<OgData | null> {
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 8000);
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36", "Accept-Encoding": "identity" },
+      redirect: "follow",
+    });
+    if (!resp.ok) return null;
+    const reader = resp.body?.getReader();
+    if (!reader) return null;
+    const decoder = new TextDecoder();
+    let html = "";
+    while (html.length < 50000) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      html += decoder.decode(value, { stream: true });
     }
-    if (bestPpsqm && p.id === bestPpsqm.id && withPpsqm.length > 2) {
-      insights.push("Best \u20ac/m\u00b2");
-    }
-    if (
-      largestSurface &&
-      p.id === largestSurface.id &&
-      withSqft.length > 2
-    ) {
-      insights.push("Largest");
+    reader.cancel();
+
+    const ogImage = (html.match(/property="og:image"[^>]*content="([^"]+)"/i) || html.match(/content="([^"]+)"[^>]*property="og:image"/i) || [])[1];
+    const ogTitle = (html.match(/property="og:title"[^>]*content="([^"]+)"/i) || html.match(/content="([^"]+)"[^>]*property="og:title"/i) || [])[1];
+
+    let price = 0, surface = 0;
+    if (ogTitle) {
+      const pm = ogTitle.match(/([\d\s.]+)\s*€/);
+      if (pm) price = parseInt(pm[1].replace(/[\s.]/g, ""));
+      const sm = ogTitle.match(/(\d{2,})\s*m[²2]/);
+      if (sm) surface = parseInt(sm[1]);
     }
 
-    if (p.price > 0 && avgPrice > 0 && withPrice.length > 2) {
-      const diff = ((p.price - avgPrice) / avgPrice) * 100;
-      if (diff <= -20)
-        insights.push(`${Math.abs(Math.round(diff))}% below avg`);
-      else if (diff >= 20) insights.push(`${Math.round(diff)}% above avg`);
-    }
+    const validImg = ogImage && !/logo|favicon|icon/i.test(ogImage) ? ogImage : null;
+    return { ogImage: validImg, ogTitle, price, surface };
+  } catch { return null; }
+}
 
-    if (p.pricePerSqm && avgPpsqm > 0 && withPpsqm.length > 2) {
-      const diff = ((p.pricePerSqm - avgPpsqm) / avgPpsqm) * 100;
-      if (diff <= -15 && !insights.includes("Best \u20ac/m\u00b2")) {
-        insights.push("\u20ac/m\u00b2 below avg");
+// ── Step 3b: Gemini URL Context ─────────────────────────────────────────────
+
+async function geminiReadUrls(urls: string[]): Promise<ScrapedListing[]> {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey || urls.length === 0) return [];
+
+  const urlList = urls.map((u, i) => `${i + 1}. ${u}`).join("\n");
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${geminiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Read these listing pages. For EACH return one line:\nURL | PRICE (number only in euros) | SURFACE (m² number only, realistic: studio 20-50, apartment 40-200, house 80-400, office 10-500) | TYPE | CITY | MODE (rent or buy) | ADDRESS | ROOMS (number, 0 if unknown)\n\n${urlList}\n\nReturn ONLY the lines, no other text.` }] }],
+          tools: [{ url_context: {} }],
+          generationConfig: { temperature: 0, maxOutputTokens: 2000 },
+        }),
       }
-    }
+    );
 
-    if (p.sqft > 0) {
-      if (p.sqft <= 30) insights.push("Compact");
-      else if (p.sqft >= 150) insights.push("Spacious");
-    }
+    if (!resp.ok) return [];
 
-    if (
-      p.city &&
-      cityCount[p.city] === 1 &&
-      Object.keys(cityCount).length > 1
-    ) {
-      insights.push(`Only listing in ${p.city}`);
-    }
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).join("") || "";
 
-    if (insights.length > 0) {
-      p.aiInsight = insights.slice(0, 2).join(" \u00b7 ");
+    const results: ScrapedListing[] = [];
+    for (const line of text.split("\n")) {
+      const parts = line.split("|").map((s: string) => s.trim());
+      if (parts.length < 6) continue;
+      const url = parts[0].replace(/^\d+\.\s*/, "").trim();
+      if (!url.startsWith("http")) continue;
+      const price = parseInt((parts[1] || "0").replace(/[^\d]/g, "")) || 0;
+      const surface = parseInt((parts[2] || "0").replace(/[^\d]/g, "")) || 0;
+      const mode = /rent|location|louer|mois/i.test(parts[5] || "") ? "rent" as const : "buy" as const;
+      const hostname = new URL(url).hostname.replace("www.", "");
+
+      if (price === 0 && surface === 0) continue;
+
+      results.push({
+        url,
+        source: hostname,
+        price,
+        surface,
+        rooms: parseInt(parts[7] || "0") || 0,
+        bathrooms: 0,
+        propertyType: parts[3] || "Property",
+        city: parts[4] || "",
+        address: parts[6] || parts[4] || "",
+        imageUrl: null, // Gemini fabricates images — never trust
+        contractType: mode,
+        description: "",
+      });
     }
-  }
+    return results;
+  } catch { return []; }
 }
 
-// ── Conversion ───────────────────────────────────────────────────────────────
+// ── Step 3c: Firecrawl fallback for images ──────────────────────────────────
 
-function scrapedListingToProperty(
-  listing: ScrapedListing,
-  id: string
-): Property {
-  const pricePerSqm =
-    listing.price > 0 && listing.surface > 0
-      ? Math.round(listing.price / listing.surface)
-      : undefined;
+async function firecrawlForImages(urls: string[]): Promise<Record<string, string>> {
+  if (urls.length === 0) return {};
+  try {
+    const Firecrawl = (await import("firecrawl")).default;
+    const apiKey = process.env.FIRECRAWL_API_KEY;
+    if (!apiKey) return {};
+    const app = new Firecrawl({ apiKey });
+    const images: Record<string, string> = {};
 
-  return {
-    id,
-    address: listing.address || listing.city || "Address not available",
-    city: listing.city,
-    state: "Luxembourg",
-    zipCode: "",
-    price: listing.price,
-    bedrooms: listing.rooms,
-    bathrooms: listing.bathrooms,
-    sqft: listing.surface,
-    propertyType: listing.propertyType,
-    yearBuilt: null,
-    description: listing.description,
-    features: [],
-    imageUrl: listing.imageUrl,
-    source: listing.source,
-    listingUrl: listing.url,
-    listingStatus:
-      listing.contractType === "rent"
-        ? `Rental - \u20ac${listing.price.toLocaleString()}/month`
-        : "Active",
-    listingMode: listing.contractType,
-    pricePerSqm,
-  };
+    // Max 3 Firecrawl calls for images
+    for (const url of urls.slice(0, 3)) {
+      try {
+        const result = await app.scrape(url);
+        const meta = result.metadata || {};
+        const md = result.markdown || "";
+        const ogImg = meta.ogImage as string | undefined;
+        const mdImg = md.match(/!\[.*?\]\((https?:\/\/[^)]+\.(?:jpg|jpeg|png|webp)[^)]*)\)/i)?.[1];
+        const img = ogImg || mdImg;
+        if (img && !/logo|favicon|icon/i.test(img)) {
+          images[url] = img;
+        }
+      } catch { /* skip failed */ }
+    }
+    return images;
+  } catch { return {}; }
 }
 
-// ── AI enrichment (GPT-4.1 nano) ────────────────────────────────────────────
+// ── AI Enrichment ───────────────────────────────────────────────────────────
 
 interface AIEnrichment {
   summary: string;
@@ -317,23 +301,13 @@ async function enrichWithAI(
   };
 
   if (properties.length === 0) return fallback;
-
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) return fallback;
 
   try {
     const propList = properties.slice(0, 12).map((p, i) =>
-      `${i + 1}. ${p.address}, ${p.city} — €${p.price.toLocaleString()}${mode === "rent" ? "/mo" : ""}, ${p.sqft}m², ${p.bedrooms}bd, ${p.propertyType} [${p.source}]${p.aiInsight ? ` (${p.aiInsight})` : ""}`
+      `${i + 1}. ${p.address}, ${p.city} — €${p.price.toLocaleString()}${mode === "rent" ? "/mo" : ""}, ${p.sqft}m², ${p.propertyType} [${p.source}]${p.aiInsight ? ` (${p.aiInsight})` : ""}`
     ).join("\n");
-
-    const prompt = `You enrich Luxembourg real estate search results. Return JSON:
-{"summary": "1-2 sentences: count, price range, best value. Same language as user query.", "marketContext": "One short market insight, max 15 words.", "suggestedFollowUps": ["3-4 follow-up queries"], "insights": {"1": "short insight for property 1", "2": "..."}}
-
-For insights: location advantages, value context, notable features. Max 8 words each. Skip properties with good existing insights.
-
-User: "${userQuery}" (${mode})
-
-${propList}`;
 
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${geminiKey}`,
@@ -341,34 +315,25 @@ ${propList}`;
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 600,
-            responseMimeType: "application/json",
-          },
+          contents: [{ parts: [{ text: `Enrich Luxembourg real estate results. Return JSON:\n{"summary":"1-2 sentences: count, price range, best value. Same language as user query.","marketContext":"One short market insight, max 15 words.","suggestedFollowUps":["3-4 follow-up queries"],"insights":{"1":"short insight","2":"..."}}\n\nFor insights: location advantages, value context. Max 8 words each.\n\nUser: "${userQuery}" (${mode})\n\n${propList}` }] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 600, responseMimeType: "application/json" },
         }),
       }
     );
 
     if (!resp.ok) return fallback;
-
     const data = await resp.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
 
-    // Apply per-property AI insights — merge with existing data-driven ones
+    // Merge AI insights with data-driven ones
     if (parsed.insights && typeof parsed.insights === "object") {
       for (const [key, insight] of Object.entries(parsed.insights)) {
         const idx = parseInt(key) - 1;
         if (idx >= 0 && idx < properties.length && typeof insight === "string" && insight.trim()) {
           const p = properties[idx];
           if (p.aiInsight) {
-            // Append AI insight after data-driven ones (max 3 total)
             const existing = p.aiInsight.split(" · ");
-            if (existing.length < 3) {
-              p.aiInsight = [...existing, insight.trim()].join(" · ");
-            }
+            if (existing.length < 3) p.aiInsight = [...existing, insight.trim()].join(" · ");
           } else {
             p.aiInsight = insight.trim();
           }
@@ -381,84 +346,176 @@ ${propList}`;
       marketContext: parsed.marketContext || "",
       suggestedFollowUps: Array.isArray(parsed.suggestedFollowUps) ? parsed.suggestedFollowUps : [],
     };
-  } catch {
-    return fallback;
+  } catch { return fallback; }
+}
+
+// ── Insights computation ────────────────────────────────────────────────────
+
+function computeInsights(properties: Property[]): void {
+  if (properties.length === 0) return;
+
+  const withPrice = properties.filter((p) => p.price > 0);
+  const withPpsqm = properties.filter((p) => p.pricePerSqm && p.pricePerSqm > 0);
+  const withSqft = properties.filter((p) => p.sqft > 0);
+
+  const avgPrice = withPrice.length > 0 ? withPrice.reduce((s, p) => s + p.price, 0) / withPrice.length : 0;
+  const avgPpsqm = withPpsqm.length > 0 ? withPpsqm.reduce((s, p) => s + (p.pricePerSqm || 0), 0) / withPpsqm.length : 0;
+  const lowestPrice = withPrice.length > 0 ? withPrice.reduce((min, p) => (p.price < min.price ? p : min)) : null;
+  const bestPpsqm = withPpsqm.length > 0 ? withPpsqm.reduce((min, p) => (p.pricePerSqm || Infinity) < (min.pricePerSqm || Infinity) ? p : min) : null;
+  const largestSurface = withSqft.length > 0 ? withSqft.reduce((max, p) => (p.sqft > max.sqft ? p : max)) : null;
+
+  const cityCount: Record<string, number> = {};
+  for (const p of properties) if (p.city) cityCount[p.city] = (cityCount[p.city] || 0) + 1;
+
+  for (const p of properties) {
+    const insights: string[] = [];
+    if (lowestPrice && p.id === lowestPrice.id && withPrice.length > 2) insights.push("Lowest price");
+    if (bestPpsqm && p.id === bestPpsqm.id && withPpsqm.length > 2) insights.push("Best €/m²");
+    if (largestSurface && p.id === largestSurface.id && withSqft.length > 2) insights.push("Largest");
+    if (p.price > 0 && avgPrice > 0 && withPrice.length > 2) {
+      const diff = ((p.price - avgPrice) / avgPrice) * 100;
+      if (diff <= -20) insights.push(`${Math.abs(Math.round(diff))}% below avg`);
+      else if (diff >= 20) insights.push(`${Math.round(diff)}% above avg`);
+    }
+    if (p.pricePerSqm && avgPpsqm > 0 && withPpsqm.length > 2) {
+      const diff = ((p.pricePerSqm - avgPpsqm) / avgPpsqm) * 100;
+      if (diff <= -15 && !insights.includes("Best €/m²")) insights.push("€/m² below avg");
+    }
+    if (p.sqft > 0) {
+      if (p.sqft <= 30) insights.push("Compact");
+      else if (p.sqft >= 150) insights.push("Spacious");
+    }
+    if (p.city && cityCount[p.city] === 1 && Object.keys(cityCount).length > 1) insights.push(`Only listing in ${p.city}`);
+    if (insights.length > 0) p.aiInsight = insights.slice(0, 2).join(" · ");
   }
 }
 
-// ── Core pipeline ────────────────────────────────────────────────────────────
+// ── Conversion ──────────────────────────────────────────────────────────────
 
-async function runBraveFirecrawlPipeline(
+function scrapedListingToProperty(listing: ScrapedListing, id: string): Property {
+  const pricePerSqm = listing.price > 0 && listing.surface > 0 ? Math.round(listing.price / listing.surface) : undefined;
+  return {
+    id,
+    address: listing.address || listing.city || "Address not available",
+    city: listing.city,
+    state: "Luxembourg",
+    zipCode: "",
+    price: listing.price,
+    bedrooms: listing.rooms,
+    bathrooms: listing.bathrooms,
+    sqft: listing.surface,
+    propertyType: listing.propertyType,
+    yearBuilt: null,
+    description: listing.description,
+    features: [],
+    imageUrl: listing.imageUrl,
+    source: listing.source,
+    listingUrl: listing.url,
+    listingStatus: listing.contractType === "rent" ? `Rental - €${listing.price.toLocaleString()}/month` : "Active",
+    listingMode: listing.contractType,
+    pricePerSqm,
+  };
+}
+
+// ── Core pipeline ───────────────────────────────────────────────────────────
+
+async function runPipeline(
   query: string,
   mode: "buy" | "rent"
 ): Promise<SearchResult> {
-  // 1. Parse query with Gemini
+  // Step 1: Parse query with Gemini
   const { enrichedQuery, parsed } = await analyzeQuery(query);
-  // If user's query has clear intent (louer/acheter), use that. Otherwise use UI mode.
-  // If UI mode is also default and query says "any", search for both.
-  const effectiveMode =
-    parsed.transactionType !== "any" ? parsed.transactionType : mode;
+  const effectiveMode = parsed.transactionType !== "any" ? parsed.transactionType : mode;
 
-  // 2. Run 4 Brave searches in parallel
-  const braveResults = await discoverUrls(enrichedQuery, effectiveMode);
-
-  // 3. Separate listing URLs from category pages
+  // Step 2: Brave Search — find listing URLs from all 4 portals
+  const braveResults = await discoverUrls(enrichedQuery);
   const listingUrls = filterListingUrls(braveResults);
-  const immotopCategories = braveResults
-    .filter((r) => isImmotopCategoryUrl(r.url))
-    .map((r) => r.url);
+  const immotopCategories = [...new Set(
+    braveResults.filter((r) => isImmotopCategoryUrl(r.url)).map((r) => r.url)
+  )].slice(0, 3);
 
-  // 4. Scrape immotop category pages for listings (__NEXT_DATA__, free)
+  // Step 3a: Free og:fetch — get og:image + parse title for price/surface
+  const ogResults: Record<string, OgData> = {};
+  const ogFetches = await Promise.allSettled(
+    listingUrls.map(async (url) => {
+      const og = await fetchOgTags(url);
+      if (og) ogResults[url] = og;
+    })
+  );
+  void ogFetches;
+
+  // Step 3 (parallel): Immotop category pages (__NEXT_DATA__, free)
   const categoryListings: ScrapedListing[] = [];
-  const uniqueCategories = [...new Set(immotopCategories)].slice(0, 3);
-  if (uniqueCategories.length > 0) {
+  if (immotopCategories.length > 0) {
     const catResults = await Promise.allSettled(
-      uniqueCategories.map(scrapeImmotopCategoryPage)
+      immotopCategories.map(scrapeImmotopCategoryPage)
     );
     for (const result of catResults) {
-      if (result.status === "fulfilled") {
-        categoryListings.push(...result.value);
-      }
+      if (result.status === "fulfilled") categoryListings.push(...result.value);
     }
   }
 
-  // 5. Check scrape cache for individual listing URLs
-  const allListingUrls = [
-    ...listingUrls,
-    // Add category listing URLs that aren't already in the list
-    ...categoryListings.map((l) => l.url).filter((u) => !listingUrls.includes(u)),
-  ];
-  const { cached: cachedListings, uncached: urlsToScrape } =
-    checkScrapeCache(listingUrls); // Only Firecrawl the Brave-found listing URLs
+  // Step 3b: Gemini URL Context — read pages missing data (batch call)
+  const urlsNeedingData = listingUrls.filter((u) => !(ogResults[u]?.price > 0));
+  const { cached: cachedListings, uncached: urlsToRead } = checkScrapeCache(urlsNeedingData);
+  const geminiListings = await geminiReadUrls(urlsToRead);
 
-  // 6. Firecrawl uncached individual listing URLs (athome, vivi, wortimmo)
-  const freshListings = await scrapeMultipleUrls(urlsToScrape);
-  for (const listing of freshListings) {
-    setScrapeCache(listing.url, listing);
-  }
+  // Cache Gemini results
+  for (const listing of geminiListings) setScrapeCache(listing.url, listing);
 
-  // 7. Merge: category listings (immotop) + cached + fresh (other portals)
+  // Step 3c: Firecrawl — get images for URLs that have no og:image
+  const urlsMissingImage = listingUrls.filter((u) => !ogResults[u]?.ogImage);
+  const firecrawlImages = await firecrawlForImages(urlsMissingImage);
+
+  // Step 4: Merge all data sources
   const seenUrls = new Set<string>();
   const allListings: ScrapedListing[] = [];
-  // Category listings first (most accurate — from __NEXT_DATA__)
+
+  // Category listings first (immotop, most accurate)
   for (const l of categoryListings) {
     if (!seenUrls.has(l.url)) { seenUrls.add(l.url); allListings.push(l); }
   }
-  // Then individual listings
-  for (const l of [...cachedListings, ...freshListings]) {
-    if (!seenUrls.has(l.url)) { seenUrls.add(l.url); allListings.push(l); }
+
+  // Gemini-read listings + cached
+  for (const l of [...geminiListings, ...cachedListings]) {
+    if (seenUrls.has(l.url)) continue;
+    seenUrls.add(l.url);
+    // Merge with og:data and Firecrawl images
+    const og = ogResults[l.url];
+    const fcImg = firecrawlImages[l.url];
+    if (og?.ogImage) l.imageUrl = og.ogImage;
+    if (fcImg) l.imageUrl = fcImg;
+    if (og?.price && !l.price) l.price = og.price;
+    if (og?.surface && !l.surface) l.surface = og.surface;
+    allListings.push(l);
   }
-  const filtered = allListings.filter(
-    (l) => l.contractType === effectiveMode
-  );
-  const properties: Property[] = filtered.map((listing, i) =>
+
+  // URLs that only have og:data (no Gemini/category data) — build from og:title
+  for (const url of listingUrls) {
+    if (seenUrls.has(url)) continue;
+    const og = ogResults[url];
+    if (!og || (!og.price && !og.surface)) continue;
+    seenUrls.add(url);
+    const hostname = new URL(url).hostname.replace("www.", "");
+    const titleMode = og.ogTitle && /louer|location|rent/i.test(og.ogTitle) ? "rent" as const : "buy" as const;
+    allListings.push({
+      url, source: hostname, price: og.price, surface: og.surface,
+      rooms: 0, bathrooms: 0, propertyType: "Property",
+      city: "", address: "", imageUrl: og.ogImage || firecrawlImages[url] || null,
+      contractType: titleMode, description: og.ogTitle || "",
+    });
+  }
+
+  // Step 5: Filter by mode, convert to Property[]
+  const filtered = allListings.filter((l) => l.contractType === effectiveMode);
+  const properties = filtered.map((listing, i) =>
     scrapedListingToProperty(listing, `prop-${Date.now()}-${i}`)
   );
 
-  // 7. Compute data-driven insights
+  // Step 6: Compute data-driven insights
   computeInsights(properties);
 
-  // 8. AI enrichment (GPT-4.1 nano — cheap, adds summary + context + per-property insights)
+  // Step 7: AI enrichment
   const aiEnrichment = await enrichWithAI(properties, query, effectiveMode);
 
   return {
@@ -470,24 +527,20 @@ async function runBraveFirecrawlPipeline(
   };
 }
 
-// ── Public actions ───────────────────────────────────────────────────────────
+// ── Public actions ──────────────────────────────────────────────────────────
 
 export async function searchAction(
   query: string,
   mode: "buy" | "rent" = "buy"
 ): Promise<SearchResult> {
-  if (!query.trim()) {
-    return { properties: [], summary: "", citations: [] };
-  }
+  if (!query.trim()) return { properties: [], summary: "", citations: [] };
   await enforceRateLimit();
 
-  // Check keyword cache
   const cacheKey = buildSearchCacheKey(query, mode);
   const cached = getSearchCache(cacheKey);
   if (cached) return cached;
 
-  const result = await runBraveFirecrawlPipeline(query, mode);
-
+  const result = await runPipeline(query, mode);
   setSearchCache(cacheKey, result);
   return result;
 }
@@ -495,28 +548,19 @@ export async function searchAction(
 export async function expandedSearchAction(
   query: string,
   preferenceHints: string | null,
-  _mode: "buy" | "rent" = "buy"
+  mode: "buy" | "rent" = "buy"
 ): Promise<SearchResult> {
-  if (!query.trim()) {
-    return { properties: [], summary: "", citations: [] };
-  }
+  if (!query.trim()) return { properties: [], summary: "", citations: [] };
   await enforceRateLimit();
 
-  // Expand query with nearby communes
   const { parsed } = await analyzeQuery(query);
   const commune = parsed.neighborhood || parsed.commune || "";
   const nearby = getNearbyCommunes(commune);
-
   let expandedQuery = query;
-  if (nearby.length > 0) {
-    expandedQuery = `${query} ${nearby.slice(0, 3).join(" ")}`;
-  }
+  if (nearby.length > 0) expandedQuery = `${query} ${nearby.slice(0, 3).join(" ")}`;
+  if (preferenceHints) expandedQuery += ` ${preferenceHints}`;
 
-  if (preferenceHints) {
-    expandedQuery += ` ${preferenceHints}`;
-  }
-
-  return runBraveFirecrawlPipeline(expandedQuery, _mode);
+  return runPipeline(expandedQuery, mode);
 }
 
 export async function refineSearchAction(
@@ -524,32 +568,20 @@ export async function refineSearchAction(
   _previousTurns: ConversationTurn[],
   mode: "rent" | "buy"
 ): Promise<SearchResult> {
-  if (!query.trim()) {
-    return { properties: [], summary: "", citations: [] };
-  }
+  if (!query.trim()) return { properties: [], summary: "", citations: [] };
   await enforceRateLimit();
 
   const cacheKey = buildSearchCacheKey(query, mode);
   const cached = getSearchCache(cacheKey);
   if (cached) return cached;
 
-  const result = await runBraveFirecrawlPipeline(query, mode);
-
+  const result = await runPipeline(query, mode);
   setSearchCache(cacheKey, result);
   return result;
 }
 
 export async function compareAction(
-  properties: {
-    address: string;
-    city: string;
-    price: number;
-    sqft: number;
-    bedrooms: number;
-    bathrooms: number;
-    propertyType: string;
-    features: string[];
-  }[]
+  properties: { address: string; city: string; price: number; sqft: number; bedrooms: number; bathrooms: number; propertyType: string; features: string[] }[]
 ): Promise<string> {
   await enforceRateLimit();
   return compareProperties(properties);
