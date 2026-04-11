@@ -20,6 +20,7 @@ import { EmptyState } from "@/components/empty-state";
 import { AiSummary } from "@/components/ai-summary";
 import { MarketStats } from "@/components/market-stats";
 import { QueryClarification } from "@/components/query-clarification";
+import { RotatingText } from "@/components/rotating-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePropertySearch } from "@/hooks/use-property-search";
 import { useToast } from "@/hooks/use-toast";
@@ -192,16 +193,29 @@ export default function HomePage() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8">
-          {!results && !isLoading && (
+          {!results && !isLoading && !pendingAnalysis && !isAnalyzing && (
             <div className="text-center mb-8 sm:mb-12 animate-fade-in-up">
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-balance leading-[1.15]">
-                {t("title")}
+              {/* Logo */}
+              <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-[#3b5bdb] flex items-center justify-center shadow-lg mx-auto mb-6">
+                <span className="text-white text-lg sm:text-xl font-extrabold tracking-tight">olu</span>
+              </div>
+
+              {/* Animated title */}
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.3]">
+                Your next{" "}
+                <RotatingText
+                  words={["home", "office", "studio", "apartment", "villa"]}
+                  className="text-primary min-w-[120px] sm:min-w-[180px] text-left"
+                  interval={2200}
+                />
                 <br />
-                <span className="text-primary">{t("titleHighlight")}</span>
+                in{" "}
+                <RotatingText
+                  words={["Luxembourg", "Kirchberg", "Mondorf", "Remich", "Esch", "Schengen", "Belval"]}
+                  className="text-primary min-w-[160px] sm:min-w-[240px] text-left"
+                  interval={2800}
+                />
               </h1>
-              <p className="mt-4 sm:mt-5 text-base sm:text-xl text-muted-foreground max-w-md mx-auto leading-relaxed text-balance">
-                {t("subtitle")}
-              </p>
             </div>
           )}
           <SearchBar
