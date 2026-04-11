@@ -26,6 +26,8 @@ import {
   ShieldCheck,
   Home,
 } from "lucide-react";
+// Calendar, Bed, Bath, Ruler used in stats row
+// ShieldCheck, Home used in image section
 import { neighborhoodAction } from "@/app/actions";
 import type { Property, NeighborhoodData } from "@/lib/types";
 
@@ -202,35 +204,45 @@ export function PropertyDetail({
                 </div>
               </div>
 
-              {/* Key Stats — horizontal on both mobile and desktop */}
-              <div className="grid grid-cols-4 gap-2 sm:gap-3">
-                {[
-                  { icon: Bed, value: property.bedrooms || "—", label: "Beds" },
-                  { icon: Bath, value: property.bathrooms || "—", label: "Baths" },
-                  { icon: Ruler, value: property.sqft > 0 ? formatNumber(property.sqft) : "—", label: "m²" },
-                  { icon: Calendar, value: property.yearBuilt || "—", label: "Built" },
-                ].map(({ icon: Icon, value, label }) => (
-                  <div key={label} className="text-center rounded-xl bg-muted/50 p-3">
-                    <Icon className="h-4 w-4 text-muted-foreground/60 mx-auto mb-1" />
-                    <p className="text-lg font-bold tabular-nums">{value}</p>
-                    <p className="text-[11px] text-muted-foreground font-medium">{label}</p>
-                  </div>
-                ))}
+              {/* Key Stats — compact inline row */}
+              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                {property.bedrooms > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <Bed className="h-3.5 w-3.5" />
+                    <strong className="text-foreground">{property.bedrooms}</strong> bd
+                  </span>
+                )}
+                {property.bathrooms > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <Bath className="h-3.5 w-3.5" />
+                    <strong className="text-foreground">{property.bathrooms}</strong> ba
+                  </span>
+                )}
+                {property.sqft > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <Ruler className="h-3.5 w-3.5" />
+                    <strong className="text-foreground">{formatNumber(property.sqft)}</strong> m²
+                  </span>
+                )}
+                {property.yearBuilt && (
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {property.yearBuilt}
+                  </span>
+                )}
+                {property.pricePerSqm && property.pricePerSqm > 0 && (
+                  <span className="tabular-nums ml-auto">€{formatNumber(property.pricePerSqm)}/m²</span>
+                )}
               </div>
 
-              {/* Status + Type + €/m² */}
+              {/* Status + Type */}
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="default" className="rounded-lg">{property.listingStatus}</Badge>
                 <Badge variant="secondary" className="rounded-lg">{property.propertyType}</Badge>
-                {property.pricePerSqm && property.pricePerSqm > 0 && (
-                  <span className="text-sm text-muted-foreground ml-auto tabular-nums">
-                    €{formatNumber(property.pricePerSqm)}/m²
-                  </span>
-                )}
                 {property.rentalYield && property.rentalYield.grossPercent > 0 && (
-                  <span className="text-sm text-muted-foreground tabular-nums">
-                    Yield: {property.rentalYield.grossPercent}%
-                  </span>
+                  <Badge variant="secondary" className="rounded-lg tabular-nums">
+                    Yield {property.rentalYield.grossPercent}%
+                  </Badge>
                 )}
               </div>
 
