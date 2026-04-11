@@ -175,7 +175,7 @@ export function PropertyDetail({
           <Tabs defaultValue="overview">
             <TabsList variant="line" className="w-full">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="features">Features</TabsTrigger>
+              <TabsTrigger value="costs">Costs</TabsTrigger>
               <TabsTrigger value="neighborhood" onClick={loadNeighborhood}>
                 Neighborhood
               </TabsTrigger>
@@ -208,17 +208,129 @@ export function PropertyDetail({
               )}
             </TabsContent>
 
-            <TabsContent value="features" className="pt-5">
-              {property.features.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {property.features.map((f) => (
-                    <span key={f} className="text-[0.8125rem] px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground">
-                      {f}
-                    </span>
-                  ))}
+            <TabsContent value="costs" className="pt-5 space-y-5">
+              {/* True cost breakdown */}
+              {property.trueCost && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2.5">
+                    {property.listingMode === "rent" ? "Move-in costs" : "Total acquisition cost"}
+                  </h3>
+                  <div className="space-y-2">
+                    {property.listingMode === "buy" ? (
+                      <>
+                        <CostRow label="Purchase price" value={property.price} />
+                        {property.trueCost.registrationTax && (
+                          <CostRow label="Registration tax (6%)" value={property.trueCost.registrationTax} />
+                        )}
+                        {property.trueCost.notaryFees && (
+                          <CostRow label="Notary fees (~1.5%)" value={property.trueCost.notaryFees} />
+                        )}
+                        {property.trueCost.bankFees && (
+                          <CostRow label="Bank fees (~0.75%)" value={property.trueCost.bankFees} />
+                        )}
+                        {property.trueCost.totalCost && (
+                          <CostRow label="Total cost" value={property.trueCost.totalCost} bold />
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <CostRow label="Monthly rent" value={property.price} suffix="/mo" />
+                        {property.chargesEstimate && (
+                          <CostRow label="Est. charges" value={property.chargesEstimate} suffix="/mo" />
+                        )}
+                        {property.trueCost.monthlyTotal && (
+                          <CostRow label="Monthly total" value={property.trueCost.monthlyTotal} suffix="/mo" bold />
+                        )}
+                        <div className="border-t pt-2 mt-2" />
+                        {property.trueCost.securityDeposit && (
+                          <CostRow label="Security deposit (3 months)" value={property.trueCost.securityDeposit} />
+                        )}
+                        {property.trueCost.agencyFee && (
+                          <CostRow label="Agency fee (1 month)" value={property.trueCost.agencyFee} />
+                        )}
+                        <CostRow label="First month rent" value={property.price} />
+                        {property.trueCost.moveInCost && (
+                          <CostRow label="Total move-in" value={property.trueCost.moveInCost} bold />
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No feature details available.</p>
+              )}
+
+              {/* Rental yield */}
+              {property.rentalYield && property.rentalYield.grossPercent > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2.5">Investment yield</h3>
+                  <div className="rounded-xl bg-muted/50 p-3.5 space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Gross yield</span>
+                      <span className="font-bold tabular-nums">{property.rentalYield.grossPercent}%</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Est. monthly rent</span>
+                      <span className="tabular-nums">€{formatNumber(property.rentalYield.estimatedMonthlyRent)}/mo</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground pt-1">
+                      Based on {property.rentalYield.source === "turso" ? "local rental data" : "Luxembourg market averages"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Fair price context */}
+              {property.fairPrice && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2.5">Price context</h3>
+                  <div className="rounded-xl bg-muted/50 p-3.5">
+                    <p className="text-sm">
+                      This property is{" "}
+                      <span className={`font-semibold ${
+                        property.fairPrice.rating === "good" ? "text-emerald-600 dark:text-emerald-400" :
+                        property.fairPrice.rating === "high" ? "text-amber-600 dark:text-amber-400" :
+                        "text-foreground"
+                      }`}>
+                        {property.fairPrice.label.toLowerCase()}
+                      </span>{" "}
+                      for this search at €{formatNumber(property.pricePerSqm || 0)}/m².
+                    </p>
+                    {property.communePriceComparison && (
+                      <p className="text-sm text-muted-foreground mt-1.5">
+                        {property.communePriceComparison.label} (€{formatNumber(property.communePriceComparison.communeAvgPpsqm)}/m²)
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* All portal links */}
+              {property.listingUrls && property.listingUrls.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2.5">
+                    View on {property.listingUrls.length > 1 ? `${property.listingUrls.length} portals` : "portal"}
+                  </h3>
+                  <div className="space-y-2">
+                    {property.listingUrls.map((url, i) => {
+                      const host = (() => { try { return new URL(url).hostname.replace("www.", ""); } catch { return url; } })();
+                      return (
+                        <a
+                          key={i}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors group"
+                        >
+                          <span className="text-sm font-medium">{host}</span>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {!property.trueCost && !property.rentalYield && !property.fairPrice && (
+                <p className="text-sm text-muted-foreground">No cost data available for this listing.</p>
               )}
             </TabsContent>
 
@@ -313,6 +425,15 @@ export function PropertyDetail({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function CostRow({ label, value, suffix, bold }: { label: string; value: number; suffix?: string; bold?: boolean }) {
+  return (
+    <div className={`flex justify-between text-sm ${bold ? "font-bold border-t pt-2" : ""}`}>
+      <span className={bold ? "" : "text-muted-foreground"}>{label}</span>
+      <span className="tabular-nums">€{formatNumber(value)}{suffix || ""}</span>
+    </div>
   );
 }
 

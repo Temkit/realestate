@@ -17,6 +17,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ToastContainer } from "@/components/ui/toast";
 import { EmptyState } from "@/components/empty-state";
+import { AiSummary } from "@/components/ai-summary";
+import { MarketStats } from "@/components/market-stats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePropertySearch } from "@/hooks/use-property-search";
 import { useToast } from "@/hooks/use-toast";
@@ -230,6 +232,18 @@ export default function HomePage() {
               {t("propertiesFound", { count: displayPrimary.length })}
             </h2>
           </div>
+
+          {/* AI Summary */}
+          {results.summary && (
+            <AiSummary summary={results.summary} marketContext={results.marketContext} />
+          )}
+
+          {/* Market Stats */}
+          {results.marketAnalytics && (
+            <div className="mb-5">
+              <MarketStats analytics={results.marketAnalytics} mode={searchMode} />
+            </div>
+          )}
 
           <FilterBar
             properties={sortedPrimary}

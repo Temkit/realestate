@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Heart, Home, Bed, Bath, Ruler, ExternalLink } from "lucide-react";
+import { Heart, Home, Bed, Bath, Ruler, ExternalLink, ShieldCheck, TrendingDown, Percent } from "lucide-react";
 import type { Property } from "@/lib/types";
 import { getProxiedImageUrl } from "@/lib/image-proxy";
 import { formatPriceCompact, formatNumber } from "@/lib/format";
@@ -18,23 +18,23 @@ interface PropertyCardProps {
 
 function getInsightStyle(text: string): string {
   const t = text.toLowerCase();
-  // Green: good value indicators
-  if (t.includes("lowest") || t.includes("best") || t.includes("below avg"))
+  if (t.includes("lowest") || t.includes("best") || t.includes("below avg") || t.includes("verified"))
     return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
-  // Blue: size/space indicators
   if (t.includes("spacious") || t.includes("largest"))
     return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
-  // Amber: above average / premium
   if (t.includes("above avg"))
     return "bg-amber-500/10 text-amber-700 dark:text-amber-400";
-  // Purple: scarcity
   if (t.includes("only listing"))
     return "bg-violet-500/10 text-violet-700 dark:text-violet-400";
-  // Orange: compact
   if (t.includes("compact"))
     return "bg-orange-500/10 text-orange-700 dark:text-orange-400";
-  // Default
   return "bg-primary/8 text-primary";
+}
+
+function getFairPriceStyle(rating: "good" | "fair" | "high"): string {
+  if (rating === "good") return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
+  if (rating === "fair") return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
+  return "bg-amber-500/10 text-amber-700 dark:text-amber-400";
 }
 
 function InsightBadge({ text }: { text: string }) {
@@ -172,9 +172,20 @@ export function PropertyCard({
       {/* Content */}
       <div className="p-3.5 sm:p-5 min-h-[140px] sm:min-h-[160px] flex flex-col">
         {/* Context Insights */}
-        {property.aiInsight && (
+        {(property.aiInsight || property.fairPrice || property.priceVerified) && (
           <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-            {property.aiInsight.split(" · ").map((insight) => (
+            {property.priceVerified && (
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3" />
+                Verified
+              </span>
+            )}
+            {property.fairPrice && (
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${getFairPriceStyle(property.fairPrice.rating)}`}>
+                {property.fairPrice.label}
+              </span>
+            )}
+            {property.aiInsight?.split(" · ").map((insight) => (
               <InsightBadge key={insight} text={insight} />
             ))}
           </div>
@@ -230,29 +241,50 @@ export function PropertyCard({
           )}
         </div>
 
+        {/* True cost + yield hints */}
+        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+          {property.trueCost?.totalCost && property.trueCost.totalCost > property.price && (
+            <span className="text-[11px] text-muted-foreground tabular-nums flex items-center gap-1">
+              <TrendingDown className="h-3 w-3" />
+              Total: €{formatNumber(property.trueCost.totalCost)}
+            </span>
+          )}
+          {property.trueCost?.monthlyTotal && (
+            <span className="text-[11px] text-muted-foreground tabular-nums">
+              Total: €{formatNumber(property.trueCost.monthlyTotal)}/mo
+            </span>
+          )}
+          {property.rentalYield && property.rentalYield.grossPercent > 0 && (
+            <span className="text-[11px] text-muted-foreground tabular-nums flex items-center gap-1">
+              <Percent className="h-3 w-3" />
+              Yield: {property.rentalYield.grossPercent}%
+            </span>
+          )}
+        </div>
+
         {/* Footer — pinned to bottom */}
         <div className="flex items-center justify-between mt-auto pt-3 border-t">
           <span className="text-xs px-2.5 py-1 rounded-lg bg-secondary text-secondary-foreground font-medium truncate max-w-[45%]">
             {property.propertyType}
           </span>
-          {(property.listingUrl || property.source) && (
-            <span className="text-xs text-muted-foreground truncate max-w-[50%]">
-              {property.listingUrl ? (
+          <div className="flex items-center gap-1.5 max-w-[55%]" onClick={(e) => e.stopPropagation()}>
+            {(property.listingUrls && property.listingUrls.length > 1 ? property.listingUrls : [property.listingUrl]).filter(Boolean).slice(0, 3).map((url, i) => {
+              const host = (() => { try { return new URL(url!).hostname.replace("www.", ""); } catch { return ""; } })();
+              return (
                 <a
-                  href={property.listingUrl}
+                  key={i}
+                  href={url!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary/70 hover:text-primary hover:underline inline-flex items-center gap-1 transition-colors"
-                  onClick={(e) => e.stopPropagation()}
+                  className="text-[11px] text-primary/70 hover:text-primary hover:underline inline-flex items-center gap-0.5 transition-colors"
+                  title={url!}
                 >
-                  {property.source || "View listing"}
-                  <ExternalLink className="h-3 w-3 shrink-0" />
+                  {host.replace(".lu", "")}
+                  <ExternalLink className="h-2.5 w-2.5 shrink-0" />
                 </a>
-              ) : (
-                property.source
-              )}
-            </span>
-          )}
+              );
+            })}
+          </div>
         </div>
       </div>
     </article>
