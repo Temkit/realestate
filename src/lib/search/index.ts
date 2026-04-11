@@ -16,5 +16,7 @@
 export { runPipeline } from "./pipeline";
 export { deduplicateListings, excludePrimaryResults } from "./dedup";
 export { computeMarketAnalytics, fetchCommuneComparison } from "./market-analytics";
+export { computePropertyFeatures } from "./property-features";
+export { computeRentalYields } from "./yield-calculator";
 export type { DedupedListing } from "./dedup";
 export type { AIEnrichment } from "./enrichment";

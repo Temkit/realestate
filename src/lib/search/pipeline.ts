@@ -39,6 +39,9 @@ import { dedupedToProperty } from "./converter";
 import { computeInsights } from "./insights";
 import { enrichWithAI } from "./enrichment";
 import { computeMarketAnalytics, fetchCommuneComparison } from "./market-analytics";
+import { computePropertyFeatures } from "./property-features";
+import { computeRentalYields } from "./yield-calculator";
+import { trackSearchResults } from "@/lib/tracking";
 
 export async function runPipeline(
   query: string,
@@ -223,7 +226,21 @@ export async function runPipeline(
     /* commune comparison is optional */
   }
 
-  // ── Step 10: AI enrichment ──────────────────────────────────────────
+  // ── Step 10: Property features (pure math, never fails) ──────────────
+  try {
+    computePropertyFeatures(properties, effectiveMode, marketAnalytics);
+  } catch {
+    /* property features are optional */
+  }
+
+  // ── Step 11: Rental yields (async, buy mode only) ───────────────────
+  try {
+    await computeRentalYields(properties, effectiveMode);
+  } catch {
+    /* yields are optional */
+  }
+
+  // ── Step 12: AI enrichment ──────────────────────────────────────────
   let aiEnrichment = {
     summary: `Found ${properties.length} properties`,
     marketContext: "",
@@ -234,6 +251,9 @@ export async function runPipeline(
   } catch {
     /* use fallback summary */
   }
+
+  // ── Step 13: Track prices + listings (fire-and-forget) ──────────────
+  trackSearchResults(properties, effectiveMode).catch(() => {});
 
   return {
     properties,

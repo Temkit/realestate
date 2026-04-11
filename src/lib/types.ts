@@ -27,6 +27,38 @@ export interface Property {
   priceVerified?: boolean;
   /** Portals with fuzzy match (not merged, just linked) */
   alsoOnPortals?: { name: string; url: string }[];
+  /** Luxembourg true cost breakdown */
+  trueCost?: {
+    registrationTax?: number;
+    notaryFees?: number;
+    bankFees?: number;
+    totalCost?: number;
+    estimatedCharges?: number;
+    securityDeposit?: number;
+    agencyFee?: number;
+    moveInCost?: number;
+    monthlyTotal?: number;
+  };
+  /** Fair price vs search average */
+  fairPrice?: {
+    diffPercent: number;
+    label: string;
+    rating: "good" | "fair" | "high";
+  };
+  /** Estimated monthly charges (€/month) */
+  chargesEstimate?: number;
+  /** Gross rental yield (buy listings only) */
+  rentalYield?: {
+    grossPercent: number;
+    estimatedMonthlyRent: number;
+    source: "cache" | "turso" | "estimate";
+  } | null;
+  /** Price per m² vs commune average */
+  communePriceComparison?: {
+    communeAvgPpsqm: number;
+    diffPercent: number;
+    label: string;
+  };
 }
 
 export interface NeighborhoodData {
