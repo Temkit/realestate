@@ -49,20 +49,46 @@ export function usePropertySearch() {
   const handleModeChange = (mode: SearchMode) => {
     setSearchMode(mode);
     if (lastQuery) {
-      // Re-trigger search with new mode (will use the updated searchMode via closure on next render)
-      // We need to call searchAction directly with the new mode since setState is async
       setIsLoading(true);
       setExpandedResults(null);
       setSortBy("recommended");
-      searchAction(lastQuery, mode).then((data) => {
-        setResults(data);
-        setSuggestedChips(data.suggestedFollowUps || []);
-        setMarketContext(data.marketContext || "");
-      }).catch(() => {
-        setError("Search failed. Please try again.");
-      }).finally(() => {
-        setIsLoading(false);
-      });
+      // Use SSE for mode change too
+      fetch(`/api/search/stream?${new URLSearchParams({ q: lastQuery, mode })}`)
+        .then(async (resp) => {
+          if (!resp.ok || !resp.body) throw new Error("SSE failed");
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              try {
+                const event = JSON.parse(line.slice(6));
+                if (event.type === "done") {
+                  setResults(event.data);
+                  setSuggestedChips(event.data.suggestedFollowUps || []);
+                  setMarketContext(event.data.marketContext || "");
+                } else if (event.type === "properties") {
+                  setResults((prev) => ({ ...(prev || { summary: "", citations: [] }), properties: event.data }));
+                }
+              } catch { /* skip */ }
+            }
+          }
+        })
+        .catch(() => {
+          // Fallback
+          searchAction(lastQuery, mode).then((data) => {
+            setResults(data);
+            setSuggestedChips(data.suggestedFollowUps || []);
+            setMarketContext(data.marketContext || "");
+          }).catch(() => setError("Search failed."));
+        })
+        .finally(() => setIsLoading(false));
     }
   };
 
@@ -73,21 +99,71 @@ export function usePropertySearch() {
     setLastQuery(query);
     setExpandedResults(null);
     setSortBy("recommended");
-
-    // Fresh search — reset conversation
     setConversationTurns([{ role: "user", content: query }]);
 
     try {
-      const data = await searchAction(query, searchMode);
-      setResults(data);
-      setSuggestedChips(data.suggestedFollowUps || []);
-      setMarketContext(data.marketContext || "");
-      setConversationTurns((prev) => [
-        ...prev,
-        { role: "assistant", content: data.summary },
-      ]);
+      // Try SSE streaming first (avoids Vercel timeout)
+      const params = new URLSearchParams({ q: query, mode: searchMode });
+      const resp = await fetch(`/api/search/stream?${params}`);
+
+      if (!resp.ok || !resp.body) throw new Error("SSE failed");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            switch (event.type) {
+              case "properties":
+                setResults((prev) => ({
+                  ...(prev || { summary: "", citations: [] }),
+                  properties: event.data as Property[],
+                }));
+                break;
+              case "analytics":
+                setResults((prev) => prev ? { ...prev, marketAnalytics: event.data } : prev);
+                break;
+              case "enrichment": {
+                const e = event.data as { summary: string; marketContext: string; suggestedFollowUps: string[] };
+                setSuggestedChips(e.suggestedFollowUps || []);
+                setMarketContext(e.marketContext || "");
+                setResults((prev) => prev ? { ...prev, summary: e.summary, marketContext: e.marketContext, suggestedFollowUps: e.suggestedFollowUps } : prev);
+                break;
+              }
+              case "done":
+                setResults(event.data as SearchResult);
+                setSuggestedChips((event.data as SearchResult).suggestedFollowUps || []);
+                setMarketContext((event.data as SearchResult).marketContext || "");
+                setConversationTurns((prev) => [...prev, { role: "assistant", content: (event.data as SearchResult).summary }]);
+                break;
+              case "error":
+                setError((event.data as { message: string }).message);
+                break;
+            }
+          } catch { /* skip malformed */ }
+        }
+      }
     } catch {
-      setError("Search failed. Please check your API key and try again.");
+      // Fallback to server action if SSE fails
+      try {
+        const data = await searchAction(query, searchMode);
+        setResults(data);
+        setSuggestedChips(data.suggestedFollowUps || []);
+        setMarketContext(data.marketContext || "");
+        setConversationTurns((prev) => [...prev, { role: "assistant", content: data.summary }]);
+      } catch {
+        setError("Search failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
