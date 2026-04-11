@@ -27,20 +27,16 @@ export async function analyzeQueryCompleteness(
   if (local.complete) return local;
 
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY || "",
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 200,
-        messages: [
-          {
-            role: "user",
-            content: `Analyze this Luxembourg real estate search query. Identify what's present and what's missing.
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return local;
+
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Analyze this Luxembourg real estate search query. Identify what's present and what's missing.
 
 Query: "${query}"
 
@@ -57,16 +53,16 @@ Rules:
 - "louer/location/rent" = rent, "acheter/vente/buy" = buy
 - "mondorf" = "Mondorf-les-Bains", "esch" = "Esch-sur-Alzette", "lux/luxembourg" = "Luxembourg"
 - If all 3 (type + location + mode) are present, that's complete
-- If mode is ambiguous but type and location are clear, mode is missing`,
-          },
-        ],
-      }),
-    });
+- If mode is ambiguous but type and location are clear, mode is missing` }] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 200, responseMimeType: "application/json" },
+        }),
+      }
+    );
 
-    if (!resp.ok) return local; // fallback to local
+    if (!resp.ok) return local;
 
     const data = await resp.json();
-    const text = data.content?.[0]?.text || "{}";
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
     const parsed = JSON.parse(text);
 
     const hasType = !!parsed.type;

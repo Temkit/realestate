@@ -58,7 +58,7 @@ export interface ClassificationResult {
   expandQuery?: string;
 }
 
-const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
+const GEMINI_MODEL = "gemini-2.0-flash-lite";
 
 export async function classifyIntent(
   message: string,
