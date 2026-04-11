@@ -57,6 +57,7 @@ export interface ParsedQuery {
 // ── Key builders ────────────────────────────────────────────────────────────
 
 export function buildSearchCacheKey(query: string, mode: string): string {
+  if (!query || !mode) return `search:_empty_:${mode || "buy"}`;
   const normalized = query.toLowerCase().trim().split(/\s+/).sort().join("|");
   return `search:${normalized}:${mode}`;
 }

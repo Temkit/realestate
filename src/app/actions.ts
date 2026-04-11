@@ -60,37 +60,45 @@ export async function searchAction(
   }
 
   // Also check under enriched query key (e.g. "bureau mondorf" → "bureau Mondorf-les-Bains")
-  const parseData = await getParseCache(query);
-  if (parseData?.enrichedQuery) {
-    const enrichedKey = buildSearchCacheKey(parseData.enrichedQuery, parseData.parsed.transactionType !== "any" ? parseData.parsed.transactionType : mode);
-    if (enrichedKey !== cacheKey) {
-      const enrichedCached = await getSearchCache(enrichedKey);
-      if (enrichedCached) {
-        // Also save under raw key so next time it's instant
-        await setSearchCache(cacheKey, enrichedCached);
-        logSearch({ query, mode, commune: parseData.parsed.commune || parseData.parsed.neighborhood || null, propertyType: parseData.parsed.propertyType || null, resultCount: enrichedCached.properties.length, cacheHit: true, durationMs: Date.now() - start }).catch(() => {});
-        return enrichedCached;
+  let parseData: Awaited<ReturnType<typeof getParseCache>> = null;
+  try {
+    parseData = await getParseCache(query);
+    if (parseData?.enrichedQuery && parseData?.parsed?.transactionType) {
+      const effectiveMode = parseData.parsed.transactionType !== "any" ? parseData.parsed.transactionType : mode;
+      const enrichedKey = buildSearchCacheKey(parseData.enrichedQuery, effectiveMode);
+      if (enrichedKey !== cacheKey) {
+        const enrichedCached = await getSearchCache(enrichedKey);
+        if (enrichedCached) {
+          await setSearchCache(cacheKey, enrichedCached);
+          logSearch({ query, mode, commune: parseData.parsed.commune || parseData.parsed.neighborhood || null, propertyType: parseData.parsed.propertyType || null, resultCount: enrichedCached.properties.length, cacheHit: true, durationMs: Date.now() - start }).catch(() => {});
+          return enrichedCached;
+        }
       }
     }
-  }
+  } catch { /* enriched lookup failed, continue to pipeline */ }
 
   const result = await runPipeline(query, mode);
 
   // Cache under both raw AND enriched query keys
   await setSearchCache(cacheKey, result);
-  const freshParse = parseData || await getParseCache(query);
-  if (freshParse?.enrichedQuery) {
-    const enrichedKey = buildSearchCacheKey(freshParse.enrichedQuery, freshParse.parsed.transactionType !== "any" ? freshParse.parsed.transactionType : mode);
-    if (enrichedKey !== cacheKey) {
-      await setSearchCache(enrichedKey, result);
-    }
+  if (!parseData) {
+    try { parseData = await getParseCache(query); } catch { /* ignore */ }
   }
+  try {
+    if (parseData?.enrichedQuery && parseData?.parsed?.transactionType) {
+      const effectiveMode = parseData.parsed.transactionType !== "any" ? parseData.parsed.transactionType : mode;
+      const enrichedKey = buildSearchCacheKey(parseData.enrichedQuery, effectiveMode);
+      if (enrichedKey !== cacheKey) {
+        await setSearchCache(enrichedKey, result);
+      }
+    }
+  } catch { /* enriched cache save failed, not critical */ }
 
   logSearch({
     query,
     mode,
-    commune: freshParse?.parsed?.commune || freshParse?.parsed?.neighborhood || null,
-    propertyType: freshParse?.parsed?.propertyType || null,
+    commune: parseData?.parsed?.commune || parseData?.parsed?.neighborhood || null,
+    propertyType: parseData?.parsed?.propertyType || null,
     resultCount: result.properties.length,
     cacheHit: false,
     durationMs: Date.now() - start,
