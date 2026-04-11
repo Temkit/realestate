@@ -65,7 +65,7 @@ export function buildSearchCacheKey(query: string, mode: string): string {
 function scrapeKey(url: string): string { return `scrape:${url}`; }
 function ogKey(url: string): string { return `og:${url}`; }
 function imageKey(url: string): string { return `img:${url}`; }
-function parseKey(query: string): string { return `parse:${query.toLowerCase().trim()}`; }
+function parseKey(query: string): string { return `parse:${(query || "").toLowerCase().trim()}`; }
 
 // ── Search cache (full results, 24h) ────────────────────────────────────────
 

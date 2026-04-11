@@ -165,11 +165,11 @@ export function usePropertySearch() {
 
   const primaryIds = new Set(results?.properties.map((p) => p.id) || []);
   const primaryAddresses = new Set(
-    results?.properties.map((p) => p.address.toLowerCase().trim()) || []
+    results?.properties.map((p) => (p.address || "").toLowerCase().trim()) || []
   );
   const filteredExpanded =
     expandedResults?.properties.filter(
-      (p) => !primaryIds.has(p.id) && !primaryAddresses.has(p.address.toLowerCase().trim())
+      (p) => !primaryIds.has(p.id) && !primaryAddresses.has((p.address || "").toLowerCase().trim())
     ) || [];
 
   // Apply sorting

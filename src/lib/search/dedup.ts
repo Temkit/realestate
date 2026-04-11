@@ -27,7 +27,7 @@ export interface DedupedListing extends ScrapedListing {
 }
 
 function normalizeCity(city: string): string {
-  return city
+  return (city || "")
     .toLowerCase()
     .replace(/[-\s]+/g, " ")
     .replace(/^commune de /, "")
@@ -36,7 +36,7 @@ function normalizeCity(city: string): string {
 }
 
 function normalizeType(type: string): string {
-  const t = type.toLowerCase();
+  const t = (type || "").toLowerCase();
   if (/bureau|office|cabinet/.test(t)) return "office";
   if (/appartement|apartment|flat/.test(t)) return "apartment";
   if (/maison|house|villa/.test(t)) return "house";

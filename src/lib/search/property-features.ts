@@ -46,7 +46,7 @@ const CHARGES_RATES: Record<string, number> = {
 const DEFAULT_CHARGES_RATE = 3.5;
 
 function getChargesRate(propertyType: string): number {
-  const lower = propertyType.toLowerCase();
+  const lower = (propertyType || "").toLowerCase();
   for (const [key, rate] of Object.entries(CHARGES_RATES)) {
     if (lower.includes(key)) return rate;
   }

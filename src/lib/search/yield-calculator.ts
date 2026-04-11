@@ -30,7 +30,7 @@ const NATIONAL_RENT_RATES: Record<string, number> = {
 const DEFAULT_RENT_RATE = 20; // €/m²/month
 
 function getNationalRentRate(propertyType: string): number {
-  const lower = propertyType.toLowerCase();
+  const lower = (propertyType || "").toLowerCase();
   for (const [key, rate] of Object.entries(NATIONAL_RENT_RATES)) {
     if (lower.includes(key)) return rate;
   }
