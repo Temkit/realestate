@@ -6,6 +6,8 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { expandedSearchAction, refineSearchAction } from "@/app/actions";
 import type { Property, SearchResult, ConversationTurn } from "@/lib/types";
 
+type SSEEvent = { type: string; data: unknown };
+
 export type SortOption = "recommended" | "price-asc" | "price-desc" | "size";
 export type SearchMode = "buy" | "rent";
 
@@ -35,12 +37,13 @@ export function usePropertySearch() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [lastQuery, setLastQuery] = useState("");
 
-  // New AI-native state
+  // AI-native state
   const [conversationTurns, setConversationTurns] = useState<ConversationTurn[]>([]);
   const [searchMode, setSearchMode] = useState<SearchMode>("buy");
   const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [suggestedChips, setSuggestedChips] = useState<string[]>([]);
   const [marketContext, setMarketContext] = useState<string>("");
+  const [statusMessage, setStatusMessage] = useState<string>("");
 
   const { favorites, addFavorite, removeFavorite, isFavorite, clearFavorites } = useFavorites();
   const { recordClick, recordFavorite, getPreferenceHints } = useUserPreferences();
@@ -71,26 +74,99 @@ export function usePropertySearch() {
     setLastQuery(query);
     setExpandedResults(null);
     setSortBy("recommended");
+    setStatusMessage("");
     setConversationTurns([{ role: "user", content: query }]);
 
-    try {
-      // Use API route (has maxDuration=60, no SSE complexity)
-      const params = new URLSearchParams({ q: query, mode: searchMode });
-      const resp = await fetch(`/api/search?${params}`);
-      const data = await resp.json() as SearchResult;
+    const params = new URLSearchParams({ q: query, mode: searchMode });
+    let sseWorked = false;
 
-      setResults(data);
-      setSuggestedChips(data.suggestedFollowUps || []);
-      setMarketContext(data.marketContext || "");
-      setConversationTurns((prev) => [
-        ...prev,
-        { role: "assistant", content: data.summary },
-      ]);
+    try {
+      // Try SSE first — shows progress + partial results
+      const resp = await fetch(`/api/search/stream?${params}`);
+      if (resp.ok && resp.body) {
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let gotDone = false;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const event: SSEEvent = JSON.parse(line.slice(6));
+              switch (event.type) {
+                case "status":
+                  setStatusMessage(event.data as string);
+                  break;
+                case "properties":
+                  setResults((prev) => ({
+                    ...(prev || { summary: "", citations: [] }),
+                    properties: event.data as Property[],
+                  }));
+                  sseWorked = true;
+                  break;
+                case "analytics":
+                  setResults((prev) => prev ? { ...prev, marketAnalytics: event.data as SearchResult["marketAnalytics"] } : prev);
+                  break;
+                case "enrichment": {
+                  const e = event.data as { summary: string; marketContext: string; suggestedFollowUps: string[] };
+                  setSuggestedChips(e.suggestedFollowUps || []);
+                  setMarketContext(e.marketContext || "");
+                  setResults((prev) => prev ? { ...prev, summary: e.summary, marketContext: e.marketContext, suggestedFollowUps: e.suggestedFollowUps } : prev);
+                  break;
+                }
+                case "done": {
+                  const data = event.data as SearchResult;
+                  setResults(data);
+                  setSuggestedChips(data.suggestedFollowUps || []);
+                  setMarketContext(data.marketContext || "");
+                  setConversationTurns((prev) => [...prev, { role: "assistant", content: data.summary }]);
+                  gotDone = true;
+                  sseWorked = true;
+                  break;
+                }
+                case "error":
+                  setError((event.data as { message: string }).message);
+                  sseWorked = true;
+                  break;
+              }
+            } catch { /* skip malformed event */ }
+          }
+        }
+
+        if (gotDone) {
+          setStatusMessage("");
+          setIsLoading(false);
+          return;
+        }
+      }
     } catch {
-      setError("Search failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+      // SSE failed — fall through to API route
     }
+
+    // Fallback: simple API route (no streaming, but reliable)
+    if (!sseWorked) {
+      try {
+        setStatusMessage("Searching...");
+        const resp = await fetch(`/api/search?${params}`);
+        const data = await resp.json() as SearchResult;
+        setResults(data);
+        setSuggestedChips(data.suggestedFollowUps || []);
+        setMarketContext(data.marketContext || "");
+        setConversationTurns((prev) => [...prev, { role: "assistant", content: data.summary }]);
+      } catch {
+        setError("Search failed. Please try again.");
+      }
+    }
+
+    setStatusMessage("");
+    setIsLoading(false);
   };
 
   /** Load expanded results on demand (triggered by scroll). */
@@ -204,6 +280,7 @@ export function usePropertySearch() {
     sortBy,
     suggestedChips,
     marketContext,
+    statusMessage,
 
     // Favorites
     favorites,
