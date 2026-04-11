@@ -152,20 +152,52 @@ export const NEARBY_COMMUNES: Record<string, string[]> = {
 };
 
 /**
- * Get nearby communes for a given location.
- * Returns the input commune + up to 5 nearby communes.
+ * Get nearby communes for a given location (tier 1 = immediate neighbors).
  */
 export function getNearbyCommunes(location: string): string[] {
-  const normalized = location.toLowerCase().trim()
+  const normalized = normalizeCommune(location);
+  const nearby = NEARBY_COMMUNES[normalized];
+  if (!nearby) return [];
+  return nearby.slice(0, 5).map(capitalize);
+}
+
+/**
+ * Get tier 1 neighbors (5-10 min, immediate adjacency).
+ */
+export function getTier1Communes(location: string): string[] {
+  const normalized = normalizeCommune(location);
+  const nearby = NEARBY_COMMUNES[normalized];
+  if (!nearby) return [];
+  return nearby.slice(0, 4).map(capitalize);
+}
+
+/**
+ * Get tier 2 neighbors (15-20 min, second ring — neighbors of neighbors).
+ * Excludes tier 1 and the original commune.
+ */
+export function getTier2Communes(location: string): string[] {
+  const normalized = normalizeCommune(location);
+  const tier1 = NEARBY_COMMUNES[normalized];
+  if (!tier1) return [];
+
+  const exclude = new Set([normalized, ...tier1]);
+  const tier2 = new Set<string>();
+
+  for (const neighbor of tier1) {
+    const neighborsOfNeighbor = NEARBY_COMMUNES[neighbor] || [];
+    for (const n of neighborsOfNeighbor) {
+      if (!exclude.has(n)) tier2.add(n);
+    }
+  }
+
+  return [...tier2].slice(0, 5).map(capitalize);
+}
+
+function normalizeCommune(location: string): string {
+  return location.toLowerCase().trim()
     .replace(/,\s*luxemb.*$/i, "")
     .replace(/\s+city$/i, "")
     .trim();
-
-  const nearby = NEARBY_COMMUNES[normalized];
-  if (!nearby) return [];
-
-  // Return up to 5 nearby, capitalized
-  return nearby.slice(0, 5).map(capitalize);
 }
 
 function capitalize(s: string): string {

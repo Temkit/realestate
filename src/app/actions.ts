@@ -15,7 +15,8 @@ import {
   setSearchCache,
   getParseCache,
 } from "@/lib/search-cache";
-import { getNearbyCommunes } from "@/lib/communes";
+import { getTier2Communes } from "@/lib/communes";
+import { getSimilarTypes } from "@/lib/search/type-synonyms";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logSearch } from "@/lib/analytics";
 import { runPipeline } from "@/lib/search";
@@ -121,40 +122,58 @@ export async function expandedSearchAction(
   try {
     const { parsed } = await analyzeQuery(query);
     const commune = parsed.neighborhood || parsed.commune || "";
-    const nearby = getNearbyCommunes(commune);
-    if (nearby.length === 0)
+    const propertyType = parsed.propertyType || "";
+
+    // Two search strategies: tier 2 geography + similar types
+    const queries: string[] = [];
+
+    // Strategy 1: Same type, farther communes (tier 2)
+    const tier2 = getTier2Communes(commune);
+    if (tier2.length > 0) {
+      queries.push(`${propertyType} ${tier2.slice(0, 3).join(" ")} Luxembourg`);
+    }
+
+    // Strategy 2: Similar types, same area
+    const similarTypes = getSimilarTypes(propertyType);
+    if (similarTypes.length > 0 && commune) {
+      queries.push(`${similarTypes[0]} ${commune} Luxembourg`);
+    }
+
+    if (queries.length === 0)
       return { properties: [], summary: "", citations: [] };
 
-    let nearbyQuery = `${parsed.propertyType || ""} ${nearby.slice(0, 3).join(" ")} Luxembourg`;
-    if (preferenceHints) nearbyQuery += ` ${preferenceHints}`;
+    // Run all queries, merge results
+    const allProperties: SearchResult["properties"] = [];
+    const allCitations: string[] = [];
+    const primarySet = new Set(primaryListingUrls);
 
-    const cacheKey = buildSearchCacheKey(nearbyQuery, mode);
-    const cached = await getSearchCache(cacheKey);
-    if (cached) {
-      // Filter out primary results even from cache
-      if (primaryListingUrls.length > 0) {
-        const primarySet = new Set(primaryListingUrls);
-        const filtered = cached.properties.filter(
-          (p) => !p.listingUrls?.some((u) => primarySet.has(u)) && !primarySet.has(p.listingUrl || "")
-        );
-        return { ...cached, properties: filtered };
+    for (const q of queries) {
+      const expandedQuery = preferenceHints ? `${q} ${preferenceHints}` : q;
+      const cacheKey = buildSearchCacheKey(expandedQuery, mode);
+      let result = await getSearchCache(cacheKey);
+      if (!result) {
+        result = await runPipeline(expandedQuery, mode);
+        await setSearchCache(cacheKey, result);
       }
-      return cached;
+
+      for (const p of result.properties) {
+        // Skip properties already in primary results
+        const urls = p.listingUrls || (p.listingUrl ? [p.listingUrl] : []);
+        if (urls.some((u) => primarySet.has(u))) continue;
+        // Skip duplicates within expanded
+        if (allProperties.some((ep) => ep.id === p.id)) continue;
+        allProperties.push(p);
+      }
+      allCitations.push(...(result.citations || []));
     }
 
-    const result = await runPipeline(nearbyQuery, mode);
-    await setSearchCache(cacheKey, result);
-
-    // Filter out properties already in primary results
-    if (primaryListingUrls.length > 0) {
-      const primarySet = new Set(primaryListingUrls);
-      const filtered = result.properties.filter(
-        (p) => !p.listingUrls?.some((u) => primarySet.has(u)) && !primarySet.has(p.listingUrl || "")
-      );
-      return { ...result, properties: filtered };
-    }
-
-    return result;
+    return {
+      properties: allProperties,
+      summary: allProperties.length > 0
+        ? `${allProperties.length} similar options nearby`
+        : "",
+      citations: [...new Set(allCitations)],
+    };
   } catch {
     return { properties: [], summary: "", citations: [] };
   }

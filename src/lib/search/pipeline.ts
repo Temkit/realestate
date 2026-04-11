@@ -27,6 +27,7 @@ import {
   getParseCache,
   setParseCache,
 } from "@/lib/search-cache";
+import { getTier1Communes } from "@/lib/communes";
 import type { OgData } from "@/lib/search-cache";
 import type { SearchResult, ScrapedListing } from "@/lib/types";
 
@@ -77,7 +78,34 @@ export async function runPipeline(
     /* no URLs found */
   }
 
-  const listingUrls = filterListingUrls(braveResults);
+  let listingUrls = filterListingUrls(braveResults);
+
+  // ── Step 2b: Auto-broaden if < 8 listing URLs ──────────────────────
+  // Add tier 1 neighbors (5-10 min away) to get more results
+  if (listingUrls.length < 8) {
+    try {
+      const cachedParse = await getParseCache(query);
+      const commune = cachedParse?.parsed?.commune || cachedParse?.parsed?.neighborhood || "";
+      const propertyType = cachedParse?.parsed?.propertyType || "";
+      if (commune) {
+        const tier1 = getTier1Communes(commune);
+        if (tier1.length > 0) {
+          const nearbyQuery = `${propertyType} ${tier1.join(" ")} Luxembourg`;
+          const nearbyResults = await discoverUrls(nearbyQuery);
+          // Merge, dedup by URL
+          const existingUrls = new Set(braveResults.map((r) => r.url));
+          for (const r of nearbyResults) {
+            if (!existingUrls.has(r.url)) {
+              existingUrls.add(r.url);
+              braveResults.push(r);
+            }
+          }
+          listingUrls = filterListingUrls(braveResults);
+        }
+      }
+    } catch { /* broadening failed, continue with what we have */ }
+  }
+
   const immotopCategories = [
     ...new Set(
       braveResults
