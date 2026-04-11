@@ -99,7 +99,8 @@ export function usePropertySearch() {
     setIsExpandedLoading(true);
     const preferenceHints = getPreferenceHints();
     try {
-      const data = await expandedSearchAction(lastQuery, preferenceHints, searchMode);
+      const primaryUrls = results?.properties?.flatMap((p) => p.listingUrls || (p.listingUrl ? [p.listingUrl] : [])) || [];
+      const data = await expandedSearchAction(lastQuery, preferenceHints, searchMode, primaryUrls);
       setExpandedResults(data);
     } catch {
       setExpandedResults(null);

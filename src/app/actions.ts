@@ -89,7 +89,8 @@ export async function searchAction(
 export async function expandedSearchAction(
   query: string,
   preferenceHints: string | null,
-  mode: "buy" | "rent" = "buy"
+  mode: "buy" | "rent" = "buy",
+  primaryListingUrls: string[] = []
 ): Promise<SearchResult> {
   if (!query.trim()) return { properties: [], summary: "", citations: [] };
   await enforceRateLimit();
@@ -106,10 +107,30 @@ export async function expandedSearchAction(
 
     const cacheKey = buildSearchCacheKey(nearbyQuery, mode);
     const cached = await getSearchCache(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      // Filter out primary results even from cache
+      if (primaryListingUrls.length > 0) {
+        const primarySet = new Set(primaryListingUrls);
+        const filtered = cached.properties.filter(
+          (p) => !p.listingUrls?.some((u) => primarySet.has(u)) && !primarySet.has(p.listingUrl || "")
+        );
+        return { ...cached, properties: filtered };
+      }
+      return cached;
+    }
 
     const result = await runPipeline(nearbyQuery, mode);
     await setSearchCache(cacheKey, result);
+
+    // Filter out properties already in primary results
+    if (primaryListingUrls.length > 0) {
+      const primarySet = new Set(primaryListingUrls);
+      const filtered = result.properties.filter(
+        (p) => !p.listingUrls?.some((u) => primarySet.has(u)) && !primarySet.has(p.listingUrl || "")
+      );
+      return { ...result, properties: filtered };
+    }
+
     return result;
   } catch {
     return { properties: [], summary: "", citations: [] };
