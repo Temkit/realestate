@@ -7,10 +7,7 @@ import { ConversationThread } from "@/components/conversation-thread";
 import { PropertyCard } from "@/components/property-card";
 import { PropertyDetail } from "@/components/property-detail";
 import { CompareView } from "@/components/compare-view";
-import { FavoritesBar } from "@/components/favorites-bar";
 import { FavoritesSheet } from "@/components/favorites-sheet";
-import { BackToTop } from "@/components/back-to-top";
-import { Footer } from "@/components/footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ToastContainer } from "@/components/ui/toast";
@@ -43,7 +40,6 @@ export default function HomePage() {
 
   const {
     turns,
-    lastQuery,
     searchMode,
     isLoading,
     isClassifying,
@@ -70,21 +66,30 @@ export default function HomePage() {
   } = usePropertySearch();
 
   const { toasts, toast, dismiss } = useToast();
+  const hasConversation = turns.length > 0;
+  const lastTurn = turns[turns.length - 1];
+  const isSearchDone = hasConversation && !isLoading && !lastTurn?.isStreaming;
 
-  // ── Expanded results lazy-load ──────────────────────────────────────
+  // ── Expanded results lazy-load (only after search is fully done) ────
   const expandedSentinelRef = useRef<HTMLDivElement | null>(null);
   const expandedLoadedRef = useRef(false);
 
-  useEffect(() => { expandedLoadedRef.current = false; }, [turns.length]);
+  useEffect(() => {
+    expandedLoadedRef.current = false;
+  }, [turns.length]);
 
   const sentinelCallback = useCallback(
-    (node: HTMLDivElement | null) => { expandedSentinelRef.current = node; },
+    (node: HTMLDivElement | null) => {
+      expandedSentinelRef.current = node;
+    },
     []
   );
 
   useEffect(() => {
     const sentinel = expandedSentinelRef.current;
-    if (!sentinel || turns.length === 0 || isLoading) return;
+    // Only trigger AFTER search is fully done, not while streaming
+    if (!sentinel || !isSearchDone) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting && !expandedLoadedRef.current) {
@@ -96,7 +101,7 @@ export default function HomePage() {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [turns.length, isLoading, loadExpanded]);
+  }, [isSearchDone, loadExpanded]);
 
   const handleToggleFavorite = (property: Property) => {
     const action = toggleFavorite(property);
@@ -105,23 +110,24 @@ export default function HomePage() {
   };
 
   const handleSubmit = (message: string) => {
-    if (turns.length === 0) handleSearch(message);
+    if (!hasConversation) handleSearch(message);
     else handleRefine(message);
   };
 
-  const hasConversation = turns.length > 0;
-
-  // Expanded results filtered
-  const expandedFiltered = expandedResults?.properties.filter((p) => {
-    const allIds = new Set(turns.flatMap((t) => t.properties?.map((pp) => pp.id) || []));
-    return !allIds.has(p.id);
-  }) || [];
+  // Expanded results filtered against all properties in turns
+  const expandedFiltered =
+    expandedResults?.properties.filter((p) => {
+      const allIds = new Set(
+        turns.flatMap((t) => t.properties?.map((pp) => pp.id) || [])
+      );
+      return !allIds.has(p.id);
+    }) || [];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
 
-      {/* ── Header ───────────────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────────────────────────── */}
       <header className="border-b sticky top-0 z-40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-5xl mx-auto px-3.5 sm:px-8 h-14 flex items-center justify-between">
           <div
@@ -150,17 +156,25 @@ export default function HomePage() {
                 </span>
               </button>
             )}
+            {favorites.length >= 2 && (
+              <button
+                onClick={() => setShowCompare(true)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-lg hover:bg-muted"
+              >
+                Compare
+              </button>
+            )}
             <LanguageSwitcher />
             <ThemeToggle />
           </div>
         </div>
       </header>
 
-      {/* ── Main content area ────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col pb-[140px]">
-        {/* Welcome state — centered, like ChatGPT */}
+      {/* ── Main content ───────────────────────────────────────── */}
+      <main className="flex-1 flex flex-col pb-[130px]">
+        {/* Welcome state */}
         {!hasConversation && !isLoading && (
-          <div className="flex-1 flex flex-col items-center justify-center px-4 min-h-[60vh]">
+          <div className="flex-1 flex flex-col items-center justify-center px-4">
             <div className="text-center max-w-lg animate-fade-in-up">
               <div className="h-14 w-14 rounded-2xl bg-[#3b5bdb] flex items-center justify-center shadow-lg mx-auto mb-6">
                 <Search className="h-6 w-6 text-white" />
@@ -182,9 +196,7 @@ export default function HomePage() {
                   <button
                     key={suggestion}
                     onClick={() => handleSearch(suggestion)}
-                    className="text-sm px-4 py-2 rounded-full border bg-background
-                               hover:bg-primary/5 hover:border-primary/30 hover:text-primary
-                               transition-colors text-muted-foreground"
+                    className="text-sm px-4 py-2 rounded-full border bg-background hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                   >
                     {suggestion}
                   </button>
@@ -196,14 +208,14 @@ export default function HomePage() {
 
         {/* Error */}
         {error && (
-          <div className="max-w-5xl mx-auto px-3.5 sm:px-8 mt-4">
+          <div className="max-w-5xl mx-auto w-full px-3.5 sm:px-8 mt-4">
             <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4">
               <p className="text-sm text-destructive">{error}</p>
             </div>
           </div>
         )}
 
-        {/* Conversation */}
+        {/* Conversation thread */}
         {hasConversation && (
           <div className="max-w-5xl mx-auto w-full px-3.5 sm:px-8 pt-4 sm:pt-6">
             <ConversationThread
@@ -216,56 +228,54 @@ export default function HomePage() {
               isClassifying={isClassifying}
             />
 
-            {/* Loading skeleton for streaming */}
-            {isLoading && turns[turns.length - 1]?.isStreaming && !turns[turns.length - 1]?.properties?.length && (
-              <ResultSkeleton />
-            )}
+            {/* Loading skeleton while streaming with no properties yet */}
+            {isLoading &&
+              lastTurn?.isStreaming &&
+              !lastTurn?.properties?.length && <ResultSkeleton />}
           </div>
         )}
 
-        {/* Expanded results sentinel */}
-        {hasConversation && !isLoading && (
-          <div ref={sentinelCallback} aria-hidden="true" />
-        )}
-
-        {/* Expanded results */}
-        {hasConversation &&
-          !isLoading &&
-          (isExpandedLoading || expandedFiltered.length > 0) && (
-            <div className="max-w-5xl mx-auto w-full px-3.5 sm:px-8 mt-4">
-              <div className="bg-muted/40 border rounded-2xl p-4 sm:p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-sm font-semibold">
-                    {t("youMightAlsoLike")}
-                  </h2>
-                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                    {t("similarListings")}
-                  </span>
-                </div>
-                {isExpandedLoading ? (
-                  <ResultSkeleton />
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                    {expandedFiltered.map((property, index) => (
-                      <PropertyCard
-                        key={property.id}
-                        property={property}
-                        isFavorite={isFavorite(property.id)}
-                        onToggleFavorite={() => handleToggleFavorite(property)}
-                        onSelect={() => handlePropertyClick(property)}
-                        index={index}
-                      />
-                    ))}
+        {/* Expanded results — ONLY after search is fully done */}
+        {isSearchDone && (
+          <>
+            <div ref={sentinelCallback} aria-hidden="true" />
+            {(isExpandedLoading || expandedFiltered.length > 0) && (
+              <div className="max-w-5xl mx-auto w-full px-3.5 sm:px-8 mt-6 mb-4">
+                <div className="bg-muted/40 border rounded-2xl p-4 sm:p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-sm font-semibold">
+                      {t("youMightAlsoLike")}
+                    </h2>
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                      {t("similarListings")}
+                    </span>
                   </div>
-                )}
+                  {isExpandedLoading ? (
+                    <ResultSkeleton />
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                      {expandedFiltered.map((property, index) => (
+                        <PropertyCard
+                          key={property.id}
+                          property={property}
+                          isFavorite={isFavorite(property.id)}
+                          onToggleFavorite={() =>
+                            handleToggleFavorite(property)
+                          }
+                          onSelect={() => handlePropertyClick(property)}
+                          index={index}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-
-        {hasConversation && <Footer />}
+            )}
+          </>
+        )}
       </main>
 
-      {/* ── Fixed bottom input ───────────────────────────────────── */}
+      {/* ── Fixed bottom input ─────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-30">
         <ChatInput
           onSubmit={handleSubmit}
@@ -277,12 +287,14 @@ export default function HomePage() {
         />
       </div>
 
-      {/* ── Overlays ─────────────────────────────────────────────── */}
+      {/* ── Overlays ───────────────────────────────────────────── */}
       <PropertyDetail
         property={selectedProperty}
         isOpen={!!selectedProperty}
         onClose={() => setSelectedProperty(null)}
-        isFavorite={selectedProperty ? isFavorite(selectedProperty.id) : false}
+        isFavorite={
+          selectedProperty ? isFavorite(selectedProperty.id) : false
+        }
         onToggleFavorite={() => {
           if (selectedProperty) handleToggleFavorite(selectedProperty);
         }}
@@ -304,15 +316,9 @@ export default function HomePage() {
         onRemove={removeFavorite}
       />
 
-      {favorites.length > 0 && !showFavorites && (
-        <FavoritesBar
-          favorites={favorites}
-          onViewFavorites={() => setShowFavorites(true)}
-          onOpenCompare={() => setShowCompare(true)}
-        />
-      )}
-
-      <BackToTop />
+      {/* No FavoritesBar — favorites are in the header now */}
+      {/* No Footer — clean conversational UI */}
+      {/* No BackToTop — conversation scrolls naturally */}
     </div>
   );
 }
