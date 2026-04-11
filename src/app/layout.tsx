@@ -5,6 +5,9 @@ export const viewport: Viewport = {
   themeColor: "#1c1917",
 };
 
+// Allow server actions up to 60s (pipeline: Brave+Gemini+Firecrawl can take 15-20s)
+export const maxDuration = 60;
+
 export default function RootLayout({
   children,
 }: Readonly<{
