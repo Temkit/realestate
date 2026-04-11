@@ -4,7 +4,10 @@ import { useState, useCallback, useMemo } from "react";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { expandedSearchAction } from "@/app/actions";
-import type { Property, SearchResult, ConversationTurn, MarketAnalytics } from "@/lib/types";
+import { applyFilter, applySort, answerQuestion, selectProperty, describeFilter } from "@/lib/search/client-actions";
+import type { FilterParams } from "@/lib/search/intent-classifier";
+import type { ConversationMessage } from "@/components/conversation-thread";
+import type { Property, SearchResult, ConversationTurn } from "@/lib/types";
 
 export type SortOption = "recommended" | "price-asc" | "price-desc" | "size";
 export type SearchMode = "buy" | "rent";
@@ -25,6 +28,7 @@ function sortProperties(properties: Property[], sortBy: SortOption): Property[] 
 }
 
 export function usePropertySearch() {
+  // Core state
   const [results, setResults] = useState<SearchResult | null>(null);
   const [expandedResults, setExpandedResults] = useState<SearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,36 +42,47 @@ export function usePropertySearch() {
   // Streaming state
   const [statusMessage, setStatusMessage] = useState<string>("");
 
-  // AI-native state
+  // Conversation state
+  const [aiMessages, setAiMessages] = useState<ConversationMessage[]>([]);
+  const [isClassifying, setIsClassifying] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterParams[]>([]);
+  const [allProperties, setAllProperties] = useState<Property[]>([]);
+  const [lastAiSuggestion, setLastAiSuggestion] = useState<string | null>(null);
+
+  // UI state
   const [conversationTurns, setConversationTurns] = useState<ConversationTurn[]>([]);
   const [searchMode, setSearchMode] = useState<SearchMode>("buy");
   const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [suggestedChips, setSuggestedChips] = useState<string[]>([]);
   const [marketContext, setMarketContext] = useState<string>("");
-
-  // Keep track of filteredPrimary via callback from FilterBar
   const [filteredPrimary, setFilteredPrimary] = useState<Property[]>([]);
 
   const { favorites, addFavorite, removeFavorite, isFavorite, clearFavorites } = useFavorites();
   const { recordClick, recordFavorite, getPreferenceHints } = useUserPreferences();
 
-  /** Stream search results via SSE */
-  const streamSearch = useCallback(async (query: string, mode: SearchMode) => {
+  const addMessage = useCallback((role: "user" | "ai", content: string) => {
+    setAiMessages((prev) => [...prev, { role, content }]);
+  }, []);
+
+  // ── Stream search via SSE ───────────────────────────────────────────────
+
+  const streamSearch = useCallback(async (query: string, mode: SearchMode, options?: { merge?: boolean }) => {
     setIsLoading(true);
     setError(null);
     setStatusMessage("Starting search...");
-    setResults(null);
+    if (!options?.merge) {
+      setResults(null);
+      setAllProperties([]);
+      setActiveFilters([]);
+      setFilteredPrimary([]);
+    }
     setExpandedResults(null);
-    setFilteredPrimary([]);
     setSortBy("recommended");
 
     try {
       const params = new URLSearchParams({ q: query, mode });
       const resp = await fetch(`/api/search/stream?${params}`);
-
-      if (!resp.ok || !resp.body) {
-        throw new Error("Search failed");
-      }
+      if (!resp.ok || !resp.body) throw new Error("Search failed");
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -76,7 +91,6 @@ export function usePropertySearch() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n\n");
         buffer = lines.pop() || "";
@@ -85,47 +99,74 @@ export function usePropertySearch() {
           if (!line.startsWith("data: ")) continue;
           try {
             const event = JSON.parse(line.slice(6));
-
             switch (event.type) {
               case "status":
                 setStatusMessage(event.data as string);
                 break;
-
               case "properties":
-                setResults((prev) => ({
-                  ...(prev || { summary: "", citations: [] }),
-                  properties: event.data as Property[],
-                }));
+                if (options?.merge) {
+                  // Merge with existing, dedup by id
+                  setAllProperties((prev) => {
+                    const existing = new Set(prev.map((p) => p.listingUrl || p.id));
+                    const newProps = (event.data as Property[]).filter(
+                      (p) => !existing.has(p.listingUrl || p.id)
+                    );
+                    return [...prev, ...newProps];
+                  });
+                  setResults((prev) => {
+                    const prevProps = prev?.properties || [];
+                    const existing = new Set(prevProps.map((p) => p.listingUrl || p.id));
+                    const newProps = (event.data as Property[]).filter(
+                      (p) => !existing.has(p.listingUrl || p.id)
+                    );
+                    return { ...(prev || { summary: "", citations: [] }), properties: [...prevProps, ...newProps] };
+                  });
+                } else {
+                  const props = event.data as Property[];
+                  setResults((prev) => ({ ...(prev || { summary: "", citations: [] }), properties: props }));
+                  setAllProperties(props);
+                }
                 break;
-
               case "analytics":
-                setResults((prev) => prev ? { ...prev, marketAnalytics: event.data as MarketAnalytics } : prev);
+                setResults((prev) => prev ? { ...prev, marketAnalytics: event.data } : prev);
                 break;
-
               case "enrichment": {
-                const enrichment = event.data as { summary: string; marketContext: string; suggestedFollowUps: string[] };
-                setSuggestedChips(enrichment.suggestedFollowUps || []);
-                setMarketContext(enrichment.marketContext || "");
-                setResults((prev) => prev ? {
-                  ...prev,
-                  summary: enrichment.summary,
-                  marketContext: enrichment.marketContext,
-                  suggestedFollowUps: enrichment.suggestedFollowUps,
-                } : prev);
+                const e = event.data as { summary: string; marketContext: string; suggestedFollowUps: string[] };
+                setSuggestedChips(e.suggestedFollowUps || []);
+                setMarketContext(e.marketContext || "");
+                setResults((prev) => prev ? { ...prev, summary: e.summary, marketContext: e.marketContext, suggestedFollowUps: e.suggestedFollowUps } : prev);
+                if (e.summary) addMessage("ai", e.summary);
                 break;
               }
-
-              case "done":
-                setResults(event.data as SearchResult);
+              case "done": {
+                const result = event.data as SearchResult;
+                if (options?.merge) {
+                  setResults((prev) => {
+                    const prevProps = prev?.properties || [];
+                    const existing = new Set(prevProps.map((p) => p.listingUrl || p.id));
+                    const newProps = result.properties.filter((p) => !existing.has(p.listingUrl || p.id));
+                    const merged = [...prevProps, ...newProps];
+                    return { ...result, properties: merged };
+                  });
+                  setAllProperties((prev) => {
+                    const existing = new Set(prev.map((p) => p.listingUrl || p.id));
+                    const newProps = result.properties.filter((p) => !existing.has(p.listingUrl || p.id));
+                    return [...prev, ...newProps];
+                  });
+                  addMessage("ai", `+${result.properties.length} résultats ajoutés.`);
+                } else {
+                  setResults(result);
+                  setAllProperties(result.properties);
+                }
                 setStatusMessage("");
                 break;
-
+              }
               case "error":
                 setError((event.data as { message: string }).message);
                 setStatusMessage("");
                 break;
             }
-          } catch { /* skip malformed events */ }
+          } catch { /* skip malformed */ }
         }
       }
     } catch {
@@ -134,47 +175,152 @@ export function usePropertySearch() {
       setIsLoading(false);
       setStatusMessage("");
     }
-  }, []);
+  }, [addMessage]);
 
-  const handleModeChange = (mode: SearchMode) => {
+  // ── Conversational refine ───────────────────────────────────────────────
+
+  const handleRefine = useCallback(async (message: string) => {
+    addMessage("user", message);
+    setIsClassifying(true);
+    setError(null);
+
+    try {
+      // Classify intent
+      const resp = await fetch("/api/search/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          conversationHistory: aiMessages.slice(-8).map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.content })),
+          currentPropertyCount: allProperties.length,
+          currentFilters: activeFilters.map((f) => describeFilter(f)),
+          lastAiSuggestion,
+          searchMode,
+          originalQuery: lastQuery,
+        }),
+      });
+
+      const classification = await resp.json();
+      setIsClassifying(false);
+
+      switch (classification.intent) {
+        case "filter": {
+          const filtered = applyFilter(allProperties, classification.params);
+          setResults((prev) => prev ? { ...prev, properties: filtered } : prev);
+          setActiveFilters((prev) => [...prev, classification.params]);
+          const response = classification.aiResponse || `${filtered.length} résultat${filtered.length > 1 ? "s" : ""} après filtre.`;
+          addMessage("ai", response);
+          // Suggest removing filter or expanding
+          if (filtered.length < 3) {
+            setLastAiSuggestion(`Chercher dans d'autres communes ?`);
+            setSuggestedChips(["Voir tout", "Chercher plus loin", "Enlever le filtre"]);
+          }
+          break;
+        }
+
+        case "sort": {
+          const sorted = applySort(allProperties.length > 0 ? allProperties : (results?.properties || []), classification.params);
+          setResults((prev) => prev ? { ...prev, properties: sorted } : prev);
+          addMessage("ai", classification.aiResponse || "Résultats triés.");
+          break;
+        }
+
+        case "expand": {
+          const query = classification.expandQuery || message;
+          addMessage("ai", classification.aiResponse || "Recherche en cours...");
+          setLastQuery(query);
+          await streamSearch(query, searchMode, { merge: true });
+          break;
+        }
+
+        case "compare": {
+          const indices = classification.params?.indices || [0, 1];
+          setShowCompare(true);
+          addMessage("ai", classification.aiResponse || "Comparaison ouverte.");
+          void indices;
+          break;
+        }
+
+        case "detail": {
+          const prop = selectProperty(
+            results?.properties || [],
+            classification.params
+          );
+          if (prop) {
+            setSelectedProperty(prop);
+            addMessage("ai", classification.aiResponse || `Détails de ${prop.address}.`);
+          } else {
+            addMessage("ai", "Propriété non trouvée.");
+          }
+          break;
+        }
+
+        case "question": {
+          const answer = answerQuestion(
+            allProperties,
+            results?.marketAnalytics || null,
+            classification.params
+          );
+          addMessage("ai", answer);
+          break;
+        }
+
+        default: {
+          // Unknown intent → full search
+          await streamSearch(message, searchMode);
+          break;
+        }
+      }
+    } catch {
+      setIsClassifying(false);
+      // Fallback: run as full search
+      await streamSearch(message, searchMode);
+    }
+  }, [aiMessages, allProperties, activeFilters, lastAiSuggestion, searchMode, lastQuery, results, addMessage, streamSearch]);
+
+  // ── Initial search ──────────────────────────────────────────────────────
+
+  const handleSearch = useCallback(async (query: string) => {
+    setLastQuery(query);
+    setAiMessages([{ role: "user", content: query }]);
+    setConversationTurns([{ role: "user", content: query }]);
+    setActiveFilters([]);
+    setLastAiSuggestion(null);
+    await streamSearch(query, searchMode);
+  }, [searchMode, streamSearch]);
+
+  const handleModeChange = useCallback((mode: SearchMode) => {
     setSearchMode(mode);
     if (lastQuery) {
+      setAiMessages([{ role: "user", content: lastQuery }]);
       streamSearch(lastQuery, mode);
     }
-  };
+  }, [lastQuery, streamSearch]);
 
-  const handleSearch = async (query: string) => {
-    setLastQuery(query);
-    setConversationTurns([{ role: "user", content: query }]);
-    await streamSearch(query, searchMode);
-  };
-
-  const handleRefine = async (query: string) => {
-    setLastQuery(query);
-    setExpandedResults(null);
-    setConversationTurns((prev) => [...prev, { role: "user", content: query }]);
-    await streamSearch(query, searchMode);
-  };
-
-  const resetConversation = () => {
+  const resetConversation = useCallback(() => {
     setResults(null);
     setExpandedResults(null);
     setError(null);
     setLastQuery("");
     setConversationTurns([]);
+    setAiMessages([]);
     setSuggestedChips([]);
     setMarketContext("");
     setStatusMessage("");
-  };
+    setAllProperties([]);
+    setActiveFilters([]);
+    setLastAiSuggestion(null);
+    setFilteredPrimary([]);
+  }, []);
 
-  /** Load expanded results on demand (triggered by scroll). */
+  // ── Expanded search ─────────────────────────────────────────────────────
+
   const loadExpanded = useCallback(async () => {
     if (!lastQuery || isExpandedLoading || expandedResults) return;
     setIsExpandedLoading(true);
-    const preferenceHints = getPreferenceHints();
     try {
       const primaryUrls = results?.properties?.flatMap((p) => p.listingUrls || (p.listingUrl ? [p.listingUrl] : [])) || [];
-      const data = await expandedSearchAction(lastQuery, preferenceHints, searchMode, primaryUrls);
+      const data = await expandedSearchAction(lastQuery, getPreferenceHints(), searchMode, primaryUrls);
       setExpandedResults(data);
     } catch {
       setExpandedResults(null);
@@ -183,12 +329,14 @@ export function usePropertySearch() {
     }
   }, [lastQuery, isExpandedLoading, expandedResults, getPreferenceHints, results, searchMode]);
 
-  const handlePropertyClick = (property: Property) => {
+  // ── Property interactions ───────────────────────────────────────────────
+
+  const handlePropertyClick = useCallback((property: Property) => {
     recordClick(property);
     setSelectedProperty(property);
-  };
+  }, [recordClick]);
 
-  const toggleFavorite = (property: Property): "added" | "removed" => {
+  const toggleFavorite = useCallback((property: Property): "added" | "removed" => {
     if (isFavorite(property.id)) {
       removeFavorite(property.id);
       return "removed";
@@ -197,18 +345,18 @@ export function usePropertySearch() {
       recordFavorite(property);
       return "added";
     }
-  };
+  }, [isFavorite, removeFavorite, addFavorite, recordFavorite]);
+
+  // ── Computed values ─────────────────────────────────────────────────────
 
   const primaryIds = new Set(results?.properties.map((p) => p.id) || []);
   const primaryAddresses = new Set(
     results?.properties.map((p) => (p.address || "").toLowerCase().trim()) || []
   );
-  const filteredExpanded =
-    expandedResults?.properties.filter(
-      (p) => !primaryIds.has(p.id) && !primaryAddresses.has((p.address || "").toLowerCase().trim())
-    ) || [];
+  const filteredExpanded = expandedResults?.properties.filter(
+    (p) => !primaryIds.has(p.id) && !primaryAddresses.has((p.address || "").toLowerCase().trim())
+  ) || [];
 
-  // Apply sorting
   const sortedPrimary = useMemo(
     () => (results ? sortProperties(results.properties, sortBy) : []),
     [results, sortBy]
@@ -218,15 +366,10 @@ export function usePropertySearch() {
     [filteredExpanded, sortBy]
   );
 
-  // displayPrimary uses filteredPrimary from FilterBar if it has results,
-  // otherwise falls back to sortedPrimary (all results, no filter applied)
-  const displayPrimary = filteredPrimary.length > 0
-    ? filteredPrimary
-    : sortedPrimary;
+  const displayPrimary = filteredPrimary.length > 0 ? filteredPrimary : sortedPrimary;
   const displayExpanded = sortedExpanded;
 
   return {
-    // State
     results,
     expandedResults,
     isLoading,
@@ -242,21 +385,20 @@ export function usePropertySearch() {
     displayExpanded,
     filteredExpanded: sortedExpanded,
     statusMessage,
+    aiMessages,
+    isClassifying,
 
-    // AI-native state
     conversationTurns,
     searchMode,
     sortBy,
     suggestedChips,
     marketContext,
 
-    // Favorites
     favorites,
     isFavorite,
     clearFavorites,
     removeFavorite,
 
-    // Actions
     handleSearch,
     handleRefine,
     loadExpanded,

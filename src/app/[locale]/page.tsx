@@ -19,6 +19,7 @@ import { ToastContainer } from "@/components/ui/toast";
 import { EmptyState } from "@/components/empty-state";
 import { AiSummary } from "@/components/ai-summary";
 import { MarketStats } from "@/components/market-stats";
+import { ConversationThread } from "@/components/conversation-thread";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePropertySearch } from "@/hooks/use-property-search";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +73,8 @@ export default function HomePage() {
     searchMode,
     sortBy,
     statusMessage,
+    aiMessages,
+    isClassifying,
     favorites,
     isFavorite,
     clearFavorites,
@@ -297,18 +300,24 @@ export default function HomePage() {
             />
           )}
 
+          {/* Conversation Thread */}
+          <ConversationThread
+            messages={aiMessages}
+            isClassifying={isClassifying}
+          />
+
           {/* Suggestion Chips */}
           <SuggestionChips
             chips={suggestedChips}
             onChipClick={handleRefine}
-            isLoading={isLoading}
+            isLoading={isLoading || isClassifying}
           />
 
           {/* Refine Input */}
           <RefineInput
             onRefine={handleRefine}
             onReset={resetConversation}
-            isLoading={isLoading}
+            isLoading={isLoading || isClassifying}
           />
         </div>
       )}
