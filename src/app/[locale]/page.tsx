@@ -160,13 +160,14 @@ export default function HomePage() {
       <main className="flex-1 flex flex-col pb-[140px]">
         {/* Welcome state — centered, like ChatGPT */}
         {!hasConversation && !isLoading && (
-          <div className="flex-1 flex flex-col items-center justify-center px-4">
+          <div className="flex-1 flex flex-col items-center justify-center px-4 min-h-[60vh]">
             <div className="text-center max-w-lg animate-fade-in-up">
               <div className="h-14 w-14 rounded-2xl bg-[#3b5bdb] flex items-center justify-center shadow-lg mx-auto mb-6">
                 <Search className="h-6 w-6 text-white" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3">
-                {t("title")}
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+                {t("title")}{" "}
+                <span className="text-primary">{t("titleHighlight")}</span>
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-8">
                 {t("subtitle")}

@@ -60,34 +60,35 @@ export function ChatInput({
     if (inputRef.current) inputRef.current.style.height = "auto";
   };
 
+  const modeLabel = mode === "buy" ? "buy" : "rent";
   const defaultPlaceholder = hasResults
     ? "Refine: plus grand, max 2000€, cherche à Luxembourg..."
-    : "Rechercher: appartement kirchberg, bureau mondorf...";
+    : `Search to ${modeLabel}: appartement kirchberg, bureau mondorf...`;
 
   return (
     <div className="bg-background/80 backdrop-blur-xl border-t">
       <div className="max-w-3xl mx-auto px-3.5 sm:px-6 py-3">
-        {/* Mode toggle */}
+        {/* Mode toggle — always one is selected */}
         <div className="flex items-center gap-1 mb-2">
           <button
             onClick={() => onModeChange("buy")}
-            className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
+            className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
               mode === "buy"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border"
             }`}
           >
-            Acheter
+            Buy
           </button>
           <button
             onClick={() => onModeChange("rent")}
-            className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
+            className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
               mode === "rent"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border"
             }`}
           >
-            Louer
+            Rent
           </button>
         </div>
 
