@@ -38,6 +38,7 @@ import { deduplicateListings } from "./dedup";
 import { dedupedToProperty } from "./converter";
 import { computeInsights } from "./insights";
 import { enrichWithAI } from "./enrichment";
+import { computeMarketAnalytics, fetchCommuneComparison } from "./market-analytics";
 
 export async function runPipeline(
   query: string,
@@ -206,7 +207,23 @@ export async function runPipeline(
   // ── Step 8: Compute insights ────────────────────────────────────────
   computeInsights(properties);
 
-  // ── Step 9: AI enrichment ───────────────────────────────────────────
+  // ── Step 9: Market analytics (pure math, never fails) ────────────────
+  const marketAnalytics = computeMarketAnalytics(properties, effectiveMode);
+  try {
+    const parseData = await getParseCache(query);
+    const commune =
+      parseData?.parsed?.commune || parseData?.parsed?.neighborhood || null;
+    const propertyType = parseData?.parsed?.propertyType || null;
+    marketAnalytics.communeComparison = await fetchCommuneComparison(
+      commune,
+      propertyType,
+      effectiveMode
+    );
+  } catch {
+    /* commune comparison is optional */
+  }
+
+  // ── Step 10: AI enrichment ──────────────────────────────────────────
   let aiEnrichment = {
     summary: `Found ${properties.length} properties`,
     marketContext: "",
@@ -225,5 +242,6 @@ export async function runPipeline(
     citations: listingUrls,
     suggestedFollowUps: aiEnrichment.suggestedFollowUps,
     marketContext: aiEnrichment.marketContext,
+    marketAnalytics,
   };
 }

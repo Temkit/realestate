@@ -49,6 +49,15 @@ export interface PerplexityImage {
   title?: string;
 }
 
+export interface MarketAnalytics {
+  priceRange: { min: number; max: number; avg: number; median: number } | null;
+  pricePerSqm: { min: number; max: number; avg: number } | null;
+  priceDistribution: { label: string; min: number; max: number; count: number }[];
+  supplyLevel: "low" | "medium" | "high";
+  portalCoverage: { portal: string; count: number }[];
+  communeComparison: { commune: string; searchCount: number; avgResults: number }[] | null;
+}
+
 export interface SearchResult {
   properties: Property[];
   summary: string;
@@ -56,6 +65,7 @@ export interface SearchResult {
   suggestedFollowUps?: string[];
   marketContext?: string;
   categoryUrls?: string[];
+  marketAnalytics?: MarketAnalytics;
 }
 
 export interface ConversationTurn {

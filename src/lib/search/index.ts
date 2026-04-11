@@ -15,5 +15,6 @@
 
 export { runPipeline } from "./pipeline";
 export { deduplicateListings, excludePrimaryResults } from "./dedup";
+export { computeMarketAnalytics, fetchCommuneComparison } from "./market-analytics";
 export type { DedupedListing } from "./dedup";
 export type { AIEnrichment } from "./enrichment";
