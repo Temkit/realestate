@@ -86,11 +86,12 @@ export async function runPipeline(
     try {
       const cachedParse = await getParseCache(query);
       const commune = cachedParse?.parsed?.commune || cachedParse?.parsed?.neighborhood || "";
-      const propertyType = cachedParse?.parsed?.propertyType || "";
+      // Use original query term (e.g. "bureau") not English parsed type ("office")
+      const queryType = query.split(/\s+/)[0] || cachedParse?.parsed?.propertyType || "";
       if (commune) {
         const tier1 = getTier1Communes(commune);
         if (tier1.length > 0) {
-          const nearbyQuery = `${propertyType} ${tier1.join(" ")} Luxembourg`;
+          const nearbyQuery = `${queryType} ${tier1.join(" ")} Luxembourg`;
           const nearbyResults = await discoverUrls(nearbyQuery);
           // Merge, dedup by URL
           const existingUrls = new Set(braveResults.map((r) => r.url));

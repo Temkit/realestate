@@ -58,6 +58,7 @@ export function usePropertySearch() {
     setStatusMessage("Starting search...");
     setResults(null);
     setExpandedResults(null);
+    setFilteredPrimary([]);
     setSortBy("recommended");
 
     try {
@@ -217,8 +218,9 @@ export function usePropertySearch() {
     [filteredExpanded, sortBy]
   );
 
-  // displayPrimary uses filteredPrimary from FilterBar if available
-  const displayPrimary = filteredPrimary.length > 0 || (results && results.properties.length > 0)
+  // displayPrimary uses filteredPrimary from FilterBar if it has results,
+  // otherwise falls back to sortedPrimary (all results, no filter applied)
+  const displayPrimary = filteredPrimary.length > 0
     ? filteredPrimary
     : sortedPrimary;
   const displayExpanded = sortedExpanded;

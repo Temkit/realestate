@@ -118,12 +118,13 @@ export async function GET(req: NextRequest) {
         if (listingUrls.length < 8) {
           try {
             const commune = parseData?.parsed?.commune || parseData?.parsed?.neighborhood || "";
-            const propertyType = parseData?.parsed?.propertyType || "";
+            // Use the original query term (e.g. "bureau") not the English parsed type ("office")
+            const queryType = query.split(/\s+/)[0] || parseData?.parsed?.propertyType || "";
             if (commune) {
               const tier1 = getTier1Communes(commune);
               if (tier1.length > 0) {
                 send("status", `Few results — also checking ${tier1.slice(0, 3).join(", ")}...`);
-                const nearbyResults = await discoverUrls(`${propertyType} ${tier1.join(" ")} Luxembourg`);
+                const nearbyResults = await discoverUrls(`${queryType} ${tier1.join(" ")} Luxembourg`);
                 const existing = new Set(braveResults.map((r) => r.url));
                 for (const r of nearbyResults) {
                   if (!existing.has(r.url)) { existing.add(r.url); braveResults.push(r); }
