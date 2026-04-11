@@ -193,61 +193,68 @@ export default function HomePage() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8">
-          {!results && !isLoading && !pendingAnalysis && !isAnalyzing && (
+          {!results && !isLoading && (
             <div className="text-center mb-8 sm:mb-12 animate-fade-in-up">
               {/* Logo */}
               <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-[#3b5bdb] flex items-center justify-center shadow-lg mx-auto mb-6">
                 <span className="text-white text-lg sm:text-xl font-extrabold tracking-tight">olu</span>
               </div>
 
-              {/* Animated title */}
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.3]">
-                Your next{" "}
-                <RotatingText
-                  words={["home", "office", "studio", "apartment", "villa"]}
-                  className="text-primary min-w-[120px] sm:min-w-[180px] text-left"
-                  interval={2200}
-                />
-                <br />
-                in{" "}
-                <RotatingText
-                  words={["Luxembourg", "Kirchberg", "Mondorf", "Remich", "Esch", "Schengen", "Belval"]}
-                  className="text-primary min-w-[160px] sm:min-w-[240px] text-left"
-                  interval={2800}
-                />
-              </h1>
+              {/* Title — animated when idle, static when clarifying */}
+              {pendingAnalysis ? (
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.3]">
+                  <span className="text-primary">{pendingAnalysis.summary}</span>
+                </h1>
+              ) : (
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.3]">
+                  Your next{" "}
+                  <RotatingText
+                    words={["home", "office", "studio", "apartment", "villa"]}
+                    className="text-primary min-w-[120px] sm:min-w-[180px] text-left"
+                    interval={2200}
+                  />
+                  <br />
+                  in{" "}
+                  <RotatingText
+                    words={["Luxembourg", "Kirchberg", "Mondorf", "Remich", "Esch", "Schengen", "Belval"]}
+                    className="text-primary min-w-[160px] sm:min-w-[240px] text-left"
+                    interval={2800}
+                  />
+                </h1>
+              )}
+              {/* Clarification box — inline below title */}
+              {pendingAnalysis && (
+                <div className="mt-6 sm:mt-8">
+                  <QueryClarification
+                    analysis={pendingAnalysis}
+                    onSelect={handleClarificationSelect}
+                    onCancel={handleClarificationCancel}
+                  />
+                </div>
+              )}
+
+              {/* Analyzing indicator */}
+              {isAnalyzing && (
+                <div className="flex items-center justify-center gap-3 mt-6 animate-fade-in-up">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <p className="text-sm text-muted-foreground">Analyzing your query...</p>
+                </div>
+              )}
             </div>
           )}
-          <SearchBar
-            onSearch={handleSearch}
-            isLoading={isLoading || isAnalyzing}
-            hasResults={!!results}
-            searchMode={searchMode}
-            onModeChange={handleModeChange}
-          />
+
+          {/* Search bar — hidden when clarifying */}
+          {!pendingAnalysis && (
+            <SearchBar
+              onSearch={handleSearch}
+              isLoading={isLoading || isAnalyzing}
+              hasResults={!!results}
+              searchMode={searchMode}
+              onModeChange={handleModeChange}
+            />
+          )}
         </div>
       </section>
-
-      {/* Query Clarification Box */}
-      {pendingAnalysis && (
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 mt-6">
-          <QueryClarification
-            analysis={pendingAnalysis}
-            onSelect={handleClarificationSelect}
-            onCancel={handleClarificationCancel}
-          />
-        </div>
-      )}
-
-      {/* Analyzing indicator */}
-      {isAnalyzing && (
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 mt-6">
-          <div className="flex items-center gap-3 animate-fade-in-up">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <p className="text-sm text-muted-foreground">Analyzing your query...</p>
-          </div>
-        </div>
-      )}
 
       {/* Error */}
       {error && (
