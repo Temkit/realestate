@@ -1,6 +1,6 @@
 /**
  * Gemini URL Context — reads listing pages in batch via Gemini's url_context tool.
- * Extracts price, surface, type, city, mode, address, rooms from up to 20 URLs in one call.
+ * Extracts price, surface, type, city, mode, address, rooms, bathrooms, description.
  * Does NOT extract images (Gemini fabricates image URLs).
  */
 
@@ -32,13 +32,30 @@ export async function geminiReadUrls(
             {
               parts: [
                 {
-                  text: `Read these listing pages. For EACH return one line:\nURL | PRICE (number only in euros) | SURFACE (m² number only, realistic: studio 20-50, apartment 40-200, house 80-400, office 10-500) | TYPE | CITY | MODE (rent or buy) | ADDRESS | ROOMS (number, 0 if unknown)\n\n${urlList}\n\nReturn ONLY the lines, no other text.`,
+                  text: `Read these real estate listing pages. For EACH return one line with fields separated by |
+
+FORMAT: URL | PRICE | SURFACE | TYPE | CITY | MODE | ADDRESS | ROOMS | BATHROOMS | DESCRIPTION
+
+RULES:
+- PRICE: number only in euros, no decimals (e.g. 750000 or 2600)
+- SURFACE: m² number only. Realistic ranges: studio 15-50, apartment 40-200, house 80-400, office 10-500. If the page shows an unrealistic number, use 0.
+- TYPE: apartment, house, office, studio, land, commercial, duplex, penthouse
+- CITY: exact city/commune name as shown on the page
+- MODE: "rent" or "buy"
+- ADDRESS: full street address if shown, otherwise neighborhood or city
+- ROOMS: number of bedrooms/rooms, 0 if unknown
+- BATHROOMS: number of bathrooms/salle de bain, 0 if unknown
+- DESCRIPTION: first 1-2 sentences describing the property (max 150 chars). Copy from the listing, do NOT invent.
+
+${urlList}
+
+Return ONLY the data lines, no headers, no explanation.`,
                 },
               ],
             },
           ],
           tools: [{ url_context: {} }],
-          generationConfig: { temperature: 0, maxOutputTokens: 2000 },
+          generationConfig: { temperature: 0, maxOutputTokens: 4000 },
         }),
       }
     );
@@ -66,21 +83,27 @@ export async function geminiReadUrls(
       const mode = /rent|location|louer|mois/i.test(parts[5] || "")
         ? ("rent" as const)
         : ("buy" as const);
-      const hostname = new URL(url).hostname.replace("www.", "");
+
+      let hostname = "";
+      try { hostname = new URL(url).hostname.replace("www.", ""); } catch { /* skip */ }
+
+      const rooms = parseInt((parts[7] || "0").replace(/[^\d]/g, "")) || 0;
+      const bathrooms = parseInt((parts[8] || "0").replace(/[^\d]/g, "")) || 0;
+      const description = (parts[9] || "").slice(0, 200);
 
       results.push({
         url,
         source: hostname,
         price,
         surface,
-        rooms: parseInt(parts[7] || "0") || 0,
-        bathrooms: 0,
+        rooms,
+        bathrooms,
         propertyType: parts[3] || "Property",
         city: parts[4] || "",
         address: parts[6] || parts[4] || "",
         imageUrl: null,
         contractType: mode,
-        description: "",
+        description,
       });
     }
     return results;

@@ -34,7 +34,7 @@ export async function firecrawlForImages(
     if (!apiKey) return images;
     const app = new Firecrawl({ apiKey });
 
-    for (const url of uncachedUrls.slice(0, 3)) {
+    for (const url of uncachedUrls.slice(0, 6)) {
       try {
         const result = await app.scrape(url);
         const meta = result.metadata || {};
