@@ -19,6 +19,7 @@ import { ToastContainer } from "@/components/ui/toast";
 import { EmptyState } from "@/components/empty-state";
 import { AiSummary } from "@/components/ai-summary";
 import { MarketStats } from "@/components/market-stats";
+import { QueryClarification } from "@/components/query-clarification";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePropertySearch } from "@/hooks/use-property-search";
 import { useToast } from "@/hooks/use-toast";
@@ -74,8 +75,12 @@ export default function HomePage() {
     isFavorite,
     clearFavorites,
     removeFavorite,
+    pendingAnalysis,
+    isAnalyzing,
     handleSearch,
     handleRefine,
+    handleClarificationSelect,
+    handleClarificationCancel,
     loadExpanded,
     resetConversation,
     handlePropertyClick,
@@ -201,13 +206,34 @@ export default function HomePage() {
           )}
           <SearchBar
             onSearch={handleSearch}
-            isLoading={isLoading}
+            isLoading={isLoading || isAnalyzing}
             hasResults={!!results}
             searchMode={searchMode}
             onModeChange={handleModeChange}
           />
         </div>
       </section>
+
+      {/* Query Clarification Box */}
+      {pendingAnalysis && (
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 mt-6">
+          <QueryClarification
+            analysis={pendingAnalysis}
+            onSelect={handleClarificationSelect}
+            onCancel={handleClarificationCancel}
+          />
+        </div>
+      )}
+
+      {/* Analyzing indicator */}
+      {isAnalyzing && (
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 mt-6">
+          <div className="flex items-center gap-3 animate-fade-in-up">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <p className="text-sm text-muted-foreground">Analyzing your query...</p>
+          </div>
+        </div>
+      )}
 
       {/* Error */}
       {error && (

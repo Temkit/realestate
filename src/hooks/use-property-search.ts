@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { expandedSearchAction, refineSearchAction } from "@/app/actions";
+import type { QueryAnalysis } from "@/lib/search/query-analyzer";
 import type { Property, SearchResult, ConversationTurn } from "@/lib/types";
 
 type SSEEvent = { type: string; data: unknown };
@@ -44,44 +45,34 @@ export function usePropertySearch() {
   const [suggestedChips, setSuggestedChips] = useState<string[]>([]);
   const [marketContext, setMarketContext] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string>("");
+  const [pendingAnalysis, setPendingAnalysis] = useState<QueryAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const { favorites, addFavorite, removeFavorite, isFavorite, clearFavorites } = useFavorites();
   const { recordClick, recordFavorite, getPreferenceHints } = useUserPreferences();
 
-  // When mode changes and we have results, re-search with the new mode
   const handleModeChange = (mode: SearchMode) => {
     setSearchMode(mode);
     if (lastQuery) {
-      setIsLoading(true);
-      setExpandedResults(null);
-      setSortBy("recommended");
-      fetch(`/api/search?${new URLSearchParams({ q: lastQuery, mode })}`)
-        .then((resp) => resp.json())
-        .then((data) => {
-          setResults(data);
-          setSuggestedChips(data.suggestedFollowUps || []);
-          setMarketContext(data.marketContext || "");
-        })
-        .catch(() => setError("Search failed."))
-        .finally(() => setIsLoading(false));
+      runSearch(lastQuery, mode);
     }
   };
 
-  const handleSearch = async (query: string) => {
+  /** Run the actual search (after query is confirmed complete) */
+  const runSearch = async (query: string, mode: "buy" | "rent") => {
     setIsLoading(true);
-    setIsExpandedLoading(false);
     setError(null);
     setLastQuery(query);
     setExpandedResults(null);
     setSortBy("recommended");
     setStatusMessage("");
+    setPendingAnalysis(null);
     setConversationTurns([{ role: "user", content: query }]);
 
-    const params = new URLSearchParams({ q: query, mode: searchMode });
+    const params = new URLSearchParams({ q: query, mode });
     let sseWorked = false;
 
     try {
-      // Try SSE first — shows progress + partial results
       const resp = await fetch(`/api/search/stream?${params}`);
       if (resp.ok && resp.body) {
         const reader = resp.body.getReader();
@@ -136,7 +127,7 @@ export function usePropertySearch() {
                   sseWorked = true;
                   break;
               }
-            } catch { /* skip malformed event */ }
+            } catch { /* skip malformed */ }
           }
         }
 
@@ -146,11 +137,8 @@ export function usePropertySearch() {
           return;
         }
       }
-    } catch {
-      // SSE failed — fall through to API route
-    }
+    } catch { /* SSE failed */ }
 
-    // Fallback: simple API route (no streaming, but reliable)
     if (!sseWorked) {
       try {
         setStatusMessage("Searching...");
@@ -167,6 +155,53 @@ export function usePropertySearch() {
 
     setStatusMessage("");
     setIsLoading(false);
+  };
+
+  /** Handle initial search — analyze query first, ask if incomplete */
+  const handleSearch = async (query: string) => {
+    setPendingAnalysis(null);
+    setIsAnalyzing(true);
+    setError(null);
+
+    try {
+      const resp = await fetch(`/api/search/analyze?q=${encodeURIComponent(query)}`);
+      const analysis = await resp.json() as QueryAnalysis;
+
+      if (analysis.complete) {
+        // Query has everything — search immediately
+        const mode = analysis.parsed.mode || searchMode;
+        setSearchMode(mode);
+        setIsAnalyzing(false);
+        await runSearch(query, mode);
+      } else {
+        // Something is missing — show clarification box
+        setIsAnalyzing(false);
+        setPendingAnalysis(analysis);
+      }
+    } catch {
+      // Analysis failed — just search with what we have
+      setIsAnalyzing(false);
+      await runSearch(query, searchMode);
+    }
+  };
+
+  /** Handle clarification selection */
+  const handleClarificationSelect = async (completedQuery: string) => {
+    setPendingAnalysis(null);
+    // Re-analyze the completed query to get the mode
+    try {
+      const resp = await fetch(`/api/search/analyze?q=${encodeURIComponent(completedQuery)}`);
+      const analysis = await resp.json() as QueryAnalysis;
+      const mode = analysis.parsed.mode || searchMode;
+      setSearchMode(mode);
+      await runSearch(completedQuery, mode);
+    } catch {
+      await runSearch(completedQuery, searchMode);
+    }
+  };
+
+  const handleClarificationCancel = () => {
+    setPendingAnalysis(null);
   };
 
   /** Load expanded results on demand (triggered by scroll). */
@@ -281,6 +316,8 @@ export function usePropertySearch() {
     suggestedChips,
     marketContext,
     statusMessage,
+    pendingAnalysis,
+    isAnalyzing,
 
     // Favorites
     favorites,
@@ -291,6 +328,8 @@ export function usePropertySearch() {
     // Actions
     handleSearch,
     handleRefine,
+    handleClarificationSelect,
+    handleClarificationCancel,
     loadExpanded,
     resetConversation,
     handlePropertyClick,
