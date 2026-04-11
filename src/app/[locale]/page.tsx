@@ -17,13 +17,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ToastContainer } from "@/components/ui/toast";
 import { EmptyState } from "@/components/empty-state";
-import { AiSummary } from "@/components/ai-summary";
 import { MarketStats } from "@/components/market-stats";
 import { ConversationThread } from "@/components/conversation-thread";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePropertySearch } from "@/hooks/use-property-search";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, SearchX } from "lucide-react";
+import { Heart, SearchX, Sparkles } from "lucide-react";
 import type { Property } from "@/lib/types";
 
 function ResultSkeleton({ count = 6 }: { count?: number }) {
@@ -58,7 +57,6 @@ export default function HomePage() {
 
   const {
     results,
-    expandedResults,
     isLoading,
     isExpandedLoading,
     error,
@@ -67,8 +65,6 @@ export default function HomePage() {
     showFavorites,
     sortedPrimary,
     sortedExpanded,
-    displayPrimary,
-    displayExpanded,
     suggestedChips,
     searchMode,
     sortBy,
@@ -90,16 +86,24 @@ export default function HomePage() {
     setShowFavorites,
     handleModeChange,
     setSortBy,
-    setFilteredPrimary,
   } = usePropertySearch();
 
   const { toasts, toast, dismiss } = useToast();
 
-  // Intersection observer to lazy-load expanded results on scroll
+  // ── FilterBar state (UI-only, separate from conversational filters) ──
+  const [filteredPrimary, setFilteredPrimary] = useState<Property[] | null>(null);
+
+  // Reset FilterBar when results change
+  useEffect(() => {
+    setFilteredPrimary(null);
+  }, [results?.properties]);
+
+  const displayPrimary = filteredPrimary ?? sortedPrimary;
+
+  // ── Expanded results lazy-load via intersection observer ──
   const expandedSentinelRef = useRef<HTMLDivElement | null>(null);
   const expandedLoadedRef = useRef(false);
 
-  // Reset the loaded flag when results change (new search)
   useEffect(() => {
     expandedLoadedRef.current = false;
   }, [results]);
@@ -142,7 +146,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
 
-      {/* Header */}
+      {/* ── Header ─────────────────────────────────────────────────── */}
       <header className="border-b sticky top-0 z-40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 overflow-hidden">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8 h-16 flex items-center justify-between">
           <div
@@ -150,18 +154,20 @@ export default function HomePage() {
             onClick={resetConversation}
           >
             <div className="h-8 w-8 rounded-lg bg-[#3b5bdb] flex items-center justify-center shadow-sm">
-              <span className="text-white text-sm font-extrabold tracking-tight">olu</span>
+              <span className="text-white text-sm font-extrabold tracking-tight">
+                olu
+              </span>
             </div>
             <span className="text-[1.125rem] font-bold tracking-tight">
-              olu<span className="text-muted-foreground font-normal">.lu</span>
+              olu
+              <span className="text-muted-foreground font-normal">.lu</span>
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             {favorites.length > 0 && (
               <button
                 onClick={() => setShowFavorites(true)}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground
-                           transition-colors px-3 py-2 rounded-xl hover:bg-muted min-h-[44px]"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-xl hover:bg-muted min-h-[44px]"
                 aria-label={`${favorites.length} ${tFav("saved")}`}
               >
                 <Heart className="h-4 w-4 fill-red-500 text-red-500" />
@@ -176,7 +182,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Search Section — sticky when results exist */}
+      {/* ── Search Section ─────────────────────────────────────────── */}
       <section
         id="main-content"
         className={`transition-all duration-500 ${
@@ -208,7 +214,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Error */}
+      {/* ── Error ──────────────────────────────────────────────────── */}
       {error && (
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8 mb-8 mt-6">
           <div className="rounded-2xl bg-destructive/10 border border-destructive/20 p-5">
@@ -217,7 +223,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Loading with streaming status */}
+      {/* ── Loading with streaming status + partial results ────────── */}
       {isLoading && (
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-8 mt-6">
           {statusMessage && (
@@ -226,7 +232,6 @@ export default function HomePage() {
               <p className="text-sm text-muted-foreground">{statusMessage}</p>
             </div>
           )}
-          {/* Show partial results while still loading */}
           {results && results.properties.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {results.properties.map((property, index) => (
@@ -246,39 +251,62 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Primary Results */}
+      {/* ── Primary Results ────────────────────────────────────────── */}
       {results && !isLoading && (
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-8 mt-4 sm:mt-6" aria-live="polite">
+        <div
+          className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-8 mt-4 sm:mt-6"
+          aria-live="polite"
+        >
+          {/* AI Summary (from first enrichment) */}
+          {results.summary && (
+            <div className="mb-5 flex items-start gap-3 animate-fade-in-up">
+              <div className="shrink-0 mt-0.5">
+                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                </div>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[0.9375rem] leading-relaxed text-foreground">
+                  {results.summary}
+                </p>
+                {results.marketContext && (
+                  <p className="text-xs text-muted-foreground mt-1 tabular-nums">
+                    {results.marketContext}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Market Stats */}
+          {results.marketAnalytics && (
+            <div className="mb-5">
+              <MarketStats
+                analytics={results.marketAnalytics}
+                mode={searchMode}
+              />
+            </div>
+          )}
+
+          {/* Count + FilterBar */}
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-medium text-muted-foreground">
               {t("propertiesFound", { count: displayPrimary.length })}
             </h2>
           </div>
 
-          {/* AI Summary */}
-          {results.summary && (
-            <AiSummary summary={results.summary} marketContext={results.marketContext} />
-          )}
-
-          {/* Market Stats */}
-          {results.marketAnalytics && (
-            <div className="mb-5">
-              <MarketStats analytics={results.marketAnalytics} mode={searchMode} />
-            </div>
-          )}
-
           <FilterBar
             properties={sortedPrimary}
-            onFilteredChange={(filtered) => setFilteredPrimary(filtered)}
+            onFilteredChange={setFilteredPrimary}
             sortBy={sortBy}
             onSortChange={setSortBy}
           />
 
-          {/* Price disclaimer */}
           <p className="text-xs text-muted-foreground/60 mb-4 -mt-2">
             {t("priceDisclaimer")}
           </p>
 
+          {/* Property Grid */}
           {displayPrimary.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {displayPrimary.map((property, index) => (
@@ -300,7 +328,7 @@ export default function HomePage() {
             />
           )}
 
-          {/* Conversation Thread */}
+          {/* Conversation Thread (visible after first refinement) */}
           <ConversationThread
             messages={aiMessages}
             isClassifying={isClassifying}
@@ -322,15 +350,15 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Sentinel for lazy-loading expanded results */}
+      {/* ── Expanded Results Sentinel ──────────────────────────────── */}
       {results && !isLoading && (
         <div ref={sentinelCallback} aria-hidden="true" />
       )}
 
-      {/* Expanded Results */}
+      {/* ── Expanded Results ───────────────────────────────────────── */}
       {results &&
         !isLoading &&
-        (isExpandedLoading || displayExpanded.length > 0) && (
+        (isExpandedLoading || sortedExpanded.length > 0) && (
           <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-8">
             <div className="relative mt-4">
               <div className="bg-muted/40 border rounded-2xl sm:rounded-3xl p-4 sm:p-8">
@@ -347,7 +375,7 @@ export default function HomePage() {
                   <ResultSkeleton count={3} />
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    {displayExpanded.map((property, index) => (
+                    {sortedExpanded.map((property, index) => (
                       <PropertyCard
                         key={property.id}
                         property={property}
@@ -366,8 +394,7 @@ export default function HomePage() {
           </div>
         )}
 
-
-      {/* Property Detail */}
+      {/* ── Property Detail Sheet ──────────────────────────────────── */}
       <PropertyDetail
         property={selectedProperty}
         isOpen={!!selectedProperty}
@@ -380,17 +407,17 @@ export default function HomePage() {
         }}
       />
 
-      {/* Favorites Sheet */}
+      {/* ── Favorites Sheet ────────────────────────────────────────── */}
       <FavoritesSheet
-        favorites={favorites}
         isOpen={showFavorites}
         onClose={() => setShowFavorites(false)}
+        favorites={favorites}
         onRemove={removeFavorite}
-        onSelect={(p) => setSelectedProperty(p)}
         onClearAll={clearFavorites}
+        onSelect={handlePropertyClick}
       />
 
-      {/* Compare Dialog */}
+      {/* ── Compare View ───────────────────────────────────────────── */}
       <CompareView
         properties={favorites}
         isOpen={showCompare}
@@ -398,12 +425,14 @@ export default function HomePage() {
         onRemove={removeFavorite}
       />
 
-      {/* Favorites Bottom Bar */}
-      <FavoritesBar
-        favorites={favorites}
-        onOpenCompare={() => setShowCompare(true)}
-        onViewFavorites={() => setShowFavorites(true)}
-      />
+      {/* ── Favorites Bar ──────────────────────────────────────────── */}
+      {favorites.length > 0 && !showFavorites && (
+        <FavoritesBar
+          favorites={favorites}
+          onViewFavorites={() => setShowFavorites(true)}
+          onOpenCompare={() => setShowCompare(true)}
+        />
+      )}
 
       <Footer />
       <BackToTop />
