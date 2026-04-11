@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { expandedSearchAction } from "@/app/actions";
+import { searchAction, expandedSearchAction } from "@/app/actions";
 import {
   applyFilter,
   applySort,
@@ -12,109 +12,104 @@ import {
   describeFilter,
 } from "@/lib/search/client-actions";
 import type { FilterParams } from "@/lib/search/intent-classifier";
-import type { ConversationMessage } from "@/components/conversation-thread";
+import type { ConversationTurn } from "@/components/conversation-thread";
 import type { Property, SearchResult } from "@/lib/types";
 
 export type SortOption = "recommended" | "price-asc" | "price-desc" | "size";
 export type SearchMode = "buy" | "rent";
 
-function sortProperties(
-  properties: Property[],
-  sortBy: SortOption
-): Property[] {
-  if (sortBy === "recommended") return properties;
-  const sorted = [...properties];
-  switch (sortBy) {
-    case "price-asc":
-      return sorted.sort(
-        (a, b) => (a.price || Infinity) - (b.price || Infinity)
-      );
-    case "price-desc":
-      return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
-    case "size":
-      return sorted.sort((a, b) => (b.sqft || 0) - (a.sqft || 0));
-    default:
-      return sorted;
-  }
-}
-
 export function usePropertySearch() {
-  // ── Core state ──────────────────────────────────────────────────────
-  const [results, setResults] = useState<SearchResult | null>(null);
-  const [expandedResults, setExpandedResults] = useState<SearchResult | null>(
-    null
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [isExpandedLoading, setIsExpandedLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(
-    null
-  );
-  const [showCompare, setShowCompare] = useState(false);
-  const [showFavorites, setShowFavorites] = useState(false);
+  // ── Conversation turns (the core state) ─────────────────────────────
+  const [turns, setTurns] = useState<ConversationTurn[]>([]);
+
+  // ── Search state ────────────────────────────────────────────────────
   const [lastQuery, setLastQuery] = useState("");
   const [searchMode, setSearchMode] = useState<SearchMode>("buy");
-  const [sortBy, setSortBy] = useState<SortOption>("recommended");
-
-  // ── Streaming state ─────────────────────────────────────────────────
-  const [statusMessage, setStatusMessage] = useState("");
-
-  // ── Conversation state ──────────────────────────────────────────────
-  const [aiMessages, setAiMessages] = useState<ConversationMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isClassifying, setIsClassifying] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<FilterParams[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // ── All accumulated properties (across all turns) ───────────────────
   const [allProperties, setAllProperties] = useState<Property[]>([]);
-  const [lastAiSuggestion, setLastAiSuggestion] = useState<string | null>(
-    null
-  );
-  const [suggestedChips, setSuggestedChips] = useState<string[]>([]);
+  const [allResults, setAllResults] = useState<SearchResult | null>(null);
+  const [activeFilters, setActiveFilters] = useState<FilterParams[]>([]);
+  const [lastAiSuggestion, setLastAiSuggestion] = useState<string | null>(null);
 
-  const {
-    favorites,
-    addFavorite,
-    removeFavorite,
-    isFavorite,
-    clearFavorites,
-  } = useFavorites();
-  const { recordClick, recordFavorite, getPreferenceHints } =
-    useUserPreferences();
+  // ── UI state ────────────────────────────────────────────────────────
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [showCompare, setShowCompare] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
 
-  const addMessage = useCallback(
-    (role: "user" | "ai", content: string) => {
-      if (!content) return;
-      setAiMessages((prev) => [...prev, { role, content }]);
-    },
-    []
-  );
+  // ── Expanded search ─────────────────────────────────────────────────
+  const [expandedResults, setExpandedResults] = useState<SearchResult | null>(null);
+  const [isExpandedLoading, setIsExpandedLoading] = useState(false);
+
+  const { favorites, addFavorite, removeFavorite, isFavorite, clearFavorites } = useFavorites();
+  const { recordClick, recordFavorite, getPreferenceHints } = useUserPreferences();
+
+  // ── Helper: update the current (last) turn ──────────────────────────
+  const updateLastTurn = useCallback((update: Partial<ConversationTurn>) => {
+    setTurns((prev) => {
+      if (prev.length === 0) return prev;
+      const last = { ...prev[prev.length - 1], ...update };
+      return [...prev.slice(0, -1), last];
+    });
+  }, []);
 
   // ── SSE streaming search ────────────────────────────────────────────
-
   const streamSearch = useCallback(
-    async (
-      query: string,
-      mode: SearchMode,
-      options?: { merge?: boolean }
-    ) => {
+    async (query: string, mode: SearchMode, options?: { merge?: boolean }) => {
       setIsLoading(true);
       setError(null);
-      setStatusMessage("Starting search...");
+
+      // Create a new turn
+      const newTurn: ConversationTurn = {
+        userMessage: query,
+        isStreaming: true,
+        statusMessage: "Starting search...",
+      };
+      setTurns((prev) => [...prev, newTurn]);
 
       if (!options?.merge) {
-        setResults(null);
         setAllProperties([]);
         setActiveFilters([]);
+        setExpandedResults(null);
       }
-      setExpandedResults(null);
-      if (!options?.merge) setSortBy("recommended");
 
       try {
         const params = new URLSearchParams({ q: query, mode });
         const resp = await fetch(`/api/search/stream?${params}`);
-        if (!resp.ok || !resp.body) throw new Error("Search failed");
+
+        if (!resp.ok || !resp.body) {
+          // Fallback to server action
+          updateLastTurn({ statusMessage: "Searching..." });
+          const result = await searchAction(query, mode);
+          setAllResults(result);
+          const props = result.properties;
+          if (options?.merge) {
+            setAllProperties((prev) => {
+              const ids = new Set(prev.map((p) => p.listingUrl || p.id));
+              return [...prev, ...props.filter((p) => !ids.has(p.listingUrl || p.id))];
+            });
+          } else {
+            setAllProperties(props);
+          }
+          updateLastTurn({
+            isStreaming: false,
+            statusMessage: undefined,
+            aiMessage: result.summary || `${props.length} results found.`,
+            properties: props,
+            analytics: result.marketAnalytics,
+            chips: result.suggestedFollowUps,
+          });
+          setIsLoading(false);
+          return;
+        }
 
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        let currentProps: Property[] = [];
 
         while (true) {
           const { done, value } = await reader.read();
@@ -129,142 +124,117 @@ export function usePropertySearch() {
               const event = JSON.parse(line.slice(6));
               switch (event.type) {
                 case "status":
-                  setStatusMessage(event.data as string);
+                  updateLastTurn({ statusMessage: event.data as string });
                   break;
 
                 case "properties": {
-                  const incoming = event.data as Property[];
+                  currentProps = event.data as Property[];
                   if (options?.merge) {
                     setAllProperties((prev) => {
-                      const ids = new Set(
-                        prev.map((p) => p.listingUrl || p.id)
-                      );
-                      const fresh = incoming.filter(
-                        (p) => !ids.has(p.listingUrl || p.id)
-                      );
-                      return [...prev, ...fresh];
-                    });
-                    setResults((prev) => {
-                      const prevProps = prev?.properties || [];
-                      const ids = new Set(
-                        prevProps.map((p) => p.listingUrl || p.id)
-                      );
-                      const fresh = incoming.filter(
-                        (p) => !ids.has(p.listingUrl || p.id)
-                      );
-                      return {
-                        ...(prev || { summary: "", citations: [] }),
-                        properties: [...prevProps, ...fresh],
-                      };
+                      const ids = new Set(prev.map((p) => p.listingUrl || p.id));
+                      return [...prev, ...currentProps.filter((p) => !ids.has(p.listingUrl || p.id))];
                     });
                   } else {
-                    setResults((prev) => ({
-                      ...(prev || { summary: "", citations: [] }),
-                      properties: incoming,
-                    }));
-                    setAllProperties(incoming);
+                    setAllProperties(currentProps);
                   }
+                  updateLastTurn({ properties: currentProps });
                   break;
                 }
 
                 case "analytics":
-                  setResults((prev) =>
-                    prev ? { ...prev, marketAnalytics: event.data } : prev
-                  );
+                  updateLastTurn({ analytics: event.data });
                   break;
 
                 case "enrichment": {
-                  const e = event.data as {
-                    summary: string;
-                    marketContext: string;
-                    suggestedFollowUps: string[];
-                  };
-                  setSuggestedChips(e.suggestedFollowUps || []);
-                  setResults((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          summary: e.summary,
-                          marketContext: e.marketContext,
-                          suggestedFollowUps: e.suggestedFollowUps,
-                        }
-                      : prev
-                  );
-                  if (e.summary && !options?.merge) {
-                    addMessage("ai", e.summary);
-                  }
+                  const e = event.data as { summary: string; suggestedFollowUps: string[] };
+                  updateLastTurn({
+                    aiMessage: e.summary,
+                    chips: e.suggestedFollowUps,
+                  });
                   break;
                 }
 
                 case "done": {
                   const result = event.data as SearchResult;
+                  setAllResults(result);
+                  const props = result.properties;
                   if (options?.merge) {
-                    setResults((prev) => {
-                      const prevProps = prev?.properties || [];
-                      const ids = new Set(
-                        prevProps.map((p) => p.listingUrl || p.id)
-                      );
-                      const fresh = result.properties.filter(
-                        (p) => !ids.has(p.listingUrl || p.id)
-                      );
-                      const merged = [...prevProps, ...fresh];
-                      return {
-                        ...result,
-                        properties: merged,
-                        marketAnalytics:
-                          prev?.marketAnalytics || result.marketAnalytics,
-                      };
-                    });
                     setAllProperties((prev) => {
-                      const ids = new Set(
-                        prev.map((p) => p.listingUrl || p.id)
-                      );
-                      const fresh = result.properties.filter(
-                        (p) => !ids.has(p.listingUrl || p.id)
-                      );
-                      return [...prev, ...fresh];
+                      const ids = new Set(prev.map((p) => p.listingUrl || p.id));
+                      return [...prev, ...props.filter((p) => !ids.has(p.listingUrl || p.id))];
                     });
-                    if (result.properties.length > 0) {
-                      addMessage(
-                        "ai",
-                        `+${result.properties.length} résultats ajoutés.`
-                      );
-                    }
                   } else {
-                    setResults(result);
-                    setAllProperties(result.properties);
+                    setAllProperties(props);
                   }
-                  setStatusMessage("");
+                  updateLastTurn({
+                    isStreaming: false,
+                    statusMessage: undefined,
+                    properties: props,
+                    analytics: result.marketAnalytics,
+                    aiMessage: result.summary || `${props.length} results found.`,
+                    chips: result.suggestedFollowUps,
+                  });
                   break;
                 }
 
                 case "error":
-                  setError(
-                    (event.data as { message: string }).message
-                  );
-                  setStatusMessage("");
+                  setError((event.data as { message: string }).message);
+                  updateLastTurn({ isStreaming: false, statusMessage: undefined });
                   break;
               }
-            } catch {
-              /* skip malformed */
-            }
+            } catch { /* skip malformed */ }
           }
         }
+
+        // If stream ended without a "done" event, finalize
+        updateLastTurn({ isStreaming: false, statusMessage: undefined });
       } catch {
-        setError("Search failed. Please try again.");
+        // Fallback to server action on any stream failure
+        try {
+          updateLastTurn({ statusMessage: "Retrying..." });
+          const result = await searchAction(query, mode);
+          setAllResults(result);
+          setAllProperties(options?.merge
+            ? [...allProperties, ...result.properties]
+            : result.properties
+          );
+          updateLastTurn({
+            isStreaming: false,
+            statusMessage: undefined,
+            aiMessage: result.summary || `${result.properties.length} results found.`,
+            properties: result.properties,
+            analytics: result.marketAnalytics,
+            chips: result.suggestedFollowUps,
+          });
+        } catch {
+          setError("Search failed. Please try again.");
+          updateLastTurn({ isStreaming: false, statusMessage: undefined });
+        }
       } finally {
         setIsLoading(false);
-        setStatusMessage("");
       }
     },
-    [addMessage]
+    [updateLastTurn, allProperties]
+  );
+
+  // ── Initial search ──────────────────────────────────────────────────
+  const handleSearch = useCallback(
+    async (query: string) => {
+      setLastQuery(query);
+      setTurns([]);
+      setAllProperties([]);
+      setActiveFilters([]);
+      setLastAiSuggestion(null);
+      setExpandedResults(null);
+      setAllResults(null);
+      await streamSearch(query, searchMode);
+    },
+    [searchMode, streamSearch]
   );
 
   // ── Conversational refine ───────────────────────────────────────────
-
   const handleRefine = useCallback(
     async (message: string) => {
-      addMessage("user", message);
       setIsClassifying(true);
       setError(null);
 
@@ -274,14 +244,11 @@ export function usePropertySearch() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message,
-            conversationHistory: aiMessages
-              .slice(-8)
-              .map((m) => ({
-                role: m.role === "ai" ? "assistant" : "user",
-                content: m.content,
-              })),
-            currentPropertyCount:
-              results?.properties?.length || allProperties.length,
+            conversationHistory: turns.slice(-4).flatMap((t) => [
+              { role: "user", content: t.userMessage },
+              ...(t.aiMessage ? [{ role: "assistant", content: t.aiMessage }] : []),
+            ]),
+            currentPropertyCount: allProperties.length,
             currentFilters: activeFilters.map((f) => describeFilter(f)),
             lastAiSuggestion,
             searchMode,
@@ -294,93 +261,83 @@ export function usePropertySearch() {
 
         switch (classification.intent) {
           case "filter": {
-            const source =
-              allProperties.length > 0
-                ? allProperties
-                : results?.properties || [];
+            const source = allProperties.length > 0 ? allProperties : [];
             const filtered = applyFilter(source, classification.params);
-            setResults((prev) =>
-              prev ? { ...prev, properties: filtered } : prev
-            );
             if (classification.params) {
               setActiveFilters((prev) => [...prev, classification.params]);
             }
-            const msg =
-              classification.aiResponse ||
-              `${filtered.length} résultat${filtered.length !== 1 ? "s" : ""}.`;
-            addMessage("ai", msg);
-            if (filtered.length < 3 && filtered.length < source.length) {
+            const msg = classification.aiResponse || `${filtered.length} résultat${filtered.length !== 1 ? "s" : ""}.`;
+            setTurns((prev) => [...prev, {
+              userMessage: message,
+              aiMessage: msg,
+              properties: filtered,
+            }]);
+            if (filtered.length < 3 && source.length > filtered.length) {
               setLastAiSuggestion("Chercher dans d'autres communes ?");
-              setSuggestedChips([
-                "Voir tout",
-                "Chercher plus loin",
-                "Enlever le filtre",
-              ]);
+              setTurns((prev) => {
+                const last = prev[prev.length - 1];
+                return [...prev.slice(0, -1), { ...last, chips: ["Voir tout", "Chercher plus loin"] }];
+              });
             }
             break;
           }
 
           case "sort": {
-            const source =
-              results?.properties || allProperties;
-            const sorted = applySort(source, classification.params);
-            setResults((prev) =>
-              prev ? { ...prev, properties: sorted } : prev
-            );
-            addMessage(
-              "ai",
-              classification.aiResponse || "Résultats triés."
-            );
+            const sorted = applySort(allProperties, classification.params);
+            setTurns((prev) => [...prev, {
+              userMessage: message,
+              aiMessage: classification.aiResponse || "Résultats triés.",
+              properties: sorted,
+            }]);
             break;
           }
 
           case "expand": {
             const query = classification.expandQuery || message;
-            addMessage(
-              "ai",
-              classification.aiResponse || "Recherche en cours..."
-            );
             setLastQuery(query);
+            // The turn is created inside streamSearch
+            setTurns((prev) => [...prev]); // force re-render
             await streamSearch(query, searchMode, { merge: true });
+            // Update the last turn's user message
+            setTurns((prev) => {
+              const last = prev[prev.length - 1];
+              return [...prev.slice(0, -1), { ...last, userMessage: message }];
+            });
             break;
           }
 
           case "compare": {
             setShowCompare(true);
-            addMessage(
-              "ai",
-              classification.aiResponse || "Comparaison ouverte."
-            );
+            setTurns((prev) => [...prev, {
+              userMessage: message,
+              aiMessage: classification.aiResponse || "Comparaison ouverte.",
+            }]);
             break;
           }
 
           case "detail": {
-            const prop = selectProperty(
-              results?.properties || [],
-              classification.params
-            );
+            const prop = selectProperty(allProperties, classification.params);
             if (prop) {
               setSelectedProperty(prop);
-              addMessage(
-                "ai",
-                classification.aiResponse ||
-                  `Détails de ${prop.address || prop.city}.`
-              );
+              setTurns((prev) => [...prev, {
+                userMessage: message,
+                aiMessage: classification.aiResponse || `Détails de ${prop.address || prop.city}.`,
+              }]);
             } else {
-              addMessage("ai", "Propriété non trouvée.");
+              setTurns((prev) => [...prev, {
+                userMessage: message,
+                aiMessage: "Propriété non trouvée.",
+              }]);
             }
             break;
           }
 
           case "question": {
-            const answer = answerQuestion(
-              allProperties.length > 0
-                ? allProperties
-                : results?.properties || [],
-              results?.marketAnalytics || null,
-              classification.params
-            );
-            addMessage("ai", answer);
+            const answer = answerQuestion(allProperties, allResults?.marketAnalytics || null, classification.params);
+            setTurns((prev) => [...prev, {
+              userMessage: message,
+              aiMessage: answer,
+            }]);
             break;
           }
 
@@ -390,186 +347,96 @@ export function usePropertySearch() {
         }
       } catch {
         setIsClassifying(false);
+        // Fallback: run as new search
         await streamSearch(message, searchMode);
       }
     },
-    [
-      aiMessages,
-      allProperties,
-      activeFilters,
-      lastAiSuggestion,
-      searchMode,
-      lastQuery,
-      results,
-      addMessage,
-      streamSearch,
-    ]
+    [turns, allProperties, activeFilters, lastAiSuggestion, searchMode, lastQuery, allResults, streamSearch]
   );
 
-  // ── Initial search ──────────────────────────────────────────────────
-
-  const handleSearch = useCallback(
-    async (query: string) => {
-      setLastQuery(query);
-      setAiMessages([{ role: "user", content: query }]);
-      setActiveFilters([]);
-      setLastAiSuggestion(null);
-      setSuggestedChips([]);
-      await streamSearch(query, searchMode);
-    },
-    [searchMode, streamSearch]
-  );
-
+  // ── Mode change ─────────────────────────────────────────────────────
   const handleModeChange = useCallback(
     (mode: SearchMode) => {
       setSearchMode(mode);
       if (lastQuery) {
-        setAiMessages([{ role: "user", content: lastQuery }]);
-        setActiveFilters([]);
+        setTurns([]);
         streamSearch(lastQuery, mode);
       }
     },
     [lastQuery, streamSearch]
   );
 
+  // ── Reset ───────────────────────────────────────────────────────────
   const resetConversation = useCallback(() => {
-    setResults(null);
+    setTurns([]);
+    setAllProperties([]);
+    setAllResults(null);
+    setActiveFilters([]);
+    setLastAiSuggestion(null);
     setExpandedResults(null);
     setError(null);
     setLastQuery("");
-    setAiMessages([]);
-    setSuggestedChips([]);
-    setStatusMessage("");
-    setAllProperties([]);
-    setActiveFilters([]);
-    setLastAiSuggestion(null);
   }, []);
 
   // ── Expanded search (scroll-triggered) ──────────────────────────────
-
   const loadExpanded = useCallback(async () => {
     if (!lastQuery || isExpandedLoading || expandedResults) return;
     setIsExpandedLoading(true);
     try {
-      const primaryUrls =
-        results?.properties?.flatMap(
-          (p) => p.listingUrls || (p.listingUrl ? [p.listingUrl] : [])
-        ) || [];
-      const data = await expandedSearchAction(
-        lastQuery,
-        getPreferenceHints(),
-        searchMode,
-        primaryUrls
+      const primaryUrls = allProperties.flatMap(
+        (p) => p.listingUrls || (p.listingUrl ? [p.listingUrl] : [])
       );
+      const data = await expandedSearchAction(lastQuery, getPreferenceHints(), searchMode, primaryUrls);
       setExpandedResults(data);
     } catch {
       setExpandedResults(null);
     } finally {
       setIsExpandedLoading(false);
     }
-  }, [
-    lastQuery,
-    isExpandedLoading,
-    expandedResults,
-    getPreferenceHints,
-    results,
-    searchMode,
-  ]);
+  }, [lastQuery, isExpandedLoading, expandedResults, allProperties, getPreferenceHints, searchMode]);
 
   // ── Property interactions ───────────────────────────────────────────
-
   const handlePropertyClick = useCallback(
-    (property: Property) => {
-      recordClick(property);
-      setSelectedProperty(property);
-    },
+    (property: Property) => { recordClick(property); setSelectedProperty(property); },
     [recordClick]
   );
 
   const toggleFavorite = useCallback(
     (property: Property): "added" | "removed" => {
-      if (isFavorite(property.id)) {
-        removeFavorite(property.id);
-        return "removed";
-      } else {
-        addFavorite(property);
-        recordFavorite(property);
-        return "added";
-      }
+      if (isFavorite(property.id)) { removeFavorite(property.id); return "removed"; }
+      addFavorite(property); recordFavorite(property); return "added";
     },
     [isFavorite, removeFavorite, addFavorite, recordFavorite]
   );
 
-  // ── Computed display values ─────────────────────────────────────────
-
-  const sortedPrimary = useMemo(
-    () => (results ? sortProperties(results.properties, sortBy) : []),
-    [results, sortBy]
-  );
-
-  const expandedFiltered = useMemo(() => {
-    if (!expandedResults) return [];
-    const primaryIds = new Set(
-      results?.properties.map((p) => p.id) || []
-    );
-    const primaryAddresses = new Set(
-      results?.properties.map((p) =>
-        (p.address || "").toLowerCase().trim()
-      ) || []
-    );
-    return expandedResults.properties.filter(
-      (p) =>
-        !primaryIds.has(p.id) &&
-        !primaryAddresses.has((p.address || "").toLowerCase().trim())
-    );
-  }, [results, expandedResults]);
-
-  const sortedExpanded = useMemo(
-    () => sortProperties(expandedFiltered, sortBy),
-    [expandedFiltered, sortBy]
-  );
-
   return {
-    // Core
-    results,
-    expandedResults,
-    isLoading,
-    isExpandedLoading,
-    error,
+    turns,
     lastQuery,
+    searchMode,
+    isLoading,
+    isClassifying,
+    error,
     selectedProperty,
     showCompare,
     showFavorites,
-    searchMode,
-    sortBy,
+    expandedResults,
+    isExpandedLoading,
+    allProperties,
 
-    // Display
-    sortedPrimary,
-    sortedExpanded,
-
-    // Conversation
-    statusMessage,
-    aiMessages,
-    isClassifying,
-    suggestedChips,
-
-    // Favorites
     favorites,
     isFavorite,
     clearFavorites,
     removeFavorite,
 
-    // Actions
     handleSearch,
     handleRefine,
-    loadExpanded,
+    handleModeChange,
     resetConversation,
+    loadExpanded,
     handlePropertyClick,
     toggleFavorite,
     setSelectedProperty,
     setShowCompare,
     setShowFavorites,
-    handleModeChange,
-    setSortBy,
   };
 }
