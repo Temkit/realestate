@@ -14,11 +14,19 @@ export interface Property {
   features: string[];
   imageUrl: string | null;
   source: string | null;
+  /** All portal hostnames where this property was found */
+  sources?: string[];
   listingUrl: string | null;
+  /** All listing URLs across portals */
+  listingUrls?: string[];
   listingStatus: string;
   aiInsight?: string;
   listingMode?: "rent" | "buy";
   pricePerSqm?: number;
+  /** True if 2+ portals report the same price */
+  priceVerified?: boolean;
+  /** Portals with fuzzy match (not merged, just linked) */
+  alsoOnPortals?: { name: string; url: string }[];
 }
 
 export interface NeighborhoodData {
