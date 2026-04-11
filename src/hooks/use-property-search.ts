@@ -3,8 +3,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { searchAction, expandedSearchAction, refineSearchAction } from "@/app/actions";
-import type { Property, SearchResult, ConversationTurn } from "@/lib/types";
+import { expandedSearchAction } from "@/app/actions";
+import type { Property, SearchResult, ConversationTurn, MarketAnalytics } from "@/lib/types";
 
 export type SortOption = "recommended" | "price-asc" | "price-desc" | "size";
 export type SearchMode = "buy" | "rent";
@@ -35,62 +35,135 @@ export function usePropertySearch() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [lastQuery, setLastQuery] = useState("");
 
-  // New AI-native state
+  // Streaming state
+  const [statusMessage, setStatusMessage] = useState<string>("");
+
+  // AI-native state
   const [conversationTurns, setConversationTurns] = useState<ConversationTurn[]>([]);
   const [searchMode, setSearchMode] = useState<SearchMode>("buy");
   const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [suggestedChips, setSuggestedChips] = useState<string[]>([]);
   const [marketContext, setMarketContext] = useState<string>("");
 
+  // Keep track of filteredPrimary via callback from FilterBar
+  const [filteredPrimary, setFilteredPrimary] = useState<Property[]>([]);
+
   const { favorites, addFavorite, removeFavorite, isFavorite, clearFavorites } = useFavorites();
   const { recordClick, recordFavorite, getPreferenceHints } = useUserPreferences();
 
-  // When mode changes and we have results, re-search with the new mode
+  /** Stream search results via SSE */
+  const streamSearch = useCallback(async (query: string, mode: SearchMode) => {
+    setIsLoading(true);
+    setError(null);
+    setStatusMessage("Starting search...");
+    setResults(null);
+    setExpandedResults(null);
+    setSortBy("recommended");
+
+    try {
+      const params = new URLSearchParams({ q: query, mode });
+      const resp = await fetch(`/api/search/stream?${params}`);
+
+      if (!resp.ok || !resp.body) {
+        throw new Error("Search failed");
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+
+            switch (event.type) {
+              case "status":
+                setStatusMessage(event.data as string);
+                break;
+
+              case "properties":
+                setResults((prev) => ({
+                  ...(prev || { summary: "", citations: [] }),
+                  properties: event.data as Property[],
+                }));
+                break;
+
+              case "analytics":
+                setResults((prev) => prev ? { ...prev, marketAnalytics: event.data as MarketAnalytics } : prev);
+                break;
+
+              case "enrichment": {
+                const enrichment = event.data as { summary: string; marketContext: string; suggestedFollowUps: string[] };
+                setSuggestedChips(enrichment.suggestedFollowUps || []);
+                setMarketContext(enrichment.marketContext || "");
+                setResults((prev) => prev ? {
+                  ...prev,
+                  summary: enrichment.summary,
+                  marketContext: enrichment.marketContext,
+                  suggestedFollowUps: enrichment.suggestedFollowUps,
+                } : prev);
+                break;
+              }
+
+              case "done":
+                setResults(event.data as SearchResult);
+                setStatusMessage("");
+                break;
+
+              case "error":
+                setError((event.data as { message: string }).message);
+                setStatusMessage("");
+                break;
+            }
+          } catch { /* skip malformed events */ }
+        }
+      }
+    } catch {
+      setError("Search failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+      setStatusMessage("");
+    }
+  }, []);
+
   const handleModeChange = (mode: SearchMode) => {
     setSearchMode(mode);
     if (lastQuery) {
-      // Re-trigger search with new mode (will use the updated searchMode via closure on next render)
-      // We need to call searchAction directly with the new mode since setState is async
-      setIsLoading(true);
-      setExpandedResults(null);
-      setSortBy("recommended");
-      searchAction(lastQuery, mode).then((data) => {
-        setResults(data);
-        setSuggestedChips(data.suggestedFollowUps || []);
-        setMarketContext(data.marketContext || "");
-      }).catch(() => {
-        setError("Search failed. Please try again.");
-      }).finally(() => {
-        setIsLoading(false);
-      });
+      streamSearch(lastQuery, mode);
     }
   };
 
   const handleSearch = async (query: string) => {
-    setIsLoading(true);
-    setIsExpandedLoading(false);
-    setError(null);
+    setLastQuery(query);
+    setConversationTurns([{ role: "user", content: query }]);
+    await streamSearch(query, searchMode);
+  };
+
+  const handleRefine = async (query: string) => {
     setLastQuery(query);
     setExpandedResults(null);
-    setSortBy("recommended");
+    setConversationTurns((prev) => [...prev, { role: "user", content: query }]);
+    await streamSearch(query, searchMode);
+  };
 
-    // Fresh search — reset conversation
-    setConversationTurns([{ role: "user", content: query }]);
-
-    try {
-      const data = await searchAction(query, searchMode);
-      setResults(data);
-      setSuggestedChips(data.suggestedFollowUps || []);
-      setMarketContext(data.marketContext || "");
-      setConversationTurns((prev) => [
-        ...prev,
-        { role: "assistant", content: data.summary },
-      ]);
-    } catch {
-      setError("Search failed. Please check your API key and try again.");
-    } finally {
-      setIsLoading(false);
-    }
+  const resetConversation = () => {
+    setResults(null);
+    setExpandedResults(null);
+    setError(null);
+    setLastQuery("");
+    setConversationTurns([]);
+    setSuggestedChips([]);
+    setMarketContext("");
+    setStatusMessage("");
   };
 
   /** Load expanded results on demand (triggered by scroll). */
@@ -107,45 +180,7 @@ export function usePropertySearch() {
     } finally {
       setIsExpandedLoading(false);
     }
-  }, [lastQuery, isExpandedLoading, expandedResults, getPreferenceHints]);
-
-  const handleRefine = async (query: string) => {
-    setIsLoading(true);
-    setError(null);
-    setExpandedResults(null);
-    setIsExpandedLoading(false);
-    setSortBy("recommended");
-
-    const newTurns: ConversationTurn[] = [...conversationTurns, { role: "user", content: query }];
-    setConversationTurns(newTurns);
-    setLastQuery(query);
-
-    try {
-      const data = await refineSearchAction(query, conversationTurns, searchMode);
-      setResults(data);
-      setSuggestedChips(data.suggestedFollowUps || []);
-      setMarketContext(data.marketContext || "");
-      setConversationTurns([
-        ...newTurns,
-        { role: "assistant", content: data.summary },
-      ]);
-    } catch {
-      setError("Refinement failed. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resetConversation = () => {
-    setResults(null);
-    setExpandedResults(null);
-    setConversationTurns([]);
-    setSuggestedChips([]);
-    setMarketContext("");
-    setLastQuery("");
-    setSortBy("recommended");
-    setError(null);
-  };
+  }, [lastQuery, isExpandedLoading, expandedResults, getPreferenceHints, results, searchMode]);
 
   const handlePropertyClick = (property: Property) => {
     recordClick(property);
@@ -182,6 +217,12 @@ export function usePropertySearch() {
     [filteredExpanded, sortBy]
   );
 
+  // displayPrimary uses filteredPrimary from FilterBar if available
+  const displayPrimary = filteredPrimary.length > 0 || (results && results.properties.length > 0)
+    ? filteredPrimary
+    : sortedPrimary;
+  const displayExpanded = sortedExpanded;
+
   return {
     // State
     results,
@@ -195,8 +236,10 @@ export function usePropertySearch() {
     showFavorites,
     sortedPrimary,
     sortedExpanded,
-    // Keep filteredExpanded for backward compat
+    displayPrimary,
+    displayExpanded,
     filteredExpanded: sortedExpanded,
+    statusMessage,
 
     // AI-native state
     conversationTurns,
@@ -223,5 +266,6 @@ export function usePropertySearch() {
     setShowFavorites,
     handleModeChange,
     setSortBy,
+    setFilteredPrimary,
   };
 }

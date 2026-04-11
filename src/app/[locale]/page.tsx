@@ -66,9 +66,12 @@ export default function HomePage() {
     showFavorites,
     sortedPrimary,
     sortedExpanded,
+    displayPrimary,
+    displayExpanded,
     suggestedChips,
     searchMode,
     sortBy,
+    statusMessage,
     favorites,
     isFavorite,
     clearFavorites,
@@ -84,6 +87,7 @@ export default function HomePage() {
     setShowFavorites,
     handleModeChange,
     setSortBy,
+    setFilteredPrimary,
   } = usePropertySearch();
 
   const { toasts, toast, dismiss } = useToast();
@@ -121,13 +125,6 @@ export default function HomePage() {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [results, isLoading, loadExpanded]);
-
-  const [filteredPrimary, setFilteredPrimary] = useState<Property[] | null>(
-    null
-  );
-
-  const displayPrimary = filteredPrimary ?? sortedPrimary;
-  const displayExpanded = sortedExpanded;
 
   const handleToggleFavorite = (property: Property) => {
     const action = toggleFavorite(property);
@@ -217,10 +214,32 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Loading */}
+      {/* Loading with streaming status */}
       {isLoading && (
         <div className="max-w-7xl mx-auto px-3.5 sm:px-8 pb-8 mt-6">
-          <ResultSkeleton />
+          {statusMessage && (
+            <div className="flex items-center gap-3 mb-6 animate-fade-in-up">
+              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+              <p className="text-sm text-muted-foreground">{statusMessage}</p>
+            </div>
+          )}
+          {/* Show partial results while still loading */}
+          {results && results.properties.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {results.properties.map((property, index) => (
+                <PropertyCard
+                  key={property.id}
+                  property={property}
+                  isFavorite={isFavorite(property.id)}
+                  onToggleFavorite={() => handleToggleFavorite(property)}
+                  onSelect={() => handlePropertyClick(property)}
+                  index={index}
+                />
+              ))}
+            </div>
+          ) : (
+            <ResultSkeleton />
+          )}
         </div>
       )}
 
