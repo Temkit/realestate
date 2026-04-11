@@ -64,28 +64,29 @@ function mergeGroup(group: ScrapedListing[]): DedupedListing {
   const seenSources = new Set<string>();
 
   for (const l of group) {
-    if (!seenSources.has(l.source)) {
-      seenSources.add(l.source);
-      sources.push(l.source);
+    const src = l.source || "unknown";
+    if (!seenSources.has(src)) {
+      seenSources.add(src);
+      sources.push(src);
     }
-    listingUrls.push(l.url);
+    if (l.url) listingUrls.push(l.url);
 
     // Best image: first non-null
     if (!base.imageUrl && l.imageUrl) base.imageUrl = l.imageUrl;
 
     // Longest description
-    if (l.description.length > base.description.length)
-      base.description = l.description;
+    if ((l.description || "").length > (base.description || "").length)
+      base.description = l.description || "";
 
     // Most rooms/bathrooms
-    if (l.rooms > base.rooms) base.rooms = l.rooms;
-    if (l.bathrooms > base.bathrooms) base.bathrooms = l.bathrooms;
+    if ((l.rooms || 0) > (base.rooms || 0)) base.rooms = l.rooms;
+    if ((l.bathrooms || 0) > (base.bathrooms || 0)) base.bathrooms = l.bathrooms;
 
     // Most specific address (longest)
-    if (l.address.length > base.address.length) base.address = l.address;
+    if ((l.address || "").length > (base.address || "").length) base.address = l.address || "";
 
     // Most specific city (longest)
-    if (l.city.length > base.city.length) base.city = l.city;
+    if ((l.city || "").length > (base.city || "").length) base.city = l.city || "";
   }
 
   return {
