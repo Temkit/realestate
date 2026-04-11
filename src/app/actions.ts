@@ -51,31 +51,46 @@ export async function searchAction(
   await enforceRateLimit();
   const start = Date.now();
 
+  // Check cache under raw query key
   const cacheKey = buildSearchCacheKey(query, mode);
   const cached = await getSearchCache(cacheKey);
   if (cached) {
-    logSearch({
-      query,
-      mode,
-      commune: null,
-      propertyType: null,
-      resultCount: cached.properties.length,
-      cacheHit: true,
-      durationMs: Date.now() - start,
-    }).catch(() => {});
+    logSearch({ query, mode, commune: null, propertyType: null, resultCount: cached.properties.length, cacheHit: true, durationMs: Date.now() - start }).catch(() => {});
     return cached;
   }
 
-  const result = await runPipeline(query, mode);
-  await setSearchCache(cacheKey, result);
-
+  // Also check under enriched query key (e.g. "bureau mondorf" → "bureau Mondorf-les-Bains")
   const parseData = await getParseCache(query);
+  if (parseData?.enrichedQuery) {
+    const enrichedKey = buildSearchCacheKey(parseData.enrichedQuery, parseData.parsed.transactionType !== "any" ? parseData.parsed.transactionType : mode);
+    if (enrichedKey !== cacheKey) {
+      const enrichedCached = await getSearchCache(enrichedKey);
+      if (enrichedCached) {
+        // Also save under raw key so next time it's instant
+        await setSearchCache(cacheKey, enrichedCached);
+        logSearch({ query, mode, commune: parseData.parsed.commune || parseData.parsed.neighborhood || null, propertyType: parseData.parsed.propertyType || null, resultCount: enrichedCached.properties.length, cacheHit: true, durationMs: Date.now() - start }).catch(() => {});
+        return enrichedCached;
+      }
+    }
+  }
+
+  const result = await runPipeline(query, mode);
+
+  // Cache under both raw AND enriched query keys
+  await setSearchCache(cacheKey, result);
+  const freshParse = parseData || await getParseCache(query);
+  if (freshParse?.enrichedQuery) {
+    const enrichedKey = buildSearchCacheKey(freshParse.enrichedQuery, freshParse.parsed.transactionType !== "any" ? freshParse.parsed.transactionType : mode);
+    if (enrichedKey !== cacheKey) {
+      await setSearchCache(enrichedKey, result);
+    }
+  }
+
   logSearch({
     query,
     mode,
-    commune:
-      parseData?.parsed?.commune || parseData?.parsed?.neighborhood || null,
-    propertyType: parseData?.parsed?.propertyType || null,
+    commune: freshParse?.parsed?.commune || freshParse?.parsed?.neighborhood || null,
+    propertyType: freshParse?.parsed?.propertyType || null,
     resultCount: result.properties.length,
     cacheHit: false,
     durationMs: Date.now() - start,
@@ -145,40 +160,8 @@ export async function refineSearchAction(
   mode: "rent" | "buy"
 ): Promise<SearchResult> {
   if (!query.trim()) return { properties: [], summary: "", citations: [] };
-  await enforceRateLimit();
-  const start = Date.now();
-
-  const cacheKey = buildSearchCacheKey(query, mode);
-  const cached = await getSearchCache(cacheKey);
-  if (cached) {
-    logSearch({
-      query,
-      mode,
-      commune: null,
-      propertyType: null,
-      resultCount: cached.properties.length,
-      cacheHit: true,
-      durationMs: Date.now() - start,
-    }).catch(() => {});
-    return cached;
-  }
-
-  const result = await runPipeline(query, mode);
-  await setSearchCache(cacheKey, result);
-
-  const parseData = await getParseCache(query);
-  logSearch({
-    query,
-    mode,
-    commune:
-      parseData?.parsed?.commune || parseData?.parsed?.neighborhood || null,
-    propertyType: parseData?.parsed?.propertyType || null,
-    resultCount: result.properties.length,
-    cacheHit: false,
-    durationMs: Date.now() - start,
-  }).catch(() => {});
-
-  return result;
+  // Reuse searchAction — same cache logic with enriched key lookup
+  return searchAction(query, mode as "buy" | "rent");
 }
 
 // ── Compare + Neighborhood ──────────────────────────────────────────────────
