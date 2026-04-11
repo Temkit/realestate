@@ -94,36 +94,6 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      {/* Rent/Buy Toggle */}
-      <div className={`flex justify-center ${compact ? "mb-2 sm:mb-3" : "mb-5"}`}>
-        <div className={`inline-flex rounded-xl bg-muted p-1 gap-0.5 ${compact ? "rounded-lg p-0.5" : ""}`}>
-          <button
-            type="button"
-            onClick={() => onModeChange("buy")}
-            className={`rounded-lg text-sm font-medium transition-all duration-200
-              ${compact ? "px-3 py-1 rounded-md text-xs" : "px-5 py-1.5"}
-              ${searchMode === "buy"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            {t("buy")}
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange("rent")}
-            className={`rounded-lg text-sm font-medium transition-all duration-200
-              ${compact ? "px-3 py-1 rounded-md text-xs" : "px-5 py-1.5"}
-              ${searchMode === "rent"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            {t("rent")}
-          </button>
-        </div>
-      </div>
-
       <form onSubmit={handleSubmit} role="search" aria-label="Search properties">
         {/* Mobile: stacked layout. Desktop: button inside input */}
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-0">
@@ -137,7 +107,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setShowRecent(true)}
               onBlur={() => setTimeout(() => setShowRecent(false), 200)}
-              placeholder={searchMode === "rent" ? t("placeholderRent") : t("placeholderBuy")}
+              placeholder={t("placeholderBuy")}
               className={`w-full bg-card border-2 border-border
                          outline-none transition-all duration-200 shadow-sm text-base
                          focus:border-primary focus:ring-4 focus:ring-primary/10 focus:shadow-md
