@@ -310,7 +310,7 @@ export default function HomePage() {
           {/* Market Stats */}
           {results.marketAnalytics && (
             <div className="mb-5">
-              <MarketStats analytics={results.marketAnalytics} mode={searchMode} />
+              <MarketStats analytics={results.marketAnalytics} mode={searchMode} propertyCount={results.properties.length} />
             </div>
           )}
 
