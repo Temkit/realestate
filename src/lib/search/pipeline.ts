@@ -236,11 +236,11 @@ export async function runPipeline(
     dedupedToProperty(listing, `prop-${Date.now()}-${i}`)
   );
 
-  // ── Step 8: Compute insights ────────────────────────────────────────
-  computeInsights(properties);
-
-  // ── Step 9: Market analytics (pure math, never fails) ────────────────
+  // ── Step 8: Market analytics (outlier-filtered) ─────────────────────
   const marketAnalytics = computeMarketAnalytics(properties, effectiveMode);
+
+  // ── Step 9: Compute insights using outlier-filtered averages ────────
+  computeInsights(properties, marketAnalytics);
   try {
     const parseData = await getParseCache(query);
     const commune =

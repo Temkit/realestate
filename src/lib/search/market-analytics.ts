@@ -23,6 +23,48 @@ function median(sorted: number[]): number {
     : sorted[mid];
 }
 
+/** Percentile from sorted array (0-100). */
+function percentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  if (sorted.length === 1) return sorted[0];
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+/**
+ * Remove statistical outliers using IQR method (Tukey's fences).
+ * Keeps values in [Q1 - 1.5*IQR, Q3 + 1.5*IQR].
+ * With < 4 values, no filtering (not enough data).
+ */
+function removeOutliers(sorted: number[]): number[] {
+  if (sorted.length < 4) return sorted;
+  const q1 = percentile(sorted, 25);
+  const q3 = percentile(sorted, 75);
+  const iqr = q3 - q1;
+  const lo = q1 - 1.5 * iqr;
+  const hi = q3 + 1.5 * iqr;
+  return sorted.filter((v) => v >= lo && v <= hi);
+}
+
+/**
+ * Sanity-check a price for buy/rent mode to filter obvious data errors.
+ */
+function isPriceSane(price: number, mode: "buy" | "rent"): boolean {
+  if (price <= 0) return false;
+  if (mode === "rent") return price >= 200 && price <= 50000;
+  return price >= 50000 && price <= 20000000;
+}
+
+/** Sanity check for €/m². */
+function isPpsqmSane(ppsqm: number, mode: "buy" | "rent"): boolean {
+  if (ppsqm <= 0) return false;
+  if (mode === "rent") return ppsqm >= 5 && ppsqm <= 200;
+  return ppsqm >= 500 && ppsqm <= 50000;
+}
+
 /**
  * Round a number up to a "nice" bucket width.
  * e.g., 37000 → 50000, 1200 → 1500, 180 → 200
@@ -56,8 +98,14 @@ export function computeMarketAnalytics(
   mode: "buy" | "rent"
 ): MarketAnalytics {
   // ── Price range ─────────────────────────────────────────────────────
-  const withPrice = properties.filter((p) => p.price > 0);
-  const prices = withPrice.map((p) => p.price).sort((a, b) => a - b);
+  // 1. Filter by sane price range (removes obvious data errors)
+  // 2. Sort and remove IQR outliers (removes statistical skew)
+  const sanePrices = properties
+    .filter((p) => isPriceSane(p.price, mode))
+    .map((p) => p.price)
+    .sort((a, b) => a - b);
+
+  const prices = removeOutliers(sanePrices);
 
   const priceRange =
     prices.length > 0
@@ -70,12 +118,12 @@ export function computeMarketAnalytics(
       : null;
 
   // ── Price per m² ────────────────────────────────────────────────────
-  const withPpsqm = properties.filter(
-    (p) => p.pricePerSqm && p.pricePerSqm > 0
-  );
-  const ppsqms = withPpsqm
+  const sanePpsqms = properties
+    .filter((p) => p.pricePerSqm && isPpsqmSane(p.pricePerSqm, mode))
     .map((p) => p.pricePerSqm!)
     .sort((a, b) => a - b);
+
+  const ppsqms = removeOutliers(sanePpsqms);
 
   const pricePerSqm =
     ppsqms.length > 0

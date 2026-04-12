@@ -3,16 +3,23 @@
  * Pure computation, no API calls. Never fails.
  */
 
-import type { Property } from "@/lib/types";
+import type { Property, MarketAnalytics } from "@/lib/types";
 
 /**
  * Compute data-driven insight badges for each property.
  * Mutates the properties in place (sets aiInsight field).
  *
+ * Uses median (not mean) for "X% below avg" comparisons to avoid
+ * outlier skew. If MarketAnalytics is provided, uses its already-
+ * outlier-filtered values. Otherwise computes naive avg as fallback.
+ *
  * Badges: "Lowest price", "Best €/m²", "Largest", "X% below avg",
  * "Compact", "Spacious", "Only listing in {city}", "Verified price"
  */
-export function computeInsights(properties: Property[]): void {
+export function computeInsights(
+  properties: Property[],
+  analytics?: MarketAnalytics
+): void {
   if (properties.length === 0) return;
 
   const withPrice = properties.filter((p) => p.price > 0);
@@ -21,15 +28,16 @@ export function computeInsights(properties: Property[]): void {
   );
   const withSqft = properties.filter((p) => p.sqft > 0);
 
-  const avgPrice =
-    withPrice.length > 0
+  // Use median from analytics (outlier-filtered) when available,
+  // fall back to naive mean if not
+  const avgPrice = analytics?.priceRange?.median
+    ?? (withPrice.length > 0
       ? withPrice.reduce((s, p) => s + p.price, 0) / withPrice.length
-      : 0;
-  const avgPpsqm =
-    withPpsqm.length > 0
-      ? withPpsqm.reduce((s, p) => s + (p.pricePerSqm || 0), 0) /
-        withPpsqm.length
-      : 0;
+      : 0);
+  const avgPpsqm = analytics?.pricePerSqm?.avg
+    ?? (withPpsqm.length > 0
+      ? withPpsqm.reduce((s, p) => s + (p.pricePerSqm || 0), 0) / withPpsqm.length
+      : 0);
   const lowestPrice =
     withPrice.length > 0
       ? withPrice.reduce((min, p) => (p.price < min.price ? p : min))
