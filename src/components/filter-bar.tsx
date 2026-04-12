@@ -134,7 +134,7 @@ export function FilterBar({ properties, onFilteredChange, sortBy, onSortChange }
                   maxPrice: active ? null : range.max,
                 })
               }
-              className={`text-[0.8125rem] px-3.5 py-1.5 rounded-full border transition-all duration-200
+              className={`text-sm px-4 py-2 rounded-full border transition-all duration-200 min-h-[40px]
                 ${
                   active
                     ? "bg-primary text-primary-foreground border-primary shadow-sm"
@@ -157,7 +157,7 @@ export function FilterBar({ properties, onFilteredChange, sortBy, onSortChange }
               onClick={() =>
                 updateFilters({ ...filters, minBeds: active ? null : beds })
               }
-              className={`text-[0.8125rem] px-3.5 py-1.5 rounded-full border transition-all duration-200
+              className={`text-sm px-4 py-2 rounded-full border transition-all duration-200 min-h-[40px]
                 ${
                   active
                     ? "bg-primary text-primary-foreground border-primary shadow-sm"
@@ -183,7 +183,7 @@ export function FilterBar({ properties, onFilteredChange, sortBy, onSortChange }
                   propertyType: active ? null : type,
                 })
               }
-              className={`text-[0.8125rem] px-3.5 py-1.5 rounded-full border transition-all duration-200
+              className={`text-sm px-4 py-2 rounded-full border transition-all duration-200 min-h-[40px]
                 ${
                   active
                     ? "bg-primary text-primary-foreground border-primary shadow-sm"

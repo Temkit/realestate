@@ -26,9 +26,9 @@ export function SuggestionChips({ chips, onChipClick, isLoading }: SuggestionChi
           <button
             key={chip}
             onClick={() => onChipClick(chip)}
-            className="text-[0.8125rem] px-4 py-2 rounded-full border border-primary/20 bg-primary/[0.03]
+            className="text-sm px-4 py-2.5 rounded-full border border-primary/20 bg-primary/[0.03]
                        text-foreground hover:bg-primary/10 hover:border-primary/40
-                       transition-all duration-200"
+                       active:scale-95 transition-all duration-200 min-h-[44px]"
           >
             {chip}
           </button>

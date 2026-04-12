@@ -39,7 +39,7 @@ function getFairPriceStyle(rating: "good" | "fair" | "high"): string {
 
 function InsightBadge({ text }: { text: string }) {
   return (
-    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${getInsightStyle(text)}`}>
+    <span className={`text-xs font-semibold px-2.5 py-1 rounded-md whitespace-nowrap ${getInsightStyle(text)}`}>
       {text}
     </span>
   );
@@ -86,7 +86,7 @@ export function PropertyCard({
     >
       {/* Image — fixed height, not aspect ratio, so all cards match */}
       <div
-        className="relative overflow-hidden bg-muted h-[180px] sm:h-[200px]"
+        className="relative overflow-hidden bg-muted h-[220px] sm:h-[200px]"
       >
         {property.imageUrl && !imageError ? (
           <>
@@ -133,7 +133,7 @@ export function PropertyCard({
         <div className="absolute bottom-3.5 left-3.5">
           <span
             className="bg-white/95 dark:bg-card/95 backdrop-blur-sm text-foreground
-                           px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-base sm:text-xl font-bold shadow-sm tabular-nums tracking-tight"
+                           px-3.5 py-2 rounded-xl text-lg sm:text-xl font-bold shadow-sm tabular-nums tracking-tight"
           >
             {formatPriceCompact(property.price, property.listingMode) || t("priceOnRequest")}
           </span>
@@ -175,13 +175,13 @@ export function PropertyCard({
         {(property.aiInsight || property.fairPrice || property.priceVerified) && (
           <div className="flex items-center gap-1.5 mb-2 flex-wrap">
             {property.priceVerified && (
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
-                <ShieldCheck className="h-3 w-3" />
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
+                <ShieldCheck className="h-3.5 w-3.5" />
                 Verified
               </span>
             )}
             {property.fairPrice && (
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${getFairPriceStyle(property.fairPrice.rating)}`}>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-md ${getFairPriceStyle(property.fairPrice.rating)}`}>
                 {property.fairPrice.label}
               </span>
             )}
@@ -200,12 +200,12 @@ export function PropertyCard({
         </p>
 
         {/* Stats */}
-        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-3 text-sm text-muted-foreground">
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-3 text-[0.9375rem] text-muted-foreground">
           {property.bedrooms > 0 && (
             <span className="flex items-center gap-1.5">
-              <Bed className="h-4 w-4 text-muted-foreground/60" />
+              <Bed className="h-[18px] w-[18px] text-muted-foreground/60" />
               <span>
-                <strong className="text-foreground font-medium">
+                <strong className="text-foreground font-semibold">
                   {property.bedrooms}
                 </strong>{" "}
                 bd
@@ -214,9 +214,9 @@ export function PropertyCard({
           )}
           {property.bathrooms > 0 && (
             <span className="flex items-center gap-1.5">
-              <Bath className="h-4 w-4 text-muted-foreground/60" />
+              <Bath className="h-[18px] w-[18px] text-muted-foreground/60" />
               <span>
-                <strong className="text-foreground font-medium">
+                <strong className="text-foreground font-semibold">
                   {property.bathrooms}
                 </strong>{" "}
                 ba
@@ -225,9 +225,9 @@ export function PropertyCard({
           )}
           {property.sqft > 0 && (
             <span className="flex items-center gap-1.5">
-              <Ruler className="h-4 w-4 text-muted-foreground/60" />
+              <Ruler className="h-[18px] w-[18px] text-muted-foreground/60" />
               <span>
-                <strong className="text-foreground font-medium">
+                <strong className="text-foreground font-semibold">
                   {formatNumber(property.sqft)}
                 </strong>{" "}
                 m²
@@ -235,28 +235,28 @@ export function PropertyCard({
             </span>
           )}
           {property.pricePerSqm && property.pricePerSqm > 0 && (
-            <span className="text-xs text-muted-foreground tabular-nums">
+            <span className="text-sm text-muted-foreground tabular-nums">
               €{formatNumber(property.pricePerSqm)}/m²
             </span>
           )}
         </div>
 
         {/* True cost + yield hints */}
-        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+        <div className="flex items-center gap-3 mt-2 flex-wrap">
           {property.trueCost?.totalCost && property.trueCost.totalCost > property.price && (
-            <span className="text-[11px] text-muted-foreground tabular-nums flex items-center gap-1">
-              <TrendingDown className="h-3 w-3" />
+            <span className="text-xs text-muted-foreground tabular-nums flex items-center gap-1">
+              <TrendingDown className="h-3.5 w-3.5" />
               Total: €{formatNumber(property.trueCost.totalCost)}
             </span>
           )}
           {property.trueCost?.monthlyTotal && (
-            <span className="text-[11px] text-muted-foreground tabular-nums">
+            <span className="text-xs text-muted-foreground tabular-nums">
               Total: €{formatNumber(property.trueCost.monthlyTotal)}/mo
             </span>
           )}
           {property.rentalYield && property.rentalYield.grossPercent > 0 && (
-            <span className="text-[11px] text-muted-foreground tabular-nums flex items-center gap-1">
-              <Percent className="h-3 w-3" />
+            <span className="text-xs text-muted-foreground tabular-nums flex items-center gap-1">
+              <Percent className="h-3.5 w-3.5" />
               Yield: {property.rentalYield.grossPercent}%
             </span>
           )}
@@ -264,10 +264,10 @@ export function PropertyCard({
 
         {/* Footer — pinned to bottom */}
         <div className="flex items-center justify-between mt-auto pt-3 border-t">
-          <span className="text-xs px-2.5 py-1 rounded-lg bg-secondary text-secondary-foreground font-medium truncate max-w-[45%]">
+          <span className="text-xs px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground font-medium truncate max-w-[45%]">
             {property.propertyType}
           </span>
-          <div className="flex items-center gap-1.5 max-w-[55%]" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2 max-w-[55%]" onClick={(e) => e.stopPropagation()}>
             {(property.listingUrls && property.listingUrls.length > 1 ? property.listingUrls : [property.listingUrl]).filter(Boolean).slice(0, 3).map((url, i) => {
               const host = (() => { try { return new URL(url!).hostname.replace("www.", ""); } catch { return ""; } })();
               return (
@@ -276,11 +276,11 @@ export function PropertyCard({
                   href={url!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[11px] text-primary/70 hover:text-primary hover:underline inline-flex items-center gap-0.5 transition-colors"
+                  className="text-xs text-primary/70 hover:text-primary hover:underline inline-flex items-center gap-1 transition-colors py-1"
                   title={url!}
                 >
                   {host.replace(".lu", "")}
-                  <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+                  <ExternalLink className="h-3 w-3 shrink-0" />
                 </a>
               );
             })}

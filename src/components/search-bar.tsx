@@ -99,7 +99,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-0">
           <div className="relative flex-1 min-w-0">
             <Search className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground/50
-              ${compact ? "left-3 h-4 w-4" : "left-4 h-4 w-4 sm:h-5 sm:w-5 sm:left-5"}`}
+              ${compact ? "left-3.5 h-5 w-5" : "left-4 h-5 w-5 sm:left-5"}`}
             />
             <input
               ref={inputRef}
@@ -114,8 +114,8 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
                          placeholder:text-muted-foreground/40
                          disabled:opacity-50
                          ${compact
-                           ? "h-11 pl-9 pr-4 rounded-xl"
-                           : "h-12 sm:h-14 pl-10 sm:pl-13 pr-4 sm:pr-32 rounded-xl sm:rounded-2xl"
+                           ? "h-12 pl-10 pr-4 rounded-xl"
+                           : "h-14 sm:h-14 pl-12 sm:pl-13 pr-4 sm:pr-32 rounded-2xl"
                          }`}
               disabled={isLoading}
               aria-label="Search for properties"
@@ -133,7 +133,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
               <Button
                 type="submit"
                 disabled={isLoading || !query.trim()}
-                className={compact ? "h-8 px-3 rounded-lg text-xs" : "h-10 px-5 rounded-xl font-medium text-sm"}
+                className={compact ? "h-9 px-4 rounded-lg text-sm" : "h-11 px-6 rounded-xl font-medium text-sm"}
                 size={compact ? "sm" : "default"}
               >
                 {isLoading ? (
@@ -185,7 +185,7 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
           <Button
             type="submit"
             disabled={isLoading || !query.trim()}
-            className={`sm:hidden rounded-xl font-medium text-sm ${compact ? "h-10" : "h-11"}`}
+            className={`sm:hidden rounded-xl font-medium text-base ${compact ? "h-12" : "h-13"}`}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -202,9 +202,9 @@ export function SearchBar({ onSearch, isLoading, hasResults, searchMode, onModeC
             <button
               key={key}
               onClick={() => handleSuggestionClick(t(`suggestions.${key}`))}
-              className="text-xs sm:text-[0.8125rem] px-3 sm:px-4 py-2 rounded-full border bg-card
+              className="text-sm sm:text-[0.8125rem] px-4 sm:px-4 py-2.5 sm:py-2 rounded-full border bg-card
                          text-muted-foreground hover:bg-secondary hover:border-primary/30
-                         hover:text-foreground transition-all duration-200 shadow-sm min-h-[44px] sm:min-h-0"
+                         hover:text-foreground transition-all duration-200 shadow-sm min-h-[44px]"
             >
               {t(`suggestions.${key}`)}
             </button>

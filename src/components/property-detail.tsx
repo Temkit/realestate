@@ -116,11 +116,12 @@ export function PropertyDetail({
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 z-10 p-2 rounded-full bg-black/40 hover:bg-black/60
-                       text-white transition-colors backdrop-blur-sm"
+            className="absolute top-3 right-3 z-10 h-11 w-11 rounded-full bg-black/50 hover:bg-black/70
+                       text-white transition-colors backdrop-blur-sm flex items-center justify-center
+                       active:scale-95"
             aria-label="Close"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
 
           {/* Scrollable content */}
@@ -186,8 +187,8 @@ export function PropertyDetail({
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
                       variant="outline"
-                      size="sm"
-                      className="rounded-xl"
+                      size="default"
+                      className="rounded-xl h-11 w-11 sm:h-10 sm:w-auto sm:px-4 p-0"
                       onClick={async () => {
                         const url = property.listingUrl || (property.listingUrls && property.listingUrls[0]) || window.location.href;
                         const shareData = {
@@ -216,9 +217,9 @@ export function PropertyDetail({
                     </Button>
                     <Button
                       variant={isFavorite ? "destructive" : "outline"}
-                      size="sm"
+                      size="default"
                       onClick={onToggleFavorite}
-                      className="rounded-xl"
+                      className="rounded-xl h-11 sm:h-10 px-4"
                     >
                       <Heart className={`h-4 w-4 mr-1.5 ${isFavorite ? "fill-current" : ""}`} />
                       {isFavorite ? "Saved" : "Save"}
@@ -228,33 +229,33 @@ export function PropertyDetail({
               </div>
 
               {/* Key Stats — compact inline row */}
-              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+              <div className="flex items-center gap-x-5 gap-y-2 text-[0.9375rem] text-muted-foreground flex-wrap">
                 {property.bedrooms > 0 && (
-                  <span className="flex items-center gap-1.5">
-                    <Bed className="h-3.5 w-3.5" />
-                    <strong className="text-foreground">{property.bedrooms}</strong> bd
+                  <span className="flex items-center gap-2">
+                    <Bed className="h-[18px] w-[18px]" />
+                    <strong className="text-foreground font-semibold">{property.bedrooms}</strong> bd
                   </span>
                 )}
                 {property.bathrooms > 0 && (
-                  <span className="flex items-center gap-1.5">
-                    <Bath className="h-3.5 w-3.5" />
-                    <strong className="text-foreground">{property.bathrooms}</strong> ba
+                  <span className="flex items-center gap-2">
+                    <Bath className="h-[18px] w-[18px]" />
+                    <strong className="text-foreground font-semibold">{property.bathrooms}</strong> ba
                   </span>
                 )}
                 {property.sqft > 0 && (
-                  <span className="flex items-center gap-1.5">
-                    <Ruler className="h-3.5 w-3.5" />
-                    <strong className="text-foreground">{formatNumber(property.sqft)}</strong> m²
+                  <span className="flex items-center gap-2">
+                    <Ruler className="h-[18px] w-[18px]" />
+                    <strong className="text-foreground font-semibold">{formatNumber(property.sqft)}</strong> m²
                   </span>
                 )}
                 {property.yearBuilt && (
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
+                  <span className="flex items-center gap-2">
+                    <Calendar className="h-[18px] w-[18px]" />
                     {property.yearBuilt}
                   </span>
                 )}
                 {property.pricePerSqm && property.pricePerSqm > 0 && (
-                  <span className="tabular-nums ml-auto">€{formatNumber(property.pricePerSqm)}/m²</span>
+                  <span className="tabular-nums ml-auto font-medium">€{formatNumber(property.pricePerSqm)}/m²</span>
                 )}
               </div>
 

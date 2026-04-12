@@ -116,22 +116,22 @@ export function QueryClarification({
               <button
                 key={option}
                 onClick={() => handleOption(option)}
-                className="w-full flex items-center gap-4 p-4 rounded-xl border bg-card
+                className="w-full flex items-center gap-4 p-5 rounded-2xl border bg-card
                            hover:border-primary/40 hover:bg-primary/[0.03]
-                           active:scale-[0.99] transition-all duration-150 text-left group"
+                           active:scale-[0.99] transition-all duration-150 text-left group min-h-[72px]"
                 style={{ animationDelay: `${i * 50}ms` }}
               >
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0
+                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0
                                 group-hover:bg-primary/20 transition-colors">
-                  <Icon className="h-5 w-5 text-primary" />
+                  <Icon className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">{option}</p>
+                  <p className="text-base font-semibold">{option}</p>
                   {desc && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{desc}</p>
                   )}
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary
+                <ArrowRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary
                                        group-hover:translate-x-0.5 transition-all shrink-0" />
               </button>
             );
@@ -148,7 +148,7 @@ export function QueryClarification({
               onChange={(e) => setCustomValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCustom()}
               placeholder="Or type something else..."
-              className="w-full text-sm px-4 py-3 rounded-xl border bg-muted/30
+              className="w-full text-base px-4 h-12 rounded-xl border bg-muted/30
                          placeholder:text-muted-foreground/40 focus:outline-none
                          focus:ring-2 focus:ring-primary/20 focus:border-primary/30
                          transition-all"
@@ -157,10 +157,10 @@ export function QueryClarification({
           {customValue.trim() && (
             <button
               onClick={handleCustom}
-              className="px-4 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium
-                         hover:bg-primary/90 active:scale-95 transition-all"
+              className="h-12 w-12 rounded-xl bg-primary text-primary-foreground font-medium
+                         hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center"
             >
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-5 w-5" />
             </button>
           )}
         </div>
