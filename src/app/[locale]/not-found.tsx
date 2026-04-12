@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { Home } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Page not found | olu.lu",
+  robots: { index: false, follow: false },
+};
 
 export default function NotFound() {
   return (

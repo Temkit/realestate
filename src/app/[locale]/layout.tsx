@@ -101,6 +101,7 @@ export async function generateMetadata({
       languages: {
         fr: "https://olu.lu/fr",
         en: "https://olu.lu/en",
+        "x-default": "https://olu.lu/fr",
       },
     },
     robots: {
@@ -146,6 +147,60 @@ export default async function LocaleLayout({ children, params }: Props) {
         >
           Skip to content
         </a>
+        {/* Organization + WebSite schema (site-wide) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": "https://olu.lu/#organization",
+                  name: "olu.lu",
+                  url: "https://olu.lu",
+                  logo: {
+                    "@type": "ImageObject",
+                    url: "https://olu.lu/icon-512.png",
+                    width: 512,
+                    height: 512,
+                  },
+                  description:
+                    "AI-powered Luxembourg real estate search across athome.lu, immotop.lu, wortimmo.lu, and vivi.lu.",
+                  email: "contact@olu.lu",
+                  address: {
+                    "@type": "PostalAddress",
+                    addressCountry: "LU",
+                    addressLocality: "Luxembourg",
+                  },
+                  founder: { "@type": "Person", name: "Temkit Sid Ali" },
+                  areaServed: {
+                    "@type": "Country",
+                    name: "Luxembourg",
+                  },
+                },
+                {
+                  "@type": "WebSite",
+                  "@id": "https://olu.lu/#website",
+                  url: "https://olu.lu",
+                  name: "olu.lu",
+                  description:
+                    "Luxembourg real estate search engine powered by AI.",
+                  publisher: { "@id": "https://olu.lu/#organization" },
+                  inLanguage: [locale === "fr" ? "fr-LU" : "en-US"],
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: {
+                      "@type": "EntryPoint",
+                      urlTemplate: `https://olu.lu/${locale}?q={search_term_string}`,
+                    },
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+              ],
+            }),
+          }}
+        />
         <NextIntlClientProvider messages={messages}>
           {children}
           <ConsentBanner />

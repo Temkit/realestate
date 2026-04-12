@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -18,6 +19,48 @@ export function generateStaticParams() {
     }
   }
   return params;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; mode: string; propertyType: string }>;
+}): Promise<Metadata> {
+  const { locale, mode, propertyType } = await params;
+  const modes = getModesForLocale(locale);
+  const types = getTypesForLocale(locale);
+  const modeEntry = modes.find((m) => m.slug === mode);
+  const typeEntry = types.find((t) => t.slug === propertyType);
+  if (!modeEntry || !typeEntry) return { title: "Not found" };
+
+  const title =
+    locale === "fr"
+      ? `${typeEntry.display}s ${modeEntry.internal === "buy" ? "à acheter" : "à louer"} au Luxembourg | olu.lu`
+      : `${typeEntry.display}s for ${modeEntry.internal === "buy" ? "sale" : "rent"} in Luxembourg | olu.lu`;
+  const description =
+    locale === "fr"
+      ? `Toutes les annonces de ${typeEntry.display.toLowerCase()}s ${modeEntry.internal === "buy" ? "à acheter" : "à louer"} au Luxembourg. Parcourez 12 communes : Luxembourg-Ville, Esch-sur-Alzette, Kirchberg, Mondorf, Strassen et plus.`
+      : `All ${typeEntry.display.toLowerCase()}s for ${modeEntry.internal === "buy" ? "sale" : "rent"} in Luxembourg. Browse 12 communes: Luxembourg City, Esch-sur-Alzette, Kirchberg, Mondorf, Strassen and more.`;
+  const canonical = `https://olu.lu/${locale}/${mode}/${propertyType}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      "x-default": canonical,
+    } as Metadata["alternates"],
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: "website",
+      siteName: "olu.lu",
+      locale: locale === "fr" ? "fr_LU" : "en_US",
+      images: ["/og-image.png"],
+    },
+    twitter: { card: "summary_large_image", title, description, images: ["/og-image.png"] },
+  };
 }
 
 export default async function TypeIndexPage({

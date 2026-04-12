@@ -103,7 +103,7 @@ export default async function CommuneSearchPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(
-            buildBreadcrumbJsonLd(resolved, mode, propertyType)
+            buildBreadcrumbJsonLd(resolved, mode, propertyType, commune)
           ),
         }}
       />

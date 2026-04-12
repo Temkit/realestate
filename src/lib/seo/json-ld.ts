@@ -29,20 +29,29 @@ export function buildListingJsonLd(
         "@type": "RealEstateListing",
         name: `${p.propertyType} ${resolved.locale === "fr" ? "à" : "in"} ${p.city || resolved.commune}`,
         ...(p.description ? { description: p.description.slice(0, 200) } : {}),
+        ...(p.listingUrl ? { url: p.listingUrl } : {}),
+        datePosted: new Date().toISOString().split("T")[0],
         ...(p.price > 0
           ? {
               offers: {
                 "@type": "Offer",
                 price: p.price,
                 priceCurrency: "EUR",
+                availability: "https://schema.org/InStock",
+                priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
               },
             }
           : {}),
         address: {
           "@type": "PostalAddress",
+          streetAddress: p.address || undefined,
           addressLocality: p.city || resolved.commune,
           addressRegion: "Luxembourg",
           addressCountry: "LU",
+        },
+        areaServed: {
+          "@type": "City",
+          name: p.city || resolved.commune,
         },
         ...(p.sqft > 0
           ? {
@@ -54,6 +63,7 @@ export function buildListingJsonLd(
             }
           : {}),
         ...(p.bedrooms > 0 ? { numberOfRooms: p.bedrooms } : {}),
+        ...(p.bathrooms > 0 ? { numberOfBathroomsTotal: p.bathrooms } : {}),
         ...(p.imageUrl ? { image: p.imageUrl } : {}),
       },
     })),
@@ -63,7 +73,8 @@ export function buildListingJsonLd(
 export function buildBreadcrumbJsonLd(
   resolved: ResolvedParams,
   modeSlug: string,
-  typeSlug: string
+  typeSlug: string,
+  communeSlug: string
 ): object {
   const home = resolved.locale === "fr" ? "Accueil" : "Home";
 
@@ -93,6 +104,7 @@ export function buildBreadcrumbJsonLd(
         "@type": "ListItem",
         position: 4,
         name: resolved.commune,
+        item: `${BASE_URL}/${resolved.locale}/${modeSlug}/${typeSlug}/${communeSlug}`,
       },
     ],
   };

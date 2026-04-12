@@ -99,7 +99,7 @@ export function PropertyCard({
             )}
             <Image
               src={getProxiedImageUrl(property.imageUrl)}
-              alt={property.address}
+              alt={`${property.propertyType}${property.sqft > 0 ? ` ${property.sqft}m²` : ""}${property.city ? ` in ${property.city}` : ""}${property.price > 0 ? ` — €${formatNumber(property.price)}` : ""}`}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               priority={index < 2}

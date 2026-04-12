@@ -45,7 +45,11 @@ export async function GET(req: NextRequest) {
         cacheHit: true,
         durationMs: Date.now() - start,
       }).catch(() => {});
-      return Response.json(cached);
+      return Response.json(cached, {
+        headers: {
+          "Cache-Control": "public, max-age=3600, s-maxage=86400",
+        },
+      });
     }
 
     // Check enriched cache key
@@ -100,7 +104,11 @@ export async function GET(req: NextRequest) {
       durationMs: Date.now() - start,
     }).catch(() => {});
 
-    return Response.json(result);
+    return Response.json(result, {
+      headers: {
+        "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      },
+    });
   } catch (err) {
     return Response.json(
       {
