@@ -58,6 +58,7 @@ export function PropertyDetail({
   const [neighborhood, setNeighborhood] = useState<NeighborhoodData | null>(null);
   const [loadingNeighborhood, setLoadingNeighborhood] = useState(false);
   const [neighborhoodError, setNeighborhoodError] = useState<string | null>(null);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   const loadNeighborhood = async () => {
     if (!property || loadingNeighborhood || neighborhood) return;
@@ -187,9 +188,31 @@ export function PropertyDetail({
                       variant="outline"
                       size="sm"
                       className="rounded-xl"
-                      onClick={() => navigator.clipboard.writeText(window.location.href)}
+                      onClick={async () => {
+                        const url = property.listingUrl || (property.listingUrls && property.listingUrls[0]) || window.location.href;
+                        const shareData = {
+                          title: `${property.propertyType} — ${property.city || property.address}`,
+                          text: `${property.propertyType} ${property.price > 0 ? `€${formatNumber(property.price)}` : ""} ${property.sqft > 0 ? `· ${property.sqft}m²` : ""} on olu.lu`,
+                          url,
+                        };
+                        try {
+                          if (navigator.share && navigator.canShare?.(shareData)) {
+                            await navigator.share(shareData);
+                          } else {
+                            await navigator.clipboard.writeText(url);
+                            setShareFeedback("Link copied");
+                            setTimeout(() => setShareFeedback(null), 2000);
+                          }
+                        } catch {
+                          // User cancelled share or error
+                        }
+                      }}
+                      title="Share this listing"
                     >
                       <Share2 className="h-4 w-4" />
+                      {shareFeedback && (
+                        <span className="ml-1.5 text-xs">{shareFeedback}</span>
+                      )}
                     </Button>
                     <Button
                       variant={isFavorite ? "destructive" : "outline"}

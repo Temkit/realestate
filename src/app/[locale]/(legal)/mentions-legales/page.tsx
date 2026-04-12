@@ -16,7 +16,7 @@ export default function MentionsLegales() {
       <p>
         <strong>olu.lu</strong><br />
         {isFr ? "Projet personnel" : "Personal project"}<br />
-        {isFr ? "Responsable" : "Responsible person"}: [Nom à compléter]<br />
+        {isFr ? "Responsable" : "Responsible person"}: Temkit Sid Ali<br />
         {isFr ? "Contact" : "Contact"}: <a href="mailto:contact@olu.lu">contact@olu.lu</a>
       </p>
 
