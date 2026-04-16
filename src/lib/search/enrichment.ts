@@ -46,13 +46,14 @@ export async function enrichWithAI(
       .join("\n");
 
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,
+      `https://aiplatform.googleapis.com/v1/publishers/google/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [
             {
+              role: "user",
               parts: [
                 {
                   text: `Enrich Luxembourg real estate results. Return JSON:\n{"summary":"1-2 sentences: count, price range, best value. Same language as user query.","marketContext":"One short market insight, max 15 words.","suggestedFollowUps":["3-4 follow-up queries"],"insights":{"1":"short insight","2":"..."}}\n\nFor insights: location advantages, value context. Max 8 words each.\n\nUser: "${userQuery}" (${mode})\n\n${propList}`,

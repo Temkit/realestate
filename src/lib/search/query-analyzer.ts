@@ -31,12 +31,12 @@ export async function analyzeQueryCompleteness(
     if (!geminiKey) return local;
 
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${geminiKey}`,
+      `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-3.1-flash-lite-preview:generateContent?key=${geminiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `Analyze this Luxembourg real estate search query. Identify what's present and what's missing.
+          contents: [{ role: "user", parts: [{ text: `Analyze this Luxembourg real estate search query. Identify what's present and what's missing.
 
 Query: "${query}"
 

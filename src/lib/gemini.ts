@@ -20,12 +20,12 @@ function getGeminiKey(): string {
 async function geminiJSON<T>(prompt: string, maxTokens: number = 300): Promise<T> {
   const key = getGeminiKey();
   const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${key}`,
+    `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-3.1-flash-lite-preview:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0,
           maxOutputTokens: maxTokens,
