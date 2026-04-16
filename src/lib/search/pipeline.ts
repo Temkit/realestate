@@ -229,7 +229,41 @@ export async function runPipeline(
   const deduped = deduplicateListings(allListings);
 
   // ── Step 6: Filter by mode ──────────────────────────────────────────
-  const filtered = deduped.filter((l) => l.contractType === effectiveMode);
+  let filtered = deduped.filter((l) => l.contractType === effectiveMode);
+
+  // ── Step 6b: Filter by commune relevance ────────────────────────────
+  // If user searched a specific commune, only keep listings whose city
+  // matches that commune OR its tier-1 neighbors (already auto-broadened).
+  // Prevents Immotop/etc category pages from polluting with Luxembourg-wide results.
+  try {
+    const cachedParse = await getParseCache(query);
+    const commune = cachedParse?.parsed?.commune || cachedParse?.parsed?.neighborhood || null;
+    if (commune) {
+      const allowed = new Set<string>();
+      const normalize = (s: string) => s.toLowerCase().replace(/[-\s]+/g, "").trim();
+      allowed.add(normalize(commune));
+      for (const n of getTier1Communes(commune)) allowed.add(normalize(n));
+
+      const beforeCount = filtered.length;
+      const relevant = filtered.filter((l) => {
+        if (!l.city) return true; // keep listings without city data (benefit of doubt)
+        const city = normalize(l.city);
+        // Match if the listing's city contains OR is contained in any allowed commune name
+        // (handles "Mondorf" vs "Mondorf-les-Bains", "Luxembourg-Kirchberg" vs "Luxembourg")
+        for (const a of allowed) {
+          if (city.includes(a) || a.includes(city)) return true;
+        }
+        return false;
+      });
+
+      // Only apply filter if it leaves at least 1 result; otherwise keep all
+      // (prevents showing zero results when city data is just unusual formatting)
+      if (relevant.length >= 1) {
+        filtered = relevant;
+        void beforeCount;
+      }
+    }
+  } catch { /* filter is optional, fall through with all results */ }
 
   // ── Step 7: Convert to Property[] ───────────────────────────────────
   const properties = filtered.map((listing, i) =>

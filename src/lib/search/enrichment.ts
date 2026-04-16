@@ -5,7 +5,7 @@
 
 import type { Property } from "@/lib/types";
 
-const GEMINI_MODEL = "gemini-2.0-flash-lite";
+const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
 
 export interface AIEnrichment {
   summary: string;
