@@ -1,7 +1,8 @@
 # SPEC — olu.lu Marketplace v1 (provider-first, multi-vertical)
 
-Status: DRAFT — awaiting owner sign-off
+Status: APPROVED — decisions locked 2026-07-19 (§12)
 Date: 2026-07-19
+Brand: **lux24** (new domain, e.g. lux24.lu — owner to register/confirm exact TLD). olu.lu keeps immo; build is domain-agnostic via env var.
 Owner: Sid
 Model: **Check24-style comparison + lead intermediary, supply built by a sales team** — no scraping for new verticals. Immo stays as-is (its own aggregation vertical).
 
@@ -29,14 +30,18 @@ Appointment **booking itself is in scope** — Doctena-style, phased so provider
 
 A vertical is a **row in the DB**, not code. Adding one = insert + translations, zero deploys.
 
-Launch candidates (sales picks the final 2–3):
+Launch verticals (confirmed by owner, 2026-07-19 — all booking-enabled):
 
 | Vertical slug | Categories (examples) | Lead type |
 |---|---|---|
-| `garages` | oil-change, tyres, brakes, inspection-prep, bodywork | quote / appointment request |
-| `artisans` | plumber, electrician, painter, heating, roofer, locksmith | quote request |
-| `cleaning` | home-cleaning, office-cleaning, end-of-lease | quote request |
-| `demenagement` | local-move, international-move, storage | quote request |
+| `garages` | oil-change, tyres, brakes, inspection-prep, bodywork | quote / appointment |
+| `artisans` | plumber, electrician, painter, heating, roofer, locksmith | quote / appointment |
+| `cleaning` | home-cleaning, office-cleaning, end-of-lease | quote / appointment |
+| `demenagement` | local-move, international-move, storage | quote / appointment |
+| `coiffeur` | men-cut, women-cut, coloring, barber | appointment |
+| `beaute` | esthéticienne, nails, massage, spa | appointment |
+
+> Risk note: hair/beauty competes head-on with Salonkee (LU incumbent). Owner decision to enter anyway — positioning: cheaper for providers (freemium + booking in premium tier vs Salonkee's SaaS fee), one platform across all their service needs.
 
 Each vertical carries two JSON schemas (stored in the DB, validated in code):
 - `attribute_schema` — what an **offer** can specify (e.g. garages: brands serviced, loaner car y/n; artisans: emergency 24/7 y/n, hourly rate band).
@@ -245,17 +250,21 @@ Digital version: a Tally/Typeform → CSV import later; paper is fine for v1, op
 
 ---
 
-## 9. Monetization (defaults — owner to confirm)
+## 9. Monetization (confirmed 2026-07-19)
 
-- Launch: free until enough leads flow (target: provider has received ≥5 leads).
-- Then either **CPL** (garages €10–20, artisans €15–25, moving €25–40, cleaning €10–15) or **subscription** (starter €49/mo — listed + leads; pro €99/mo — top placement + badge). Sales decides per provider; both fields exist in the schema.
+Hybrid model — **CPL on every lead + freemium subscription for premium features**:
+
+- **Free tier**: listed, receives leads (CPL applies after free period), request-mode booking.
+- **Premium subscription** (€49–99/mo, sales sets per deal): top placement, badge, slot-picker + auto-confirm booking, photos gallery, stats.
+- **CPL on all plans**: garages €10–20, artisans €15–25, moving €25–40, cleaning €10–15, coiffeur/beauté €5–10 (appointment-leads, higher volume).
+- **Free period per provider: ends after 5 leads received** — then CPL kicks in. Pitch: "first 5 customers are on us."
 - A dispatch is billable when status reaches `sent` and is not `disputed`/`invalid` within 72h.
 
 ---
 
 ## 10. Booking module (Doctena-style appointments)
 
-Booking is the third interaction type (contact → quote → **book**), available where `verticals.booking_enabled = 1` AND the provider has booking turned on. Fit: garages, contrôle-technique prep, cleaning, vets, driving schools, physios/paramedical. **Skip doctors (Doctena) and hair/beauty (Salonkee)** — incumbents own those in Luxembourg.
+Booking is the third interaction type (contact → quote → **book**), available where `verticals.booking_enabled = 1` AND the provider has booking turned on. **All launch verticals are booking-enabled** (owner decision 2026-07-19); coiffeur/beauté are appointment-first (booking is the primary CTA there, quote forms secondary). Doctors stay excluded (Doctena's regulated turf).
 
 Three maturity levels — providers need zero tooling at Level 1:
 
@@ -349,12 +358,14 @@ Booking is the **pro-tier hook**: request-mode included in every plan (it's just
 
 ---
 
-## 12. Open questions (need owner answers)
+## 12. Decisions (owner, 2026-07-19)
 
-1. **Launch verticals** — which 2–3 does sales attack first? (spec assumes garages + artisans)
-2. **Brand** — everything under olu.lu, or a separate brand/domain for services?
-3. **Resend** as the email provider — OK to add? (free tier, no cost at v1 volume)
-4. **Pricing default** — CPL or subscription as the primary pitch?
-5. **Free-launch cutoff** — date-based or leads-received-based?
-6. **Booking verticals** — which launch verticals get `booking_enabled` on day one? (spec assumes garages; cleaning optional)
-7. **Booking pricing** — auto-confirm as a pro-tier feature, or per-completed-appointment fee (€2–5)?
+1. **Launch verticals**: garages, artisans, cleaning, déménagement, coiffeur, beauté/esthéticiens — all six.
+2. **Brand**: new domain **lux24** (exact TLD to confirm/register; build domain-agnostic via env var). olu.lu stays immo.
+3. **Email**: Resend — approved.
+4. **Pricing**: hybrid — freemium subscription for premium features + CPL on all leads (§9).
+5. **Free period**: ends after 5 leads received per provider.
+6. **Booking**: enabled on all launch verticals; providers opt in individually.
+7. **Booking monetization**: premium-subscription feature (request-mode free, slot-picker/auto-confirm premium).
+
+Remaining owner TODO: register/confirm the lux24 domain before P1 launch.
