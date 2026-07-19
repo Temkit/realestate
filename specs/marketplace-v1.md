@@ -18,8 +18,10 @@ Model: **Check24-style comparison + lead intermediary, supply built by a sales t
 **Non-goals for v1** (explicitly out):
 - No scraping/feeds for new verticals.
 - No provider self-service portal (ops enters data from the sales form).
-- No online payments, no booking calendar, no reviews (all phase ≥3).
+- No online payments, no reviews, no provider calendar sync (all phase ≥3).
 - No changes to the existing immo pipeline or its URLs.
+
+Appointment **booking itself is in scope** — Doctena-style, phased so providers need zero tooling at first. See §10.
 
 ---
 
@@ -54,6 +56,7 @@ CREATE TABLE verticals (
   name_fr          TEXT NOT NULL,
   attribute_schema TEXT NOT NULL DEFAULT '{}',  -- JSON, offer attributes
   lead_form_schema TEXT NOT NULL DEFAULT '{}',  -- JSON, extra lead questions
+  booking_enabled  INTEGER NOT NULL DEFAULT 0,  -- vertical supports appointments (§10)
   active           INTEGER NOT NULL DEFAULT 1,
   sort             INTEGER NOT NULL DEFAULT 0
 );
@@ -250,23 +253,108 @@ Digital version: a Tally/Typeform → CSV import later; paper is fine for v1, op
 
 ---
 
-## 10. Phases
+## 10. Booking module (Doctena-style appointments)
 
-| Phase | Scope | Effort |
-|---|---|---|
-| **P0** | Schema + migrations, seed 2 verticals + categories, admin auth + providers/offers/config CRUD | ~1 wk |
-| **P1** | Public pages (hub/category/commune/profile), lead form + matching + Resend dispatch + magic-link replies, sitemap, GDPR purge cron | ~2 wk |
-| **P2** | Admin stats + billing export, WhatsApp dispatch, conversational search over marketplace DB, homepage vertical switcher | ~1–2 wk |
-| **P3** | Provider portal (self-service, real auth), reviews with moderation, online booking/calendar, payments | later |
+Booking is the third interaction type (contact → quote → **book**), available where `verticals.booking_enabled = 1` AND the provider has booking turned on. Fit: garages, contrôle-technique prep, cleaning, vets, driving schools, physios/paramedical. **Skip doctors (Doctena) and hair/beauty (Salonkee)** — incumbents own those in Luxembourg.
 
-**Definition of done P1**: a sales rep signs a real garage on paper → ops enters it in admin → its commune page ranks it → a test lead submitted on that page arrives in the garage's inbox with working magic links → dispatch visible in admin with full event timeline.
+Three maturity levels — providers need zero tooling at Level 1:
+
+### Level 1 — Request mode (P1, reuses dispatch infra)
+1. Booking form = lead form + **2–3 preferred time windows** (date + morning/afternoon/evening, or exact times).
+2. Dispatch email to the provider contains one-click magic links: *Confirm slot A / Confirm slot B / Propose another time / Decline*.
+3. Click → appointment `confirmed`, user gets confirmation email; "propose another" → tiny tokened page with a date-time picker → user confirms the counter-proposal via their own magic link.
+4. Reminders to both sides at 24h and 2h before (QStash scheduled messages — already in the stack).
+
+### Level 2 — Managed availability, auto-confirm (P2)
+- Sales collects opening hours + slot duration per service on the onboarding form; ops enters them as availability rules.
+- Public **slot picker**: slots = rules − exceptions − existing appointments − `min_lead_time`, with `buffer_minutes` between jobs.
+- Booking auto-confirms. Per-provider `mode` toggle (`request` | `auto`) mitigates double-booking against their offline agenda — start every provider in `request`, flip to `auto` when they trust it.
+- Provider cancel/reschedule via magic link (reason required; user notified + prompted to rebook).
+
+### Level 3 — Full Doctena (P3, with the provider portal)
+Portal calendar, two-way Google Calendar/iCal sync, staff members, no-show tracking. Build only when providers ask.
+
+### Schema additions
+
+```sql
+CREATE TABLE booking_settings (
+  provider_id      INTEGER PRIMARY KEY REFERENCES providers(id),
+  mode             TEXT NOT NULL DEFAULT 'request', -- request | auto
+  slot_minutes     INTEGER NOT NULL DEFAULT 60,
+  buffer_minutes   INTEGER NOT NULL DEFAULT 0,
+  min_lead_hours   INTEGER NOT NULL DEFAULT 24,     -- earliest bookable = now + this
+  max_horizon_days INTEGER NOT NULL DEFAULT 60
+);
+
+CREATE TABLE availability_rules (                   -- Level 2; empty for request-mode providers
+  id          INTEGER PRIMARY KEY,
+  provider_id INTEGER NOT NULL REFERENCES providers(id),
+  weekday     INTEGER NOT NULL,                     -- 0=Mon … 6=Sun
+  open_time   TEXT NOT NULL,                        -- 'HH:MM' local (Europe/Luxembourg)
+  close_time  TEXT NOT NULL,
+  category_id INTEGER REFERENCES categories(id)     -- NULL = all services
+);
+
+CREATE TABLE availability_exceptions (              -- holidays, congé collectif
+  id          INTEGER PRIMARY KEY,
+  provider_id INTEGER NOT NULL REFERENCES providers(id),
+  date        TEXT NOT NULL,                        -- 'YYYY-MM-DD'
+  closed      INTEGER NOT NULL DEFAULT 1,
+  open_time   TEXT, close_time  TEXT                -- when closed=0: modified hours
+);
+
+CREATE TABLE appointments (
+  id           TEXT PRIMARY KEY,                    -- nanoid(12)
+  lead_id      TEXT REFERENCES leads(id),           -- the originating request
+  provider_id  INTEGER NOT NULL REFERENCES providers(id),
+  category_id  INTEGER REFERENCES categories(id),
+  offer_id     INTEGER REFERENCES offers(id),
+  starts_at    TEXT,                                -- NULL while status=requested (windows in leads.answers)
+  duration_min INTEGER,
+  status       TEXT NOT NULL DEFAULT 'requested',   -- requested | confirmed | declined | cancelled_user
+                                                    -- | cancelled_provider | completed | no_show
+  confirm_token TEXT UNIQUE,                        -- magic-link token (provider side)
+  manage_token  TEXT UNIQUE,                        -- magic-link token (user side: cancel/reschedule)
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at   TEXT
+);
+```
+
+Indexes: `appointments(provider_id, starts_at)`, `appointments(status, starts_at)`. Slot-picker conflict check runs on `provider_id + starts_at` range overlap; `auto` mode inserts inside a transaction re-checking the slot (Turso single-writer makes this safe).
+
+State machine: `requested → confirmed → completed | no_show`; cancellations from either side allowed until `starts_at`; every transition appends to `lead_events` (same audit trail as leads).
+
+### Flow additions
+- `POST /api/appointments` — create (request or auto mode), same Zod + rate-limit + honeypot guards as leads.
+- `GET /api/appointments/r/[token]` — provider magic-link actions; `GET /api/appointments/m/[token]` — user cancel/reschedule page.
+- QStash: schedule reminder messages at confirm time; cancel them on cancellation. Reminder channel v1 = email; SMS (Twilio) is a P3 cost decision.
+- Admin: `/admin/appointments` — day/week list per provider, manual status overrides, no-show marking; availability editor on the provider page (Level 2).
+- Public: provider cards + profile show **"Book appointment"** instead of "Request quote" when bookable; category/commune pages get a "bookable today/this week" filter chip once Level 2 providers exist.
+
+### Monetization
+Booking is the **pro-tier hook**: request-mode included in every plan (it's just a smarter lead), slot-picker + auto-confirm reserved for `pro` (or billed per completed appointment, €2–5). No-show data stays our asset — it powers ranking (reliable providers rank higher) and later deposit-taking (P3, payments).
 
 ---
 
-## 11. Open questions (need owner answers)
+## 11. Phases
+
+| Phase | Scope | Effort |
+|---|---|---|
+| **P0** | Schema + migrations (incl. booking tables), seed 2 verticals + categories, admin auth + providers/offers/config CRUD | ~1 wk |
+| **P1** | Public pages (hub/category/commune/profile), lead form + matching + Resend dispatch + magic-link replies, **Level-1 request booking + reminders**, sitemap, GDPR purge cron | ~2–3 wk |
+| **P2** | **Level-2 availability rules + slot picker + auto-confirm**, admin stats + billing export, WhatsApp dispatch, conversational search over marketplace DB, homepage vertical switcher | ~2 wk |
+| **P3** | Provider portal (self-service, real auth), **calendar sync (Level 3)**, reviews with moderation, payments/deposits, SMS reminders | later |
+
+**Definition of done P1**: a sales rep signs a real garage on paper → ops enters it in admin → its commune page ranks it → a test lead submitted on that page arrives in the garage's inbox with working magic links → dispatch visible in admin with full event timeline → a booking request with preferred windows gets confirmed via the provider's magic link and both sides receive confirmation + reminder emails.
+
+---
+
+## 12. Open questions (need owner answers)
 
 1. **Launch verticals** — which 2–3 does sales attack first? (spec assumes garages + artisans)
 2. **Brand** — everything under olu.lu, or a separate brand/domain for services?
 3. **Resend** as the email provider — OK to add? (free tier, no cost at v1 volume)
 4. **Pricing default** — CPL or subscription as the primary pitch?
 5. **Free-launch cutoff** — date-based or leads-received-based?
+6. **Booking verticals** — which launch verticals get `booking_enabled` on day one? (spec assumes garages; cleaning optional)
+7. **Booking pricing** — auto-confirm as a pro-tier feature, or per-completed-appointment fee (€2–5)?
