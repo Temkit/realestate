@@ -39,6 +39,11 @@ import {
   upsertBookingSettings,
 } from "@/lib/marketplace/queries";
 import { NEARBY_COMMUNES } from "@/lib/communes";
+import {
+  revalidateProviderPaths,
+  revalidateVerticalPaths,
+} from "@/lib/marketplace/revalidate";
+import { getProviderCategoryIds } from "@/lib/marketplace/queries";
 import type { AttributeField } from "@/lib/marketplace/types";
 
 function firstZodMessage(e: ZodError): string {
@@ -177,6 +182,7 @@ export async function saveProviderAction(formData: FormData): Promise<void> {
   await setProviderCoverage(providerId, coverage);
 
   revalidatePath("/admin/providers");
+  await revalidateProviderPaths(categoryIds);
   redirect(`/admin/providers/${providerId}?saved=1`);
 }
 
@@ -264,6 +270,7 @@ export async function createOfferAction(formData: FormData): Promise<void> {
         : Math.round(parsed.price_eur * 100),
     attributes,
   });
+  await revalidateProviderPaths([parsed.category_id]);
   redirect(`${backTo}?saved=1`);
 }
 
@@ -272,7 +279,10 @@ export async function toggleOfferAction(formData: FormData): Promise<void> {
   const id = Number(str(formData, "id"));
   const providerId = Number(str(formData, "provider_id"));
   const active = str(formData, "active") === "1";
-  if (id) await setOfferActive(id, active);
+  if (id) {
+    await setOfferActive(id, active);
+    await revalidateProviderPaths(await getProviderCategoryIds(providerId));
+  }
   redirect(`/admin/providers/${providerId}/offers`);
 }
 
@@ -303,6 +313,7 @@ export async function toggleVerticalAction(formData: FormData): Promise<void> {
   const value = str(formData, "value") === "1";
   if (id && (flag === "active" || flag === "booking_enabled")) {
     await setVerticalFlags(id, { [flag]: value });
+    await revalidateVerticalPaths(id);
   }
   redirect("/admin/config");
 }
@@ -317,6 +328,7 @@ export async function createCategoryAction(formData: FormData): Promise<void> {
       name_fr: str(formData, "name_fr"),
     });
     await createCategory(parsed);
+    await revalidateVerticalPaths(parsed.vertical_id);
   } catch (e) {
     if (e instanceof ZodError) {
       redirect(`/admin/config?error=${encodeURIComponent(firstZodMessage(e))}`);
@@ -330,6 +342,9 @@ export async function toggleCategoryAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = Number(str(formData, "id"));
   const active = str(formData, "active") === "1";
-  if (id) await setCategoryActive(id, active);
+  if (id) {
+    await setCategoryActive(id, active);
+    await revalidateProviderPaths([id]);
+  }
   redirect("/admin/config");
 }

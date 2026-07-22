@@ -6,6 +6,22 @@ import {
   getTypesForLocale,
   COMMUNES,
 } from "@/lib/seo/slugs";
+import {
+  getActiveCategoryBySlug,
+  getActiveVerticalBySlug,
+  listProvidersForCategory,
+} from "@/lib/marketplace/public-queries";
+import { cname } from "@/lib/marketplace/display";
+import { CategoryView } from "@/components/marketplace/category-view";
+
+/** Marketplace category lookup for the shared [mode]/[propertyType] segments. */
+async function resolveMarketplace(mode: string, propertyType: string) {
+  const vertical = await getActiveVerticalBySlug(mode);
+  if (!vertical) return null;
+  const category = await getActiveCategoryBySlug(vertical.id, propertyType);
+  if (!category) return null;
+  return { vertical, category };
+}
 
 export const revalidate = 86400;
 
@@ -31,7 +47,27 @@ export async function generateMetadata({
   const types = getTypesForLocale(locale);
   const modeEntry = modes.find((m) => m.slug === mode);
   const typeEntry = types.find((t) => t.slug === propertyType);
-  if (!modeEntry || !typeEntry) return { title: "Not found" };
+  if (!modeEntry || !typeEntry) {
+    // notFound() in metadata → proper 404 status (body streams too late)
+    const mkt = await resolveMarketplace(mode, propertyType);
+    if (!mkt) notFound();
+    const catName = cname(mkt.category, locale);
+    const title =
+      locale === "fr"
+        ? `${catName} au Luxembourg — comparez & recevez des devis | lux24`
+        : `${catName} in Luxembourg — compare & get quotes | lux24`;
+    const description =
+      locale === "fr"
+        ? `Trouvez un prestataire pour « ${catName} » au Luxembourg. Jusqu'à 3 devis gratuits, prise de rendez-vous en ligne.`
+        : `Find a provider for "${catName}" in Luxembourg. Up to 3 free quotes, online appointment booking.`;
+    const canonical = `https://olu.lu/${locale}/${mode}/${propertyType}`;
+    return {
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: { title, description, url: canonical, type: "website" },
+    };
+  }
 
   const title =
     locale === "fr"
@@ -73,7 +109,20 @@ export default async function TypeIndexPage({
   const types = getTypesForLocale(locale);
   const modeEntry = modes.find((m) => m.slug === mode);
   const typeEntry = types.find((t) => t.slug === propertyType);
-  if (!modeEntry || !typeEntry) notFound();
+  if (!modeEntry || !typeEntry) {
+    const mkt = await resolveMarketplace(mode, propertyType);
+    if (!mkt) notFound();
+    const providers = await listProvidersForCategory(mkt.category.id);
+    return (
+      <CategoryView
+        vertical={mkt.vertical}
+        category={mkt.category}
+        communeSlug={null}
+        providers={providers}
+        locale={locale}
+      />
+    );
+  }
 
   const heading =
     locale === "fr"

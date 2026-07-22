@@ -191,13 +191,19 @@ Public listing pages use the same candidate query, ranked by plan weight then pr
 ## 5. Lead flow
 
 ```
-form submit → POST /api/leads
-  → validate (Zod, per-vertical lead_form_schema) + rate-limit (existing rate-limit.ts) + honeypot
+form submit → server action submitLeadAction (src/lib/marketplace/public-actions.ts)
+  → validate (Zod) + rate-limit (existing rate-limit.ts) + honeypot + consent
   → insert lead (status=new, consent_at)
   → match (§4) → insert dispatches
   → send provider emails + user confirmation email
   → status=dispatched
 ```
+
+> Implemented as Next.js server actions (not JSON API routes) — plain HTML
+> forms, no client JS needed. Magic links are GET routes:
+> `/api/leads/r/[token]` (provider reply, stateless HMAC token) and
+> `/api/appointments/r/[token]` (booking confirm/decline, stored token).
+> User-side management: `/[locale]/rdv/[manage_token]`.
 
 - **Email**: Resend (new dependency — free tier 3k/mo, fits Vercel). Provider email contains lead details + two magic links: “I take this job” / “Not relevant” → `GET /api/leads/r/[token]` flips dispatch to `answered`/`disputed` — no portal, no login.
 - Failure handling: email send failures leave dispatch `pending`; admin inbox shows them for manual retry. No silent drops.

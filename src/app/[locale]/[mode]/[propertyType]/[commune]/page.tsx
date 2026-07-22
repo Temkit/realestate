@@ -11,6 +11,24 @@ import { formatNumber } from "@/lib/format";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import { InternalLinks } from "@/components/seo/internal-links";
 import { Home, Bed, Bath, Ruler, ExternalLink, ShieldCheck, ArrowRight } from "lucide-react";
+import { NEARBY_COMMUNES } from "@/lib/communes";
+import {
+  getActiveCategoryBySlug,
+  getActiveVerticalBySlug,
+  listProvidersForCategory,
+} from "@/lib/marketplace/public-queries";
+import { cname, communeDisplay } from "@/lib/marketplace/display";
+import { CategoryView } from "@/components/marketplace/category-view";
+
+/** Marketplace lookup for the shared [mode]/[propertyType]/[commune] segments. */
+async function resolveMarketplace(mode: string, propertyType: string, commune: string) {
+  const vertical = await getActiveVerticalBySlug(mode);
+  if (!vertical) return null;
+  const category = await getActiveCategoryBySlug(vertical.id, propertyType);
+  if (!category) return null;
+  if (NEARBY_COMMUNES[commune] === undefined) return null;
+  return { vertical, category };
+}
 
 // ISR: revalidate every 24h (matches Redis cache TTL)
 export const revalidate = 86400;
@@ -32,7 +50,28 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, mode, propertyType, commune } = await params;
   const resolved = resolveParams(locale, mode, propertyType, commune);
-  if (!resolved) return { title: "Not found" };
+  if (!resolved) {
+    // notFound() in metadata → proper 404 status (body streams too late)
+    const mkt = await resolveMarketplace(mode, propertyType, commune);
+    if (!mkt) notFound();
+    const catName = cname(mkt.category, locale);
+    const communeName = communeDisplay(commune);
+    const title =
+      locale === "fr"
+        ? `${catName} à ${communeName} — devis gratuits | lux24`
+        : `${catName} in ${communeName} — free quotes | lux24`;
+    const description =
+      locale === "fr"
+        ? `Comparez les prestataires « ${catName} » à ${communeName} et alentours. Jusqu'à 3 devis gratuits, rendez-vous en ligne.`
+        : `Compare "${catName}" providers in ${communeName} and nearby. Up to 3 free quotes, online booking.`;
+    const canonical = `https://olu.lu/${locale}/${mode}/${propertyType}/${commune}`;
+    return {
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: { title, description, url: canonical, type: "website" },
+    };
+  }
 
   // Try to get property count from cache for description
   const cacheKey = buildSearchCacheKey(resolved.query, resolved.mode);
@@ -49,7 +88,20 @@ export default async function CommuneSearchPage({
 }) {
   const { locale, mode, propertyType, commune } = await params;
   const resolved = resolveParams(locale, mode, propertyType, commune);
-  if (!resolved) notFound();
+  if (!resolved) {
+    const mkt = await resolveMarketplace(mode, propertyType, commune);
+    if (!mkt) notFound();
+    const providers = await listProvidersForCategory(mkt.category.id, commune);
+    return (
+      <CategoryView
+        vertical={mkt.vertical}
+        category={mkt.category}
+        communeSlug={commune}
+        providers={providers}
+        locale={locale}
+      />
+    );
+  }
 
   // Read from Redis cache — at build time, only use cached data (no pipeline)
   // ISR will regenerate with fresh data on next visit after revalidate period

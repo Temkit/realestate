@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getModesForLocale, getTypesForLocale, COMMUNES } from "@/lib/seo/slugs";
+import {
+  getActiveVerticalBySlug,
+  listActiveCategories,
+} from "@/lib/marketplace/public-queries";
+import { vname } from "@/lib/marketplace/display";
+import { VerticalHub } from "@/components/marketplace/vertical-hub";
 
 export const revalidate = 86400;
 
@@ -23,7 +29,29 @@ export async function generateMetadata({
   const { locale, mode } = await params;
   const modes = getModesForLocale(locale);
   const modeEntry = modes.find((m) => m.slug === mode);
-  if (!modeEntry) return { title: "Not found" };
+  if (!modeEntry) {
+    // Marketplace vertical hub (spec §7) — segment shared with immo modes.
+    // notFound() here (not in the page body): metadata resolves before the
+    // response streams, so the 404 status is still settable.
+    const vertical = await getActiveVerticalBySlug(mode);
+    if (!vertical) notFound();
+    const name = vname(vertical, locale);
+    const title =
+      locale === "fr"
+        ? `${name} au Luxembourg — devis gratuits & rendez-vous | lux24`
+        : `${name} in Luxembourg — free quotes & appointments | lux24`;
+    const description =
+      locale === "fr"
+        ? `Comparez les ${name.toLowerCase()} au Luxembourg. Demandez jusqu'à 3 devis gratuits ou prenez rendez-vous en ligne.`
+        : `Compare ${name.toLowerCase()} in Luxembourg. Request up to 3 free quotes or book an appointment online.`;
+    const canonical = `https://olu.lu/${locale}/${mode}`;
+    return {
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: { title, description, url: canonical, type: "website" },
+    };
+  }
 
   const title =
     locale === "fr"
@@ -68,7 +96,14 @@ export default async function ModeIndexPage({
   const { locale, mode } = await params;
   const modes = getModesForLocale(locale);
   const modeEntry = modes.find((m) => m.slug === mode);
-  if (!modeEntry) notFound();
+  if (!modeEntry) {
+    // Marketplace vertical hub — ISR like the immo pages; admin actions
+    // revalidate these paths on provider/config changes
+    const vertical = await getActiveVerticalBySlug(mode);
+    if (!vertical) notFound();
+    const categories = await listActiveCategories(vertical.id);
+    return <VerticalHub vertical={vertical} categories={categories} locale={locale} />;
+  }
 
   const types = getTypesForLocale(locale);
   const heading =

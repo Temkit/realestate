@@ -95,7 +95,30 @@ export const RESERVED_SLUGS = [
   "admin",
   "api",
   "pro",
+  "rdv",
   "immo",
   "fr",
   "en",
 ];
+
+export type LeadStatus = "new" | "dispatched" | "answered" | "converted" | "invalid";
+export type DispatchStatus =
+  | "pending"
+  | "sent"
+  | "bounced"
+  | "answered"
+  | "converted"
+  | "disputed";
+export type AppointmentStatus =
+  | "requested"
+  | "confirmed"
+  | "declined"
+  | "cancelled_user"
+  | "cancelled_provider"
+  | "completed"
+  | "no_show";
+
+export interface BookingWindow {
+  date: string; // YYYY-MM-DD
+  period: "morning" | "afternoon";
+}
