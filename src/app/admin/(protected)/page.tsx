@@ -25,7 +25,7 @@ export default async function AdminDashboardPage() {
     { label: "Providers", value: counts!.providers, href: "/admin/providers" },
     { label: "Active providers", value: counts!.activeProviders, href: "/admin/providers?status=active" },
     { label: "Active offers", value: counts!.offers, href: "/admin/providers" },
-    { label: "Leads", value: counts!.leads, href: "/admin" },
+    { label: "Leads", value: counts!.leads, href: "/admin/leads" },
   ];
 
   return (

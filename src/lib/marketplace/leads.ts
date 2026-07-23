@@ -12,6 +12,7 @@ import {
 } from "./tokens";
 import {
   getBaseUrl,
+  sendAutoBookingToProvider,
   sendBookingConfirmedToUser,
   sendBookingRequestToProvider,
   sendLeadConfirmationToUser,
@@ -213,6 +214,154 @@ export async function createBookingRequest(
   }
 
   return { leadId, appointmentId };
+}
+
+/**
+ * Level-2 auto-confirmed booking. The insert is guarded against a concurrent
+ * confirmed appointment on the same grid slot; returns null when taken.
+ */
+export async function createAutoBooking(
+  lead: NewLead,
+  provider: { id: number; email: string; name: string },
+  startsAtIso: string,
+  durationMin: number
+): Promise<{ leadId: string; appointmentId: string } | null> {
+  const db = requireMarketplaceDb();
+  lead.answers = { ...lead.answers, slot: startsAtIso };
+  const leadId = await insertLead(lead);
+
+  const appointmentId = randomId();
+  const confirmToken = randomToken();
+  const manageToken = randomToken();
+  const res = await db.execute({
+    sql: `INSERT INTO appointments (id, lead_id, provider_id, category_id, starts_at,
+            duration_min, status, confirm_token, manage_token)
+          SELECT ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?
+          WHERE NOT EXISTS (
+            SELECT 1 FROM appointments
+            WHERE provider_id = ? AND status = 'confirmed' AND starts_at = ?
+          )`,
+    args: [
+      appointmentId, leadId, provider.id, lead.categoryId, startsAtIso,
+      durationMin, confirmToken, manageToken, provider.id, startsAtIso,
+    ],
+  });
+  if (res.rowsAffected === 0) {
+    await db.execute({
+      sql: "UPDATE leads SET status = 'invalid' WHERE id = ?",
+      args: [leadId],
+    });
+    await addEvent(leadId, null, "slot_taken", "system", { slot: startsAtIso });
+    return null;
+  }
+
+  const dispatch = await db.execute({
+    sql: `INSERT INTO lead_dispatches (lead_id, provider_id, channel, status)
+          VALUES (?, ?, 'email', 'pending') RETURNING id`,
+    args: [leadId, provider.id],
+  });
+  const dispatchId = Number(dispatch.rows[0].id);
+
+  const base = getBaseUrl();
+  const { sent, error } = await sendAutoBookingToProvider({
+    to: provider.email,
+    providerName: provider.name,
+    lead: toEmailData(lead),
+    startsAt: startsAtIso,
+    cancelUrl: `${base}/api/appointments/r/${confirmToken}?action=cancel`,
+  });
+  if (sent) {
+    await db.execute({
+      sql: `UPDATE lead_dispatches SET status = 'sent', billable = 1, sent_at = datetime('now') WHERE id = ?`,
+      args: [dispatchId],
+    });
+    await db.execute({
+      sql: "UPDATE leads SET status = 'answered' WHERE id = ?",
+      args: [leadId],
+    });
+    await addEvent(leadId, dispatchId, "dispatched", "system", {
+      providerId: provider.id,
+      appointmentId,
+      auto: true,
+    });
+  } else {
+    await addEvent(leadId, dispatchId, "dispatch_failed", "system", {
+      providerId: provider.id,
+      error: error ?? "unknown",
+    });
+  }
+
+  if (lead.email) {
+    await sendBookingConfirmedToUser({
+      to: lead.email,
+      name: lead.name,
+      providerName: provider.name,
+      startsAt: startsAtIso,
+      manageUrl: `${base}/${lead.locale}/rdv/${manageToken}`,
+      locale: lead.locale,
+    });
+  }
+  await scheduleReminders(appointmentId, startsAtIso);
+
+  return { leadId, appointmentId };
+}
+
+/** Admin retry of a pending/bounced dispatch (spec §5 — no silent drops). */
+export async function retryDispatch(dispatchId: number): Promise<{ sent: boolean; error?: string }> {
+  const db = requireMarketplaceDb();
+  const res = await db.execute({
+    sql: `SELECT d.id, d.status, d.lead_id,
+            l.name, l.email, l.phone, l.commune, l.message,
+            c.name_fr AS category_name_fr,
+            p.email AS provider_email, p.name AS provider_name
+          FROM lead_dispatches d
+          JOIN leads l ON l.id = d.lead_id
+          JOIN providers p ON p.id = d.provider_id
+          LEFT JOIN categories c ON c.id = l.category_id
+          WHERE d.id = ?`,
+    args: [dispatchId],
+  });
+  if (!res.rows.length) return { sent: false, error: "dispatch not found" };
+  const r = res.rows[0];
+  if (r.status !== "pending" && r.status !== "bounced") {
+    return { sent: false, error: `dispatch is ${r.status}` };
+  }
+
+  const answeredToken = signDispatchToken(dispatchId, "answered");
+  const disputedToken = signDispatchToken(dispatchId, "disputed");
+  const base = getBaseUrl();
+  const { sent, error } = await sendLeadToProvider({
+    to: String(r.provider_email),
+    providerName: String(r.provider_name),
+    lead: {
+      name: String(r.name),
+      email: (r.email as string) || null,
+      phone: (r.phone as string) || null,
+      commune: (r.commune as string) || null,
+      message: (r.message as string) || null,
+      categoryNameFr: String(r.category_name_fr ?? "Service"),
+    },
+    answeredUrl: answeredToken ? `${base}/api/leads/r/${answeredToken}` : null,
+    disputedUrl: disputedToken ? `${base}/api/leads/r/${disputedToken}` : null,
+  });
+
+  const leadId = String(r.lead_id);
+  if (sent) {
+    await db.execute({
+      sql: `UPDATE lead_dispatches SET status = 'sent', billable = 1, sent_at = datetime('now') WHERE id = ?`,
+      args: [dispatchId],
+    });
+    await db.execute({
+      sql: "UPDATE leads SET status = 'dispatched' WHERE id = ? AND status = 'new'",
+      args: [leadId],
+    });
+    await addEvent(leadId, dispatchId, "dispatch_retried", "admin", {});
+  } else {
+    await addEvent(leadId, dispatchId, "dispatch_retry_failed", "admin", {
+      error: error ?? "unknown",
+    });
+  }
+  return { sent, error };
 }
 
 export interface AppointmentRecord {

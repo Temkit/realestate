@@ -11,8 +11,10 @@ import {
 import { listCategories, listVerticals } from "@/lib/marketplace/queries";
 import { getMarketplaceDb } from "@/lib/marketplace/db";
 import { cname, communeDisplay, offerTitle, priceLabel } from "@/lib/marketplace/display";
+import { computeAvailableSlots } from "@/lib/marketplace/slots";
 import { BookingForm } from "@/components/marketplace/booking-form";
 import { LeadForm } from "@/components/marketplace/lead-form";
+import { SlotPickerForm } from "@/components/marketplace/slot-picker-form";
 import { StatusBanner } from "@/components/marketplace/status-banner";
 
 export async function generateMetadata({
@@ -66,6 +68,15 @@ export default async function ProviderProfilePage({
     categories.some((c) => c.vertical_id === v.id)
   );
   const path = `/${locale}/pro/${slug}`;
+
+  // Level-2 slot picker only in auto mode with availability rules configured
+  let slotDays: Awaited<ReturnType<typeof computeAvailableSlots>>["days"] = [];
+  let autoMode = false;
+  if (bookable) {
+    const { config, days } = await computeAvailableSlots(provider.id, 14);
+    autoMode = config.mode === "auto" && config.hasRules;
+    slotDays = days;
+  }
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -203,14 +214,26 @@ export default async function ProviderProfilePage({
             </h2>
             <p className="mb-4 text-xs text-muted-foreground">
               {bookable
-                ? fr
-                  ? "Le prestataire confirme votre créneau par email."
-                  : "The provider confirms your slot by email."
+                ? autoMode
+                  ? fr
+                    ? "Réservation immédiate — choisissez un créneau libre."
+                    : "Instant booking — pick an open slot."
+                  : fr
+                    ? "Le prestataire confirme votre créneau par email."
+                    : "The provider confirms your slot by email."
                 : fr
                   ? "Réponse directe du prestataire."
                   : "Direct reply from the provider."}
             </p>
-            {bookable && categories.length > 0 ? (
+            {bookable && autoMode && slotDays.length > 0 && categories.length > 0 ? (
+              <SlotPickerForm
+                locale={locale}
+                providerId={provider.id}
+                categories={categories}
+                days={slotDays}
+                backTo={path}
+              />
+            ) : bookable && categories.length > 0 ? (
               <BookingForm
                 locale={locale}
                 providerId={provider.id}

@@ -189,6 +189,50 @@ export async function submitBookingAction(formData: FormData): Promise<void> {
   redirect(`${backTo}?lead=booking`);
 }
 
+/** Level-2 auto-confirm booking from the slot picker. */
+export async function submitAutoBookAction(formData: FormData): Promise<void> {
+  const backTo = str(formData, "back_to") || "/";
+  await guard(formData, backTo);
+
+  const ctx = await loadContext(formData);
+  if (!ctx) redirect(`${backTo}?error=invalid`);
+  const fields = parseLeadFields(formData, backTo);
+
+  const provider = await loadProvider(Number(str(formData, "provider_id")));
+  if (!provider) redirect(`${backTo}?error=invalid`);
+
+  const slot = str(formData, "slot");
+  const { computeAvailableSlots } = await import("./slots");
+  const { config, days } = await computeAvailableSlots(provider.id, 60);
+  const valid =
+    config.mode === "auto" && days.some((d) => d.slots.some((s) => s.iso === slot));
+  if (!valid) redirect(`${backTo}?error=slot_taken`);
+
+  const { createAutoBooking } = await import("./leads");
+  const result = await createAutoBooking(
+    {
+      verticalId: ctx.verticalId,
+      categoryId: ctx.categoryId,
+      categoryNameFr: ctx.categoryNameFr,
+      categoryNameForUser: ctx.locale === "en" ? ctx.categoryNameEn : ctx.categoryNameFr,
+      name: fields.name,
+      email: fields.email || null,
+      phone: fields.phone || null,
+      commune: null,
+      message: fields.message || null,
+      answers: {},
+      locale: ctx.locale,
+      sourcePage: backTo,
+    },
+    provider,
+    slot,
+    config.slot_minutes
+  );
+  if (!result) redirect(`${backTo}?error=slot_taken`);
+
+  redirect(`${backTo}?lead=confirmed`);
+}
+
 /** User-side cancellation from the /rdv/[token] manage page. */
 export async function cancelAppointmentAction(formData: FormData): Promise<void> {
   const token = str(formData, "token");

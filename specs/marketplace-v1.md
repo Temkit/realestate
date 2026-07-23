@@ -357,8 +357,8 @@ Booking is the **pro-tier hook**: request-mode included in every plan (it's just
 |---|---|---|
 | **P0** | Schema + migrations (incl. booking tables), seed 2 verticals + categories, admin auth + providers/offers/config CRUD | ~1 wk |
 | **P1** | Public pages (hub/category/commune/profile), lead form + matching + Resend dispatch + magic-link replies, **Level-1 request booking + reminders**, sitemap, GDPR purge cron | ~2–3 wk |
-| **P2** | **Level-2 availability rules + slot picker + auto-confirm**, admin stats + billing export, WhatsApp dispatch, conversational search over marketplace DB, homepage vertical switcher | ~2 wk |
-| **P3** | Provider portal (self-service, real auth), **calendar sync (Level 3)**, reviews with moderation, payments/deposits, SMS reminders | later |
+| **P2** | **Level-2 availability rules + slot picker + auto-confirm**, admin leads inbox + appointments board, stats + billing CSV export, homepage vertical switcher | ~2 wk |
+| **P3** | Provider portal (self-service, real auth), **calendar sync (Level 3)**, reviews with moderation, payments/deposits, SMS reminders, WhatsApp dispatch (needs a WhatsApp Business API provider — cost decision), conversational search over the marketplace DB | later |
 
 **Definition of done P1**: a sales rep signs a real garage on paper → ops enters it in admin → its commune page ranks it → a test lead submitted on that page arrives in the garage's inbox with working magic links → dispatch visible in admin with full event timeline → a booking request with preferred windows gets confirmed via the provider's magic link and both sides receive confirmation + reminder emails.
 

@@ -7,6 +7,7 @@ import {
   setAppointmentStatus,
   windowToStartsAt,
 } from "@/lib/marketplace/leads";
+import { sendBookingCancelledToUser } from "@/lib/marketplace/email";
 
 /**
  * Provider one-click booking reply: ?action=confirm&w=<windowIndex> or
@@ -44,6 +45,23 @@ export async function GET(
   if (appt.status === "cancelled_user") {
     return page("Demande annulée", "Le client a annulé cette demande de rendez-vous.");
   }
+
+  // Provider-side cancellation of a confirmed appointment (Level 2)
+  if (action === "cancel" && appt.status === "confirmed") {
+    await setAppointmentStatus(appt, "cancelled_provider", "provider");
+    const ctx = await getAppointmentContext(appt);
+    if (ctx?.userEmail) {
+      await sendBookingCancelledToUser({
+        to: ctx.userEmail,
+        name: ctx.userName,
+        providerName: ctx.providerName,
+        startsAt: appt.starts_at,
+        locale: ctx.locale,
+      });
+    }
+    return page("Rendez-vous annulé", "Le client a été prévenu par email.");
+  }
+
   if (appt.status === "confirmed") {
     return page("Déjà confirmé ✓", "Ce rendez-vous est déjà confirmé.");
   }

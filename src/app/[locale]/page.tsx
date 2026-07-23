@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { ServicesStrip } from "@/components/marketplace/services-strip";
 import { SearchBar } from "@/components/search-bar";
 import { PropertyCard } from "@/components/property-card";
 import { PropertyDetail } from "@/components/property-detail";
@@ -56,6 +57,7 @@ function ResultSkeleton({ count = 6 }: { count?: number }) {
 export default function HomePage() {
   const t = useTranslations("home");
   const tFav = useTranslations("favorites");
+  const locale = useLocale();
 
   const {
     results,
@@ -253,6 +255,9 @@ export default function HomePage() {
               onModeChange={handleModeChange}
             />
           )}
+
+          {/* Services marketplace entry points — hero only */}
+          {!results && !isLoading && !pendingAnalysis && <ServicesStrip locale={locale} />}
         </div>
       </section>
 

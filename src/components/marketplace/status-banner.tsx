@@ -15,7 +15,11 @@ function BannerInner({ locale }: { locale: string }) {
 
   if (lead) {
     const msg =
-      lead === "booking"
+      lead === "confirmed"
+        ? fr
+          ? "Rendez-vous confirmé ! Vous recevez un email de confirmation avec le détail."
+          : "Appointment confirmed! A confirmation email with the details is on its way."
+        : lead === "booking"
         ? fr
           ? "Demande de rendez-vous envoyée ! Le prestataire confirme un créneau par email."
           : "Appointment request sent! The provider will confirm a slot by email."
@@ -38,6 +42,7 @@ function BannerInner({ locale }: { locale: string }) {
       rate: ["Trop de demandes — réessayez dans quelques minutes.", "Too many requests — try again in a few minutes."],
       invalid: ["Formulaire invalide — vérifiez vos coordonnées (email ou téléphone requis).", "Invalid form — check your details (email or phone required)."],
       windows: ["Choisissez au moins un créneau valide (date future).", "Pick at least one valid (future) time slot."],
+      slot_taken: ["Ce créneau vient d'être pris — choisissez-en un autre.", "That slot was just taken — please pick another."],
     };
     const [frMsg, enMsg] = msgs[error] ?? ["Une erreur est survenue.", "Something went wrong."];
     return (

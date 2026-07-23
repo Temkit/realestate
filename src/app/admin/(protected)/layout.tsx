@@ -17,6 +17,15 @@ export default async function AdminProtectedLayout({
           <Link href="/admin/providers" className="text-muted-foreground hover:text-foreground">
             Providers
           </Link>
+          <Link href="/admin/leads" className="text-muted-foreground hover:text-foreground">
+            Leads
+          </Link>
+          <Link href="/admin/appointments" className="text-muted-foreground hover:text-foreground">
+            Appointments
+          </Link>
+          <Link href="/admin/stats" className="text-muted-foreground hover:text-foreground">
+            Stats
+          </Link>
           <Link href="/admin/config" className="text-muted-foreground hover:text-foreground">
             Config
           </Link>

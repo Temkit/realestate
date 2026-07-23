@@ -8,8 +8,20 @@ import {
   listCategories,
   listVerticals,
 } from "@/lib/marketplace/queries";
-import { saveBookingSettingsAction } from "../../../actions";
+import {
+  listAvailabilityExceptions,
+  listAvailabilityRules,
+} from "@/lib/marketplace/admin-queries";
+import {
+  addAvailabilityExceptionAction,
+  addAvailabilityRuleAction,
+  deleteAvailabilityExceptionAction,
+  deleteAvailabilityRuleAction,
+  saveBookingSettingsAction,
+} from "../../../actions";
 import { ProviderForm } from "../provider-form";
+
+const WEEKDAYS_FR = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +40,7 @@ export default async function EditProviderPage({
   const providerId = Number(id);
   if (!Number.isInteger(providerId)) notFound();
 
-  const [provider, verticals, categories, selectedCategoryIds, coverage, booking] =
+  const [provider, verticals, categories, selectedCategoryIds, coverage, booking, rules, exceptions] =
     await Promise.all([
       getProvider(providerId),
       listVerticals(),
@@ -36,6 +48,8 @@ export default async function EditProviderPage({
       getProviderCategoryIds(providerId),
       getProviderCoverage(providerId),
       getBookingSettings(providerId),
+      listAvailabilityRules(providerId),
+      listAvailabilityExceptions(providerId),
     ]);
   if (!provider) notFound();
 
@@ -110,6 +124,74 @@ export default async function EditProviderPage({
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="mt-12 border-t pt-8">
+        <h2 className="mb-1 text-base font-semibold">Availability (Level 2 — auto mode)</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Weekly opening hours drive the public slot picker when mode is `auto`.
+          Without rules, the provider stays in request mode regardless of the toggle.
+        </p>
+
+        <div className="grid gap-8 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-2 text-sm font-medium">Weekly hours</h3>
+            {rules.length === 0 ? (
+              <p className="mb-3 text-sm text-muted-foreground">No rules yet.</p>
+            ) : (
+              <ul className="mb-3 space-y-1">
+                {rules.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-1.5 text-sm">
+                    <span>
+                      {WEEKDAYS_FR[r.weekday]} {r.open_time}–{r.close_time}
+                    </span>
+                    <form action={deleteAvailabilityRuleAction}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <input type="hidden" name="provider_id" value={provider.id} />
+                      <button className="text-xs text-red-600 hover:underline">delete</button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form action={addAvailabilityRuleAction} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="provider_id" value={provider.id} />
+              <select name="weekday" className={inputCls + " w-auto"}>
+                {WEEKDAYS_FR.map((d, i) => (
+                  <option key={d} value={i}>{d}</option>
+                ))}
+              </select>
+              <input name="open_time" type="time" defaultValue="09:00" required className={inputCls + " w-auto"} />
+              <input name="close_time" type="time" defaultValue="17:00" required className={inputCls + " w-auto"} />
+              <button className="rounded-lg border px-3 py-2 text-sm hover:bg-muted">+ Add</button>
+            </form>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-sm font-medium">Closed days (holidays)</h3>
+            {exceptions.length === 0 ? (
+              <p className="mb-3 text-sm text-muted-foreground">None upcoming.</p>
+            ) : (
+              <ul className="mb-3 space-y-1">
+                {exceptions.map((e) => (
+                  <li key={e.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-1.5 text-sm">
+                    <span>{e.date}</span>
+                    <form action={deleteAvailabilityExceptionAction}>
+                      <input type="hidden" name="id" value={e.id} />
+                      <input type="hidden" name="provider_id" value={provider.id} />
+                      <button className="text-xs text-red-600 hover:underline">delete</button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form action={addAvailabilityExceptionAction} className="flex items-end gap-2">
+              <input type="hidden" name="provider_id" value={provider.id} />
+              <input name="date" type="date" required className={inputCls + " w-auto"} />
+              <button className="rounded-lg border px-3 py-2 text-sm hover:bg-muted">+ Close day</button>
+            </form>
+          </div>
+        </div>
       </section>
     </div>
   );

@@ -190,6 +190,52 @@ export async function sendBookingConfirmedToUser(opts: {
   );
 }
 
+/** Auto-confirmed booking notice to the provider, with a cancel link. */
+export async function sendAutoBookingToProvider(opts: {
+  to: string;
+  providerName: string;
+  lead: LeadEmailData;
+  startsAt: string;
+  cancelUrl: string;
+}): Promise<{ sent: boolean; error?: string }> {
+  const when = formatDateTime(opts.startsAt, "fr-FR");
+  return send(
+    opts.to,
+    `Nouveau rendez-vous confirmé — ${when}`,
+    layout(`
+      <h2 style="font-size:18px">Bonjour ${esc(opts.providerName)},</h2>
+      <p><strong>${esc(opts.lead.name)}</strong> a réservé un créneau (${esc(opts.lead.categoryNameFr)}) :</p>
+      <p style="font-size:16px"><strong>${when}</strong></p>
+      <p>Contact : ${esc(opts.lead.email ?? "—")} / ${esc(opts.lead.phone ?? "—")}<br/>
+      ${opts.lead.message ? `Message : ${esc(opts.lead.message)}` : ""}</p>
+      <p>${button(opts.cancelUrl, "Annuler ce rendez-vous", "#78716c")}</p>
+    `)
+  );
+}
+
+/** Provider-side cancellation notice to the user. */
+export async function sendBookingCancelledToUser(opts: {
+  to: string;
+  name: string;
+  providerName: string;
+  startsAt: string | null;
+  locale: string;
+}): Promise<{ sent: boolean; error?: string }> {
+  const fr = opts.locale !== "en";
+  const when = opts.startsAt
+    ? formatDateTime(opts.startsAt, fr ? "fr-FR" : "en-GB")
+    : null;
+  return send(
+    opts.to,
+    fr ? `Rendez-vous annulé — ${opts.providerName}` : `Appointment cancelled — ${opts.providerName}`,
+    layout(
+      fr
+        ? `<p>Bonjour ${esc(opts.name)}, <strong>${esc(opts.providerName)}</strong> a dû annuler votre rendez-vous${when ? ` du <strong>${when}</strong>` : ""}. N'hésitez pas à réserver un autre créneau sur lux24.</p>`
+        : `<p>Hello ${esc(opts.name)}, <strong>${esc(opts.providerName)}</strong> had to cancel your appointment${when ? ` on <strong>${when}</strong>` : ""}. Feel free to book another slot on lux24.</p>`
+    )
+  );
+}
+
 /** Reminder (24h / 2h before) to user or provider. */
 export async function sendAppointmentReminder(opts: {
   to: string;

@@ -286,6 +286,119 @@ export async function toggleOfferAction(formData: FormData): Promise<void> {
   redirect(`/admin/providers/${providerId}/offers`);
 }
 
+// ── Availability (Level 2) ────────────────────────────────────────────
+
+export async function addAvailabilityRuleAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const providerId = Number(str(formData, "provider_id"));
+  const weekday = Number(str(formData, "weekday"));
+  const open = str(formData, "open_time");
+  const close = str(formData, "close_time");
+  const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+  if (
+    providerId &&
+    weekday >= 0 &&
+    weekday <= 6 &&
+    timeRe.test(open) &&
+    timeRe.test(close) &&
+    open < close
+  ) {
+    const { addAvailabilityRule } = await import("@/lib/marketplace/admin-queries");
+    await addAvailabilityRule(providerId, weekday, open, close);
+    redirect(`/admin/providers/${providerId}?saved=1`);
+  }
+  redirect(`/admin/providers/${providerId}?error=${encodeURIComponent("invalid availability rule")}`);
+}
+
+export async function deleteAvailabilityRuleAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const providerId = Number(str(formData, "provider_id"));
+  const id = Number(str(formData, "id"));
+  if (id && providerId) {
+    const { deleteAvailabilityRule } = await import("@/lib/marketplace/admin-queries");
+    await deleteAvailabilityRule(id, providerId);
+  }
+  redirect(`/admin/providers/${providerId}`);
+}
+
+export async function addAvailabilityExceptionAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const providerId = Number(str(formData, "provider_id"));
+  const date = str(formData, "date");
+  if (providerId && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const { addAvailabilityException } = await import("@/lib/marketplace/admin-queries");
+    await addAvailabilityException(providerId, date);
+  }
+  redirect(`/admin/providers/${providerId}?saved=1`);
+}
+
+export async function deleteAvailabilityExceptionAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const providerId = Number(str(formData, "provider_id"));
+  const id = Number(str(formData, "id"));
+  if (id && providerId) {
+    const { deleteAvailabilityException } = await import("@/lib/marketplace/admin-queries");
+    await deleteAvailabilityException(id, providerId);
+  }
+  redirect(`/admin/providers/${providerId}`);
+}
+
+// ── Leads inbox ───────────────────────────────────────────────────────
+
+export async function retryDispatchAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const dispatchId = Number(str(formData, "dispatch_id"));
+  const leadId = str(formData, "lead_id");
+  if (dispatchId) {
+    const { retryDispatch } = await import("@/lib/marketplace/leads");
+    const { sent, error } = await retryDispatch(dispatchId);
+    if (!sent) {
+      redirect(`/admin/leads/${leadId}?error=${encodeURIComponent(error ?? "retry failed")}`);
+    }
+  }
+  redirect(`/admin/leads/${leadId}?saved=1`);
+}
+
+export async function setLeadStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const leadId = str(formData, "lead_id");
+  const status = str(formData, "status");
+  if (leadId && ["answered", "converted", "invalid"].includes(status)) {
+    const { setLeadStatus } = await import("@/lib/marketplace/admin-queries");
+    const { addEvent } = await import("@/lib/marketplace/leads");
+    await setLeadStatus(leadId, status as "converted");
+    await addEvent(leadId, null, `marked_${status}`, "admin", {});
+  }
+  redirect(`/admin/leads/${leadId}?saved=1`);
+}
+
+export async function setDispatchStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const dispatchId = Number(str(formData, "dispatch_id"));
+  const leadId = str(formData, "lead_id");
+  const status = str(formData, "status");
+  if (dispatchId && ["converted", "disputed"].includes(status)) {
+    const { setDispatchStatus } = await import("@/lib/marketplace/admin-queries");
+    const { addEvent } = await import("@/lib/marketplace/leads");
+    await setDispatchStatus(dispatchId, status as "converted", status !== "disputed");
+    await addEvent(leadId, dispatchId, `admin_marked_${status}`, "admin", {});
+  }
+  redirect(`/admin/leads/${leadId}?saved=1`);
+}
+
+// ── Appointments board ────────────────────────────────────────────────
+
+export async function setAppointmentStatusAdminAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = str(formData, "id");
+  const status = str(formData, "status");
+  if (id && ["completed", "no_show", "cancelled_provider"].includes(status)) {
+    const { adminSetAppointmentStatus } = await import("@/lib/marketplace/admin-queries");
+    await adminSetAppointmentStatus(id, status as "completed");
+  }
+  redirect("/admin/appointments");
+}
+
 // ── Config (verticals + categories) ───────────────────────────────────
 
 export async function createVerticalAction(formData: FormData): Promise<void> {
