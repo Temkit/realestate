@@ -2,14 +2,17 @@ import Link from "next/link";
 import { requireProvider } from "@/lib/marketplace/provider-auth";
 import { getProviderDashboard } from "@/lib/marketplace/provider-queries";
 import { getProvider } from "@/lib/marketplace/queries";
+import { getRatingSummary } from "@/lib/marketplace/reviews";
+import { StarRating } from "@/components/marketplace/star-rating";
 
 export const dynamic = "force-dynamic";
 
 export default async function PortalDashboardPage() {
   const providerId = await requireProvider();
-  const [stats, provider] = await Promise.all([
+  const [stats, provider, rating] = await Promise.all([
     getProviderDashboard(providerId),
     getProvider(providerId),
+    getRatingSummary(providerId),
   ]);
 
   const tiles = [
@@ -21,7 +24,10 @@ export default async function PortalDashboardPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-lg font-semibold">Bonjour {provider?.name} 👋</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-lg font-semibold">Bonjour {provider?.name} 👋</h1>
+        {rating.avg != null && <StarRating value={rating.avg} count={rating.count} />}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {tiles.map((t) => (

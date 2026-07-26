@@ -233,6 +233,39 @@ export async function submitAutoBookAction(formData: FormData): Promise<void> {
   redirect(`${backTo}?lead=confirmed`);
 }
 
+/** Submit a review from the tokenized /avis/[token] page (P3b). */
+export async function submitReviewAction(formData: FormData): Promise<void> {
+  const token = str(formData, "token");
+  const locale = str(formData, "locale") === "en" ? "en" : "fr";
+  const backTo = `/${locale}/avis/${token}`;
+  if (!token) redirect(`/${locale}`);
+
+  const rating = Number(str(formData, "rating"));
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    redirect(`${backTo}?error=rating`);
+  }
+  const comment = str(formData, "comment").slice(0, 2000) || null;
+
+  const { getAppointmentByToken, getAppointmentContext } = await import("./leads");
+  const appt = await getAppointmentByToken("manage", token);
+  // Only a completed appointment can be reviewed
+  if (!appt || appt.status !== "completed") redirect(`${backTo}?error=state`);
+
+  const { appointmentHasReview, createReview } = await import("./reviews");
+  if (await appointmentHasReview(appt.id)) redirect(`${backTo}?done=1`);
+
+  const ctx = await getAppointmentContext(appt);
+  const ok = await createReview({
+    providerId: appt.provider_id,
+    appointmentId: appt.id,
+    leadId: appt.lead_id,
+    authorName: ctx?.userName || "Client",
+    rating,
+    comment,
+  });
+  redirect(`${backTo}?${ok ? "done=1" : "error=state"}`);
+}
+
 /** User-side cancellation from the /rdv/[token] manage page. */
 export async function cancelAppointmentAction(formData: FormData): Promise<void> {
   const token = str(formData, "token");

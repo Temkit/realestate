@@ -395,8 +395,50 @@ export async function setAppointmentStatusAdminAction(formData: FormData): Promi
   if (id && ["completed", "no_show", "cancelled_provider"].includes(status)) {
     const { adminSetAppointmentStatus } = await import("@/lib/marketplace/admin-queries");
     await adminSetAppointmentStatus(id, status as "completed");
+    // Ask the customer for a review once the appointment is done
+    if (status === "completed") {
+      const { getMarketplaceDb } = await import("@/lib/marketplace/db");
+      const db = getMarketplaceDb();
+      if (db) {
+        const row = await db.execute({
+          sql: "SELECT id, lead_id, provider_id, category_id, starts_at, duration_min, status FROM appointments WHERE id = ?",
+          args: [id],
+        });
+        if (row.rows.length) {
+          const r = row.rows[0];
+          const { sendReviewRequestForAppointment } = await import("@/lib/marketplace/leads");
+          await sendReviewRequestForAppointment({
+            id: String(r.id),
+            lead_id: (r.lead_id as string) || null,
+            provider_id: Number(r.provider_id),
+            category_id: r.category_id == null ? null : Number(r.category_id),
+            starts_at: (r.starts_at as string) || null,
+            duration_min: r.duration_min == null ? null : Number(r.duration_min),
+            status: "completed",
+          });
+        }
+      }
+    }
   }
   redirect("/admin/appointments");
+}
+
+// ── Reviews moderation ────────────────────────────────────────────────
+
+export async function moderateReviewAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = str(formData, "id");
+  const decision = str(formData, "decision");
+  if (id && (decision === "approved" || decision === "rejected")) {
+    const { moderateReview } = await import("@/lib/marketplace/reviews");
+    const providerId = await moderateReview(id, decision);
+    // Approving changes public rating → refresh that provider's pages
+    if (providerId && decision === "approved") {
+      const cats = await getProviderCategoryIds(providerId);
+      await revalidateProviderPaths(cats);
+    }
+  }
+  redirect("/admin/reviews?saved=1");
 }
 
 // ── Config (verticals + categories) ───────────────────────────────────

@@ -12,6 +12,8 @@ import { listCategories, listVerticals } from "@/lib/marketplace/queries";
 import { getMarketplaceDb } from "@/lib/marketplace/db";
 import { cname, communeDisplay, offerTitle, priceLabel } from "@/lib/marketplace/display";
 import { computeAvailableSlots } from "@/lib/marketplace/slots";
+import { getRatingSummary, listApprovedReviews } from "@/lib/marketplace/reviews";
+import { StarRating } from "@/components/marketplace/star-rating";
 import { BookingForm } from "@/components/marketplace/booking-form";
 import { LeadForm } from "@/components/marketplace/lead-form";
 import { SlotPickerForm } from "@/components/marketplace/slot-picker-form";
@@ -62,6 +64,10 @@ export default async function ProviderProfilePage({
   const categories = allCategories.filter(
     (c) => categoryIds.includes(c.id) && c.active
   );
+  const [rating, reviews] = await Promise.all([
+    getRatingSummary(provider.id),
+    listApprovedReviews(provider.id, 10),
+  ]);
   const fr = locale !== "en";
   const description = fr ? provider.description_fr : provider.description_en;
   const firstVertical = verticals.find((v) =>
@@ -92,6 +98,16 @@ export default async function ProviderProfilePage({
           addressCountry: "LU",
         }
       : undefined,
+    aggregateRating:
+      rating.avg != null
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: rating.avg,
+            reviewCount: rating.count,
+            bestRating: 5,
+            worstRating: 1,
+          }
+        : undefined,
   };
 
   return (
@@ -128,6 +144,11 @@ export default async function ProviderProfilePage({
         )}
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{provider.name}</h1>
+          {rating.avg != null && (
+            <div className="mt-1">
+              <StarRating value={rating.avg} count={rating.count} />
+            </div>
+          )}
           <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             {provider.commune && (
               <span className="flex items-center gap-1">
@@ -197,6 +218,26 @@ export default async function ProviderProfilePage({
                   ? "Tarifs indicatifs communiqués par le prestataire."
                   : "Indicative prices provided by the provider."}
               </p>
+            </div>
+          )}
+
+          {reviews.length > 0 && (
+            <div className="mt-6">
+              <h2 className="mb-3 text-base font-semibold">
+                {fr ? "Avis clients" : "Customer reviews"}
+              </h2>
+              <div className="space-y-3">
+                {reviews.map((r) => (
+                  <div key={r.id} className="rounded-2xl border bg-card p-4">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <StarRating value={r.rating} size={14} showValue={false} />
+                      <span className="text-xs text-muted-foreground">{r.created_at.slice(0, 10)}</span>
+                    </div>
+                    <p className="text-sm font-medium">{r.author_name}</p>
+                    {r.comment && <p className="mt-1 text-sm text-muted-foreground">{r.comment}</p>}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

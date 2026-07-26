@@ -196,6 +196,12 @@ export async function setAppointmentStatusPortalAction(formData: FormData): Prom
   };
   await setAppointmentStatus(record, status as "completed", "provider");
 
+  // Ask the customer for a review once the appointment is done
+  if (status === "completed") {
+    const { sendReviewRequestForAppointment } = await import("@/lib/marketplace/leads");
+    await sendReviewRequestForAppointment(record);
+  }
+
   // Notify the user when a confirmed appointment is cancelled by the provider
   if (status === "cancelled_provider" && owned.status === "confirmed") {
     const ctx = await getAppointmentContext(record);

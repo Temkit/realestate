@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BadgeCheck, Globe, MapPin, Phone } from "lucide-react";
 import type { PublicProvider } from "@/lib/marketplace/public-queries";
 import { communeDisplay, offerTitle, priceLabel } from "@/lib/marketplace/display";
+import { StarRating } from "./star-rating";
 
 export function ProviderCard({
   provider,
@@ -23,6 +24,11 @@ export function ProviderCard({
           >
             {provider.name}
           </Link>
+          {provider.rating.avg != null && (
+            <div className="mt-0.5">
+              <StarRating value={provider.rating.avg} count={provider.rating.count} size={14} />
+            </div>
+          )}
           <div className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
             {provider.commune && (
               <span className="flex items-center gap-1">

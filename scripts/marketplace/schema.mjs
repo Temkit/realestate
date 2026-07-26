@@ -163,6 +163,22 @@ export const STATEMENTS = [
     expires_at TEXT NOT NULL
   )`,
 
+  `CREATE TABLE IF NOT EXISTS reviews (
+    id             TEXT PRIMARY KEY,
+    provider_id    INTEGER NOT NULL REFERENCES providers(id),
+    appointment_id TEXT REFERENCES appointments(id),
+    lead_id        TEXT REFERENCES leads(id),
+    author_name    TEXT NOT NULL,
+    rating         INTEGER NOT NULL,
+    comment        TEXT,
+    status         TEXT NOT NULL DEFAULT 'pending',
+    created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    moderated_at   TEXT,
+    UNIQUE (appointment_id)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_reviews_provider ON reviews(provider_id, status)`,
+
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_dispatches_provider ON lead_dispatches(provider_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_offers_category ON offers(category_id, active)`,

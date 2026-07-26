@@ -190,6 +190,32 @@ export async function sendBookingConfirmedToUser(opts: {
   );
 }
 
+/** Review request to the customer after a completed appointment (P3b). */
+export async function sendReviewRequest(opts: {
+  to: string;
+  name: string;
+  providerName: string;
+  reviewUrl: string;
+  locale: string;
+}): Promise<{ sent: boolean; error?: string }> {
+  const fr = opts.locale !== "en";
+  return send(
+    opts.to,
+    fr ? `Votre avis sur ${opts.providerName} ?` : `How was ${opts.providerName}?`,
+    layout(
+      fr
+        ? `<h2 style="font-size:18px">Bonjour ${esc(opts.name)},</h2>
+           <p>Comment s'est passé votre rendez-vous chez <strong>${esc(opts.providerName)}</strong> ?
+           Votre avis aide d'autres personnes au Luxembourg.</p>
+           <p style="margin-top:16px">${button(opts.reviewUrl, "Laisser un avis")}</p>`
+        : `<h2 style="font-size:18px">Hello ${esc(opts.name)},</h2>
+           <p>How was your appointment with <strong>${esc(opts.providerName)}</strong>?
+           Your review helps others in Luxembourg.</p>
+           <p style="margin-top:16px">${button(opts.reviewUrl, "Leave a review")}</p>`
+    )
+  );
+}
+
 /** Passwordless login link for the provider portal (P3). */
 export async function sendProviderLoginLink(opts: {
   to: string;

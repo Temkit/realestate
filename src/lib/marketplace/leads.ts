@@ -516,6 +516,25 @@ export async function afterConfirm(
   await scheduleReminders(appt.id, startsAt);
 }
 
+/**
+ * Email a review request for a completed appointment (P3b). Uses the
+ * appointment's manage_token as the review token. No-op without a user email.
+ */
+export async function sendReviewRequestForAppointment(
+  appt: AppointmentRecord
+): Promise<void> {
+  const ctx = await getAppointmentContext(appt);
+  if (!ctx || !ctx.userEmail) return;
+  const { sendReviewRequest } = await import("./email");
+  await sendReviewRequest({
+    to: ctx.userEmail,
+    name: ctx.userName,
+    providerName: ctx.providerName,
+    reviewUrl: `${getBaseUrl()}/${ctx.locale}/avis/${ctx.manageToken}`,
+    locale: ctx.locale,
+  });
+}
+
 /** Schedule 24h + 2h reminders via QStash (skipped without QSTASH_TOKEN). */
 async function scheduleReminders(appointmentId: string, startsAt: string): Promise<void> {
   const token = process.env.QSTASH_TOKEN;

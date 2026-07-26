@@ -10,6 +10,7 @@ import {
   listOffers,
   listVerticals,
 } from "./queries";
+import { getRatingSummaries, type RatingSummary } from "./reviews";
 
 export async function listActiveVerticals(): Promise<Vertical[]> {
   if (!getMarketplaceDb()) return [];
@@ -38,6 +39,7 @@ export async function getActiveCategoryBySlug(
 
 export interface PublicProvider extends Provider {
   offers: Offer[];
+  rating: RatingSummary;
 }
 
 const PLAN_WEIGHT: Record<string, number> = { pro: 2, starter: 1, free: 0 };
@@ -71,6 +73,9 @@ export async function listProvidersForCategory(
     args,
   });
 
+  const ids = res.rows.map((r) => Number(r.id));
+  const ratings = await getRatingSummaries(ids);
+
   const providers: PublicProvider[] = [];
   for (const row of res.rows) {
     const id = Number(row.id);
@@ -80,11 +85,15 @@ export async function listProvidersForCategory(
     providers.push({
       ...rowToPublicProvider(row as Record<string, unknown>),
       offers,
+      rating: ratings.get(id) ?? { avg: null, count: 0 },
     });
   }
+  // Rank: plan weight → higher rating → name. Unrated providers sort below
+  // rated ones at the same plan tier (avg null → -1).
   providers.sort(
     (a, b) =>
       (PLAN_WEIGHT[b.plan] ?? 0) - (PLAN_WEIGHT[a.plan] ?? 0) ||
+      (b.rating.avg ?? -1) - (a.rating.avg ?? -1) ||
       a.name.localeCompare(b.name)
   );
   return providers;
