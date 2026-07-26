@@ -95,6 +95,7 @@ export const RESERVED_SLUGS = [
   "admin",
   "api",
   "pro",
+  "portal",
   "rdv",
   "immo",
   "fr",

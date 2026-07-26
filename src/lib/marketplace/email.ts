@@ -190,6 +190,24 @@ export async function sendBookingConfirmedToUser(opts: {
   );
 }
 
+/** Passwordless login link for the provider portal (P3). */
+export async function sendProviderLoginLink(opts: {
+  to: string;
+  providerName: string;
+  loginUrl: string;
+}): Promise<{ sent: boolean; error?: string }> {
+  return send(
+    opts.to,
+    "Votre lien de connexion — Espace pro lux24",
+    layout(`
+      <h2 style="font-size:18px">Bonjour ${esc(opts.providerName)},</h2>
+      <p>Cliquez pour accéder à votre espace pro lux24 (leads, rendez-vous, tarifs, disponibilités) :</p>
+      <p style="margin-top:16px">${button(opts.loginUrl, "Ouvrir mon espace pro")}</p>
+      <p style="font-size:13px;color:#78716c">Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
+    `)
+  );
+}
+
 /** Auto-confirmed booking notice to the provider, with a cancel link. */
 export async function sendAutoBookingToProvider(opts: {
   to: string;

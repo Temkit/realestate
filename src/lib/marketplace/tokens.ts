@@ -5,15 +5,11 @@
  */
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { getSigningSecret } from "./signing";
 
-function getSecret(): string | null {
-  return (
-    process.env.LINK_SIGNING_SECRET ||
-    process.env.ADMIN_SESSION_SECRET ||
-    process.env.ADMIN_PASSWORD ||
-    null
-  );
-}
+// Dispatch reply links go to providers by email — sign with the dedicated
+// marketplace secret, never the admin password (see signing.ts).
+const getSecret = getSigningSecret;
 
 export type DispatchAction = "answered" | "disputed";
 

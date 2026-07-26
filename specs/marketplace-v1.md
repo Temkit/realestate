@@ -358,7 +358,10 @@ Booking is the **pro-tier hook**: request-mode included in every plan (it's just
 | **P0** | Schema + migrations (incl. booking tables), seed 2 verticals + categories, admin auth + providers/offers/config CRUD | ~1 wk |
 | **P1** | Public pages (hub/category/commune/profile), lead form + matching + Resend dispatch + magic-link replies, **Level-1 request booking + reminders**, sitemap, GDPR purge cron | ~2–3 wk |
 | **P2** | **Level-2 availability rules + slot picker + auto-confirm**, admin leads inbox + appointments board, stats + billing CSV export, homepage vertical switcher | ~2 wk |
-| **P3** | Provider portal (self-service, real auth), **calendar sync (Level 3)**, reviews with moderation, payments/deposits, SMS reminders, WhatsApp dispatch (needs a WhatsApp Business API provider — cost decision), conversational search over the marketplace DB | later |
+| **P3a** | ✅ Provider self-service portal (`/portal`): passwordless magic-link auth, dashboard, leads inbox, appointments (confirm/decline/complete/no-show/cancel), offer/price self-edit, availability + booking-mode, profile. All provider-scoped (OWASP A01). | done |
+| **P3b** | **Calendar sync (Level 3)** [needs Google/Microsoft OAuth], reviews with moderation, payments/deposits [money], SMS reminders [Twilio — cost], WhatsApp dispatch [WhatsApp Business API provider — cost], conversational search over the marketplace DB | later (starred items need an owner decision) |
+
+**Security (P3a):** `MARKETPLACE_SIGNING_SECRET` (`openssl rand -hex 32`) is now **required** for the provider portal and every provider-facing magic link (dispatch replies, appointment confirm/cancel, portal login + session). It must differ from `ADMIN_PASSWORD` — providers receive HMACs signed with it, so reuse would let them brute-force the admin key. Admin auth keeps its own secret. Magic-login links are single-use (`consumed_login_tokens` table). See `.env.example`.
 
 **Definition of done P1**: a sales rep signs a real garage on paper → ops enters it in admin → its commune page ranks it → a test lead submitted on that page arrives in the garage's inbox with working magic links → dispatch visible in admin with full event timeline → a booking request with preferred windows gets confirmed via the provider's magic link and both sides receive confirmation + reminder emails.
 

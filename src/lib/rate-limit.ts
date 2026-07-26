@@ -24,6 +24,21 @@ function cleanup() {
   }
 }
 
+/**
+ * Best-effort client IP for rate-limit keying. Prefers `x-real-ip` (set by
+ * the platform edge / trusted proxy) over the leftmost `x-forwarded-for`
+ * value, which is client-settable and trivially spoofed. On Vercel/Scaleway
+ * both are populated by the edge; behind an untrusted proxy neither is
+ * fully reliable, so this is a mitigation, not a guarantee.
+ */
+export function clientIpFromHeaders(h: Headers): string {
+  const real = h.get("x-real-ip")?.trim();
+  if (real) return real;
+  const xff = h.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]?.trim() || "unknown";
+  return "unknown";
+}
+
 export function checkRateLimit(ip: string): {
   allowed: boolean;
   retryAfter?: number;

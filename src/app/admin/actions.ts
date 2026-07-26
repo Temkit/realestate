@@ -16,7 +16,7 @@ import {
   setSessionCookie,
   verifyPassword,
 } from "@/lib/marketplace/admin-auth";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, clientIpFromHeaders } from "@/lib/rate-limit";
 import {
   bookingSettingsSchema,
   categorySchema,
@@ -66,7 +66,7 @@ function orNull(s: string): string | null {
 
 export async function loginAction(formData: FormData): Promise<void> {
   const hdrs = await headers();
-  const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const ip = clientIpFromHeaders(hdrs);
   const { allowed } = checkRateLimit(`admin-login:${ip}`);
   if (!allowed) redirect("/admin/login?error=rate");
 

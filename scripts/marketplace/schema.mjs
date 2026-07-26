@@ -158,6 +158,11 @@ export const STATEMENTS = [
     updated_at    TEXT
   )`,
 
+  `CREATE TABLE IF NOT EXISTS consumed_login_tokens (
+    token_hash TEXT PRIMARY KEY,
+    expires_at TEXT NOT NULL
+  )`,
+
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_dispatches_provider ON lead_dispatches(provider_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_offers_category ON offers(category_id, active)`,

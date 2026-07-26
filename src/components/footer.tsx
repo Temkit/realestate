@@ -45,6 +45,10 @@ export function Footer() {
             <a href="mailto:contact@olu.lu" className="hover:text-foreground transition-colors">
               {t("contact")}
             </a>
+            {/* Portal lives outside [locale] — plain anchor, not the i18n Link */}
+            <a href="/portal/login" className="hover:text-foreground transition-colors">
+              {t("proSpace")}
+            </a>
           </nav>
         </div>
 
