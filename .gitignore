@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Screenshots
 *.png
+
+# vitest marketplace test DB
+.vitest-marketplace.db*
