@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, Clock, Globe, MapPin, Navigation, Phone } from "lucide-react";
+import { ArrowRight, BadgeCheck, Clock, Globe, MapPin, Navigation, Phone } from "lucide-react";
 import type { PublicProvider } from "@/lib/marketplace/public-queries";
 import {
   communeDisplay,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/marketplace/display";
 import { StarRating } from "./star-rating";
 
+/** Compact, information-dense provider card used on every results page. */
 export function ProviderCard({
   provider,
   locale,
@@ -21,76 +22,72 @@ export function ProviderCard({
   const description = fr ? provider.description_fr : provider.description_en;
   const claimed = provider.status === "active";
   const hours = shortHours(provider.opening_hours);
+  const href = `/${locale}/pro/${provider.slug}`;
 
   return (
-    <div className="flex flex-col rounded-2xl border bg-card p-5 transition-colors hover:border-primary/30">
-      <div className="mb-2 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link
-            href={`/${locale}/pro/${provider.slug}`}
-            className="text-base font-semibold hover:text-primary"
-          >
-            {provider.name}
-          </Link>
-          {provider.rating.avg != null && (
-            <div className="mt-0.5">
-              <StarRating value={provider.rating.avg} count={provider.rating.count} size={14} />
-            </div>
-          )}
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            {provider.commune && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {communeDisplay(provider.commune)}
-              </span>
-            )}
-            {hours && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {hours}
-              </span>
-            )}
-          </div>
-        </div>
+    <div className="flex flex-col rounded-xl border bg-card p-4 transition-colors hover:border-primary/40">
+      <div className="flex items-start justify-between gap-2">
+        <Link href={href} className="font-semibold leading-tight hover:text-primary">
+          {provider.name}
+        </Link>
         {claimed ? (
           <span
-            className="flex shrink-0 items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-600"
-            title={fr ? "Prestataire vérifié" : "Verified provider"}
+            className="flex shrink-0 items-center gap-0.5 rounded-full bg-green-500/10 px-1.5 py-0.5 text-[11px] text-green-600"
+            title={fr ? "Prestataire vérifié" : "Verified"}
           >
             <BadgeCheck className="h-3 w-3" />
             {fr ? "Vérifié" : "Verified"}
           </span>
         ) : provider.plan === "pro" ? (
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+          <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[11px] text-primary">
             <BadgeCheck className="h-3 w-3" />
             {fr ? "Sponsorisé" : "Sponsored"}
           </span>
         ) : null}
       </div>
 
+      <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-muted-foreground">
+        {provider.rating.avg != null && (
+          <StarRating value={provider.rating.avg} count={provider.rating.count} size={13} />
+        )}
+        {provider.commune && (
+          <span className="flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            {communeDisplay(provider.commune)}
+          </span>
+        )}
+        {hours && (
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {hours}
+          </span>
+        )}
+      </div>
+
       {description && (
-        <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{description}</p>
+        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{description}</p>
       )}
 
       {provider.offers.length > 0 && (
-        <ul className="mb-3 space-y-1">
-          {provider.offers.slice(0, 3).map((o) => (
-            <li key={o.id} className="flex items-baseline justify-between gap-3 text-sm">
-              <span>{offerTitle(o, locale)}</span>
+        <ul className="mt-2 space-y-0.5 text-sm">
+          {provider.offers.slice(0, 2).map((o) => (
+            <li key={o.id} className="flex items-baseline justify-between gap-3">
+              <span className="truncate">{offerTitle(o, locale)}</span>
               <span className="shrink-0 font-medium">{priceLabel(o, locale)}</span>
             </li>
           ))}
         </ul>
       )}
 
-      {/* Quick actions — always available for directory listings */}
-      <div className="mb-3 flex flex-wrap gap-2 text-xs">
+      <div className="mt-3 flex items-center gap-1.5">
         {provider.phone && (
           <a
             href={`tel:${provider.phone}`}
-            className="flex items-center gap-1 rounded-lg border px-2.5 py-1.5 hover:bg-muted"
+            title={fr ? "Appeler" : "Call"}
+            className="flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs hover:bg-muted"
           >
-            <Phone className="h-3.5 w-3.5" /> {fr ? "Appeler" : "Call"}
+            <Phone className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{fr ? "Appeler" : "Call"}</span>
           </a>
         )}
         {provider.website && (
@@ -98,9 +95,10 @@ export function ProviderCard({
             href={provider.website}
             rel="nofollow noopener"
             target="_blank"
-            className="flex items-center gap-1 rounded-lg border px-2.5 py-1.5 hover:bg-muted"
+            title={fr ? "Site web" : "Website"}
+            className="flex items-center rounded-lg border px-2 py-1.5 text-xs hover:bg-muted"
           >
-            <Globe className="h-3.5 w-3.5" /> {fr ? "Site" : "Site"}
+            <Globe className="h-3.5 w-3.5" />
           </a>
         )}
         {(provider.commune || provider.lat != null) && (
@@ -114,25 +112,20 @@ export function ProviderCard({
             })}
             rel="nofollow noopener"
             target="_blank"
-            className="flex items-center gap-1 rounded-lg border px-2.5 py-1.5 hover:bg-muted"
+            title={fr ? "Itinéraire" : "Directions"}
+            className="flex items-center rounded-lg border px-2 py-1.5 text-xs hover:bg-muted"
           >
-            <Navigation className="h-3.5 w-3.5" /> {fr ? "Itinéraire" : "Directions"}
+            <Navigation className="h-3.5 w-3.5" />
           </a>
         )}
+        <Link
+          href={href}
+          className="ml-auto flex items-center gap-0.5 text-sm font-medium text-primary hover:underline"
+        >
+          {fr ? "Voir" : "View"}
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
-
-      <Link
-        href={`/${locale}/pro/${provider.slug}`}
-        className="mt-auto inline-block rounded-lg bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground hover:opacity-90"
-      >
-        {claimed
-          ? fr
-            ? "Contacter / Rendez-vous"
-            : "Contact / Book"
-          : fr
-            ? "Voir la fiche"
-            : "View listing"}
-      </Link>
     </div>
   );
 }

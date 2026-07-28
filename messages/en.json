@@ -204,7 +204,8 @@
     },
     "countBadge": "{count} providers",
     "featured": {
-      "title": "Recently added providers"
+      "title": "Recently added providers",
+      "seeAll": "See all"
     },
     "verifiedShort": "Verified"
   }

@@ -204,7 +204,8 @@
     },
     "countBadge": "{count} prestataires",
     "featured": {
-      "title": "Prestataires récemment ajoutés"
+      "title": "Prestataires récemment ajoutés",
+      "seeAll": "Voir tout"
     },
     "verifiedShort": "Vérifié"
   }

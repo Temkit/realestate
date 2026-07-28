@@ -101,6 +101,59 @@ export async function listProvidersForCategory(
   return providers;
 }
 
+/**
+ * Browse a whole vertical in one query — optional category + commune filters.
+ * Offers are omitted (avoids N+1); the card shows contact/hours/rating.
+ */
+export async function listProvidersForVertical(
+  verticalId: number,
+  opts: { categoryId?: number; communeSlug?: string; limit?: number } = {}
+): Promise<{ providers: PublicProvider[]; total: number }> {
+  const db = getMarketplaceDb();
+  if (!db) return { providers: [], total: 0 };
+
+  const where: string[] = ["c.vertical_id = ?", "p.status IN ('active', 'listed')"];
+  const args: (string | number)[] = [verticalId];
+  if (opts.categoryId) {
+    where.push("pc.category_id = ?");
+    args.push(opts.categoryId);
+  }
+  if (opts.communeSlug) {
+    where.push(`p.id IN (SELECT provider_id FROM provider_coverage
+      WHERE commune_slug = '*' OR commune_slug = ?)`);
+    args.push(opts.communeSlug);
+  }
+
+  const countRes = await db.execute({
+    sql: `SELECT COUNT(DISTINCT p.id) AS n FROM providers p
+          JOIN provider_categories pc ON pc.provider_id = p.id
+          JOIN categories c ON c.id = pc.category_id
+          WHERE ${where.join(" AND ")}`,
+    args,
+  });
+  const total = Number(countRes.rows[0].n);
+
+  const limit = opts.limit ?? 60;
+  const res = await db.execute({
+    sql: `SELECT DISTINCT p.* FROM providers p
+          JOIN provider_categories pc ON pc.provider_id = p.id
+          JOIN categories c ON c.id = pc.category_id
+          WHERE ${where.join(" AND ")}
+          ORDER BY (p.status = 'active') DESC, p.name
+          LIMIT ?`,
+    args: [...args, limit],
+  });
+
+  const ids = res.rows.map((r) => Number(r.id));
+  const ratings = await getRatingSummaries(ids);
+  const providers = res.rows.map((row) => ({
+    ...rowToPublicProvider(row as Record<string, unknown>),
+    offers: [] as Offer[],
+    rating: ratings.get(Number(row.id)) ?? { avg: null, count: 0 },
+  }));
+  return { providers, total };
+}
+
 export async function getActiveProviderBySlug(
   slug: string
 ): Promise<{ provider: Provider; offers: Offer[]; categoryIds: number[] } | null> {

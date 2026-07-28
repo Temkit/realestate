@@ -6,11 +6,17 @@ import {
   getActiveVerticalBySlug,
   getCategoryCounts,
   listActiveCategories,
+  listProvidersForVertical,
 } from "@/lib/marketplace/public-queries";
+import { NEARBY_COMMUNES } from "@/lib/communes";
 import { vname } from "@/lib/marketplace/display";
 import { VerticalHub } from "@/components/marketplace/vertical-hub";
 
-export const revalidate = 86400;
+// This route serves both immo mode-index pages and the marketplace vertical
+// browse (which reads ?cat/?commune searchParams) — so it renders dynamically.
+// The deep immo SEO pages ([propertyType]/[commune]) are separate files that
+// keep their own ISR config.
+export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
   const params: { locale: string; mode: string }[] = [];
@@ -91,22 +97,32 @@ export async function generateMetadata({
 
 export default async function ModeIndexPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; mode: string }>;
+  searchParams: Promise<{ cat?: string; commune?: string }>;
 }) {
   const { locale, mode } = await params;
   const modes = getModesForLocale(locale);
   const modeEntry = modes.find((m) => m.slug === mode);
   if (!modeEntry) {
-    // Marketplace vertical hub — ISR like the immo pages; admin actions
-    // revalidate these paths on provider/config changes
+    // Marketplace vertical browse page (filters via ?cat / ?commune)
     const vertical = await getActiveVerticalBySlug(mode);
     if (!vertical) notFound();
+    const { cat, commune } = await searchParams;
     const [categories, counts] = await Promise.all([
       listActiveCategories(vertical.id),
       getCategoryCounts(vertical.id),
     ]);
-    const total = Object.values(counts).reduce((a, n) => a + n, 0);
+    const activeCategory = categories.find((c) => c.slug === cat)?.slug;
+    const activeCommune =
+      commune && NEARBY_COMMUNES[commune] !== undefined ? commune : undefined;
+    const categoryId = categories.find((c) => c.slug === activeCategory)?.id;
+    const { providers, total } = await listProvidersForVertical(vertical.id, {
+      categoryId,
+      communeSlug: activeCommune,
+      limit: 60,
+    });
     return (
       <VerticalHub
         vertical={vertical}
@@ -114,6 +130,9 @@ export default async function ModeIndexPage({
         locale={locale}
         counts={counts}
         total={total}
+        providers={providers}
+        activeCategory={activeCategory}
+        activeCommune={activeCommune}
       />
     );
   }

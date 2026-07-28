@@ -21,9 +21,11 @@ import { ServiceSearch } from "@/components/marketplace/service-search";
 import { Footer } from "@/components/footer";
 import {
   getVerticalCounts,
-  listFeaturedProviders,
+  listActiveVerticals,
+  listProvidersForVertical,
 } from "@/lib/marketplace/public-queries";
-import { communeDisplay } from "@/lib/marketplace/display";
+import { vname } from "@/lib/marketplace/display";
+import { ProviderCard } from "@/components/marketplace/provider-card";
 
 // Refresh homepage counts + featured hourly (DB-backed).
 export const revalidate = 3600;
@@ -47,11 +49,23 @@ export default async function HomePage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
-  const [counts, featured] = await Promise.all([
+  const [counts, activeVerticals] = await Promise.all([
     getVerticalCounts().catch(() => ({}) as Record<string, number>),
-    listFeaturedProviders(8).catch(() => []),
+    listActiveVerticals().catch(() => []),
   ]);
   const total = Object.values(counts).reduce((a, n) => a + n, 0);
+
+  // Featured providers per vertical (a few each) for the homepage rows
+  const featuredByVertical = (
+    await Promise.all(
+      activeVerticals.map(async (v) => {
+        const { providers } = await listProvidersForVertical(v.id, { limit: 4 }).catch(
+          () => ({ providers: [] })
+        );
+        return { vertical: v, providers };
+      })
+    )
+  ).filter((f) => f.providers.length > 0);
 
   const steps = [
     { Icon: MessageSquare, key: "describe" },
@@ -151,25 +165,28 @@ export default async function HomePage({
           </div>
         </section>
 
-        {/* Featured businesses */}
-        {featured.length > 0 && (
-          <section className="mx-auto max-w-7xl px-3.5 pb-6 sm:px-8">
+        {/* Featured providers — a row per vertical */}
+        {featuredByVertical.length > 0 && (
+          <section className="mx-auto max-w-7xl px-3.5 pb-8 sm:px-8">
             <h2 className="mb-4 text-lg font-semibold">{t("featured.title")}</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {featured.map((p) => (
-                <Link
-                  key={p.slug}
-                  href={`/${locale}/pro/${p.slug}`}
-                  className="rounded-xl border bg-card p-4 transition-colors hover:border-primary/30"
-                >
-                  <p className="truncate font-medium">{p.name}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {p.commune ? communeDisplay(p.commune) : "Luxembourg"}
-                    {p.status === "active" && (
-                      <span className="ml-1 text-green-600">· {t("verifiedShort")}</span>
-                    )}
-                  </p>
-                </Link>
+            <div className="space-y-8">
+              {featuredByVertical.map(({ vertical, providers }) => (
+                <div key={vertical.id}>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="font-semibold">{vname(vertical, locale)}</h3>
+                    <Link
+                      href={`/${locale}/${vertical.slug}`}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {t("featured.seeAll")}
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {providers.map((p) => (
+                      <ProviderCard key={p.id} provider={p} locale={locale} />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </section>
