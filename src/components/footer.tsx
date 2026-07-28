@@ -55,6 +55,19 @@ export function Footer() {
 
         <div className="mt-6 pt-6 border-t text-xs text-muted-foreground/60">
           {t("copyright")}
+          <span className="mx-1.5">·</span>
+          <span>
+            {t("dataAttribution")}{" "}
+            <a
+              href="https://www.openstreetmap.org/copyright"
+              rel="nofollow noopener"
+              target="_blank"
+              className="underline hover:text-foreground"
+            >
+              OpenStreetMap
+            </a>{" "}
+            (ODbL)
+          </span>
         </div>
       </div>
     </footer>

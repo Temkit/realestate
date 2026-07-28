@@ -10,7 +10,8 @@
     "marketplace:migrate": "node scripts/marketplace/migrate.mjs",
     "marketplace:seed": "node scripts/marketplace/seed.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ingest:osm": "node scripts/ingest/osm.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

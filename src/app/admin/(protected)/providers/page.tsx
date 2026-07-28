@@ -58,9 +58,9 @@ export default async function ProvidersPage({
                 <th className="px-4 py-2 font-medium">Name</th>
                 <th className="px-4 py-2 font-medium">Commune</th>
                 <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">Source</th>
                 <th className="px-4 py-2 font-medium">Plan</th>
                 <th className="px-4 py-2 font-medium">CPL</th>
-                <th className="px-4 py-2 font-medium">Sales rep</th>
                 <th className="px-4 py-2 font-medium">Created</th>
               </tr>
             </thead>
@@ -79,11 +79,18 @@ export default async function ProvidersPage({
                       {p.status}
                     </span>
                   </td>
+                  <td className="px-4 py-2">
+                    <span className="text-xs text-muted-foreground">{p.source ?? "manual"}</span>
+                    {!p.email && (
+                      <span className="ml-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600" title="No email — add one before activating">
+                        no email
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-2">{p.plan}</td>
                   <td className="px-4 py-2">
                     {p.cpl_cents === null ? "free" : `€${(p.cpl_cents / 100).toFixed(0)}`}
                   </td>
-                  <td className="px-4 py-2">{p.sales_rep ?? "—"}</td>
                   <td className="px-4 py-2 text-muted-foreground">{p.created_at.slice(0, 10)}</td>
                 </tr>
               ))}

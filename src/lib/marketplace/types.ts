@@ -59,6 +59,8 @@ export interface Provider {
   sales_rep: string | null;
   signed_at: string | null;
   notes: string | null;
+  source: string | null;
+  source_ref: string | null;
   created_at: string;
   updated_at: string | null;
 }

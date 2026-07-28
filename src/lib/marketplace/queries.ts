@@ -145,6 +145,8 @@ function rowToProvider(r: Row): Provider {
     sales_rep: (r.sales_rep as string) || null,
     signed_at: (r.signed_at as string) || null,
     notes: (r.notes as string) || null,
+    source: (r.source as string) || null,
+    source_ref: (r.source_ref as string) || null,
     created_at: String(r.created_at),
     updated_at: (r.updated_at as string) || null,
   };

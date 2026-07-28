@@ -168,6 +168,8 @@ function rowToPublicProvider(r: Record<string, unknown>): Provider {
     sales_rep: (r.sales_rep as string) || null,
     signed_at: (r.signed_at as string) || null,
     notes: null, // never expose internal notes publicly
+    source: null,
+    source_ref: null,
     created_at: String(r.created_at),
     updated_at: (r.updated_at as string) || null,
   };

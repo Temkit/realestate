@@ -47,6 +47,8 @@ export const STATEMENTS = [
     sales_rep   TEXT,
     signed_at   TEXT,
     notes       TEXT,
+    source      TEXT,
+    source_ref  TEXT,
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at  TEXT
   )`,
@@ -185,4 +187,19 @@ export const STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_coverage_commune ON provider_coverage(commune_slug)`,
   `CREATE INDEX IF NOT EXISTS idx_appointments_provider ON appointments(provider_id, starts_at)`,
   `CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status, starts_at)`,
+];
+
+/**
+ * Idempotent ADD COLUMN migrations for tables that predate a column.
+ * migrate.mjs applies these (after CREATE TABLE, before POST_INDEXES) only
+ * when the column is missing (SQLite has no ADD COLUMN IF NOT EXISTS).
+ */
+export const ALTERS = [
+  { table: "providers", column: "source", ddl: "ALTER TABLE providers ADD COLUMN source TEXT" },
+  { table: "providers", column: "source_ref", ddl: "ALTER TABLE providers ADD COLUMN source_ref TEXT" },
+];
+
+/** Indexes that reference columns added by ALTERS — created last. */
+export const POST_INDEXES = [
+  `CREATE INDEX IF NOT EXISTS idx_providers_source ON providers(source, source_ref)`,
 ];
