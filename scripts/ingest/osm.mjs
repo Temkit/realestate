@@ -14,8 +14,9 @@
  */
 import { createClient } from "@libsql/client";
 
-// Luxembourg bounding box (S, W, N, E)
-const BBOX = "49.44,5.73,50.19,6.53";
+// Restrict to Luxembourg's actual boundary (not a bbox — avoids DE/BE/FR
+// border spillover). Overpass derives the area from the country relation.
+const AREA_PREFIX = `area["ISO3166-1"="LU"][admin_level=2]->.lu;`;
 // Public Overpass mirrors — tried in order with backoff. Public instances are
 // frequently overloaded (504) or rate-limited (429); more mirrors = more luck.
 const ENDPOINTS = [
@@ -78,9 +79,9 @@ function normPhone(p) {
 
 function buildQuery(selectors) {
   const lines = selectors
-    .map(([k, v]) => `  node["${k}"="${v}"](${BBOX});\n  way["${k}"="${v}"](${BBOX});`)
+    .map(([k, v]) => `  node["${k}"="${v}"](area.lu);\n  way["${k}"="${v}"](area.lu);`)
     .join("\n");
-  return `[out:json][timeout:90];\n(\n${lines}\n);\nout center tags;`;
+  return `[out:json][timeout:120];\n${AREA_PREFIX}\n(\n${lines}\n);\nout center tags;`;
 }
 
 // Overpass requires a descriptive User-Agent and can rate-limit (429);
