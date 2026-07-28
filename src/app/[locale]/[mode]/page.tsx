@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getModesForLocale, getTypesForLocale, COMMUNES } from "@/lib/seo/slugs";
 import {
   getActiveVerticalBySlug,
+  getCategoryCounts,
   listActiveCategories,
 } from "@/lib/marketplace/public-queries";
 import { vname } from "@/lib/marketplace/display";
@@ -101,8 +102,20 @@ export default async function ModeIndexPage({
     // revalidate these paths on provider/config changes
     const vertical = await getActiveVerticalBySlug(mode);
     if (!vertical) notFound();
-    const categories = await listActiveCategories(vertical.id);
-    return <VerticalHub vertical={vertical} categories={categories} locale={locale} />;
+    const [categories, counts] = await Promise.all([
+      listActiveCategories(vertical.id),
+      getCategoryCounts(vertical.id),
+    ]);
+    const total = Object.values(counts).reduce((a, n) => a + n, 0);
+    return (
+      <VerticalHub
+        vertical={vertical}
+        categories={categories}
+        locale={locale}
+        counts={counts}
+        total={total}
+      />
+    );
   }
 
   const types = getTypesForLocale(locale);

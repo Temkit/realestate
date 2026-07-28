@@ -10,10 +10,14 @@ export function VerticalHub({
   vertical,
   categories,
   locale,
+  counts = {},
+  total = 0,
 }: {
   vertical: Vertical;
   categories: Category[];
   locale: string;
+  counts?: Record<number, number>;
+  total?: number;
 }) {
   const fr = locale !== "en";
   const name = vname(vertical, locale);
@@ -34,9 +38,13 @@ export function VerticalHub({
         {fr ? `${name} au Luxembourg` : `${name} in Luxembourg`}
       </h1>
       <p className="mb-8 text-muted-foreground">
-        {fr
-          ? "Comparez les prestataires, demandez des devis gratuits, prenez rendez-vous."
-          : "Compare providers, get free quotes, book appointments."}
+        {total > 0
+          ? fr
+            ? `${total} prestataires — comparez, demandez des devis, prenez rendez-vous.`
+            : `${total} providers — compare, get quotes, book appointments.`
+          : fr
+            ? "Comparez les prestataires, demandez des devis gratuits, prenez rendez-vous."
+            : "Compare providers, get free quotes, book appointments."}
       </p>
 
       <h2 className="mb-3 text-lg font-semibold">{fr ? "Services" : "Services"}</h2>
@@ -50,6 +58,11 @@ export function VerticalHub({
             <p className="font-medium transition-colors group-hover:text-primary">
               {cname(c, locale)}
             </p>
+            {counts[c.id] > 0 && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {counts[c.id]} {fr ? "prestataires" : "providers"}
+              </p>
+            )}
           </Link>
         ))}
       </div>

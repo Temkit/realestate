@@ -211,6 +211,9 @@ export const STATEMENTS = [
 export const ALTERS = [
   { table: "providers", column: "source", ddl: "ALTER TABLE providers ADD COLUMN source TEXT" },
   { table: "providers", column: "source_ref", ddl: "ALTER TABLE providers ADD COLUMN source_ref TEXT" },
+  { table: "providers", column: "opening_hours", ddl: "ALTER TABLE providers ADD COLUMN opening_hours TEXT" },
+  { table: "providers", column: "lat", ddl: "ALTER TABLE providers ADD COLUMN lat REAL" },
+  { table: "providers", column: "lon", ddl: "ALTER TABLE providers ADD COLUMN lon REAL" },
 ];
 
 /** Indexes that reference columns added by ALTERS — created last. */

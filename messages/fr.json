@@ -150,7 +150,8 @@
       "titleHighlight": "comparés en un clic",
       "subtitle": "Décrivez votre besoin, recevez jusqu'à 3 devis gratuits ou réservez un rendez-vous en ligne. Garages, artisans, coiffeurs et plus.",
       "searchPlaceholder": "De quel service avez-vous besoin ? (ex : vidange, plombier, coiffeur…)",
-      "searchButton": "Rechercher"
+      "searchButton": "Rechercher",
+      "count": "{count}+ prestataires au Luxembourg"
     },
     "trust": {
       "free": "Devis gratuits",
@@ -200,6 +201,11 @@
       "subtitle": "Recevez des demandes de clients au Luxembourg. Gratuit pour démarrer, sans commission cachée.",
       "cta": "Référencer mon entreprise",
       "login": "Accéder à mon espace"
-    }
+    },
+    "countBadge": "{count} prestataires",
+    "featured": {
+      "title": "Prestataires récemment ajoutés"
+    },
+    "verifiedShort": "Vérifié"
   }
 }

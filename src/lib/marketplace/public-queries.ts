@@ -124,6 +124,78 @@ export async function getActiveProviderBySlug(
   };
 }
 
+/** Public provider count per vertical slug (active + listed). */
+export async function getVerticalCounts(): Promise<Record<string, number>> {
+  const db = getMarketplaceDb();
+  if (!db) return {};
+  const res = await db.execute({
+    sql: `SELECT v.slug, COUNT(DISTINCT p.id) AS n
+          FROM providers p
+          JOIN provider_categories pc ON pc.provider_id = p.id
+          JOIN categories c ON c.id = pc.category_id
+          JOIN verticals v ON v.id = c.vertical_id
+          WHERE p.status IN ('active', 'listed')
+          GROUP BY v.slug`,
+    args: [],
+  });
+  const out: Record<string, number> = {};
+  for (const r of res.rows) out[String(r.slug)] = Number(r.n);
+  return out;
+}
+
+/** Public provider count per category id, for one vertical. */
+export async function getCategoryCounts(verticalId: number): Promise<Record<number, number>> {
+  const db = getMarketplaceDb();
+  if (!db) return {};
+  const res = await db.execute({
+    sql: `SELECT pc.category_id AS cid, COUNT(DISTINCT p.id) AS n
+          FROM providers p
+          JOIN provider_categories pc ON pc.provider_id = p.id
+          JOIN categories c ON c.id = pc.category_id
+          WHERE c.vertical_id = ? AND p.status IN ('active', 'listed')
+          GROUP BY pc.category_id`,
+    args: [verticalId],
+  });
+  const out: Record<number, number> = {};
+  for (const r of res.rows) out[Number(r.cid)] = Number(r.n);
+  return out;
+}
+
+export interface FeaturedProvider {
+  slug: string;
+  name: string;
+  commune: string | null;
+  phone: string | null;
+  status: string;
+  vertical_slug: string;
+}
+
+/** A handful of recent public providers for the homepage strip. */
+export async function listFeaturedProviders(limit = 8): Promise<FeaturedProvider[]> {
+  const db = getMarketplaceDb();
+  if (!db) return [];
+  const res = await db.execute({
+    sql: `SELECT p.slug, p.name, p.commune, p.phone, p.status,
+            (SELECT v.slug FROM verticals v
+             JOIN categories c ON c.vertical_id = v.id
+             JOIN provider_categories pc ON pc.category_id = c.id
+             WHERE pc.provider_id = p.id LIMIT 1) AS vertical_slug
+          FROM providers p
+          WHERE p.status IN ('active', 'listed') AND p.commune IS NOT NULL
+          ORDER BY (p.status = 'active') DESC, p.created_at DESC
+          LIMIT ?`,
+    args: [limit],
+  });
+  return res.rows.map((r) => ({
+    slug: String(r.slug),
+    name: String(r.name),
+    commune: (r.commune as string) || null,
+    phone: (r.phone as string) || null,
+    status: String(r.status),
+    vertical_slug: (r.vertical_slug as string) || "garages",
+  }));
+}
+
 export async function isProviderBookable(providerId: number): Promise<boolean> {
   const db = getMarketplaceDb();
   if (!db) return false;
@@ -172,6 +244,9 @@ function rowToPublicProvider(r: Record<string, unknown>): Provider {
     notes: null, // never expose internal notes publicly
     source: null,
     source_ref: null,
+    opening_hours: (r.opening_hours as string) || null,
+    lat: r.lat == null ? null : Number(r.lat),
+    lon: r.lon == null ? null : Number(r.lon),
     created_at: String(r.created_at),
     updated_at: (r.updated_at as string) || null,
   };

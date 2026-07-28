@@ -147,6 +147,9 @@ function rowToProvider(r: Row): Provider {
     notes: (r.notes as string) || null,
     source: (r.source as string) || null,
     source_ref: (r.source_ref as string) || null,
+    opening_hours: (r.opening_hours as string) || null,
+    lat: r.lat == null ? null : Number(r.lat),
+    lon: r.lon == null ? null : Number(r.lon),
     created_at: String(r.created_at),
     updated_at: (r.updated_at as string) || null,
   };

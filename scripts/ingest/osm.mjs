@@ -144,15 +144,17 @@ async function uniqueSlug(base) {
 async function run() {
   const catMap = await loadCategories();
 
-  // Preload existing keys for dedup (source_ref + phone)
-  const existing = await db.execute({ sql: "SELECT source_ref, phone FROM providers", args: [] });
-  const seenRefs = new Set();
+  // Preload: existing OSM objects (ref → id) so we ENRICH them on re-run, and
+  // existing phones so we don't insert a NEW provider that duplicates one.
+  const existing = await db.execute({ sql: "SELECT id, source_ref, phone FROM providers", args: [] });
+  const refToId = new Map();
   const seenPhones = new Set();
   for (const r of existing.rows) {
-    if (r.source_ref) seenRefs.add(String(r.source_ref));
+    if (r.source_ref) refToId.set(String(r.source_ref), Number(r.id));
     const np = normPhone(r.phone);
     if (np.length >= 6) seenPhones.add(np);
   }
+  const processedRefs = new Set(); // within this run, avoid touching a ref twice
 
   let totalInserted = 0,
     totalSkipped = 0,
@@ -191,17 +193,10 @@ async function run() {
       }
       count++;
       const ref = `osm:${el.type}/${el.id}`;
+      if (processedRefs.has(ref)) continue; // seen in another mapping this run
+      processedRefs.add(ref);
       const phone = tags.phone || tags["contact:phone"] || null;
       const np = normPhone(phone);
-
-      // Dedup: same OSM object, or same phone as an existing provider
-      if (seenRefs.has(ref) || (np.length >= 6 && seenPhones.has(np))) {
-        skipped++;
-        totalSkipped++;
-        continue;
-      }
-      seenRefs.add(ref);
-      if (np.length >= 6) seenPhones.add(np);
 
       const website = tags.website || tags["contact:website"] || null;
       const email = tags.email || tags["contact:email"] || "";
@@ -212,24 +207,52 @@ async function run() {
         .filter(Boolean)
         .join(", ") || null;
       const commune = city ? slugify(city) : null;
+      const openingHours = tags.opening_hours || null;
+      const lat = el.lat ?? el.center?.lat ?? null;
+      const lon = el.lon ?? el.center?.lon ?? null;
 
       if (DRY) {
         inserted++;
         continue;
       }
 
+      // Already imported → ENRICH (refresh detail fields), don't duplicate.
+      const existingId = refToId.get(ref);
+      if (existingId != null) {
+        await db.execute({
+          sql: `UPDATE providers SET
+                  phone = COALESCE(?, phone), website = COALESCE(?, website),
+                  address = COALESCE(?, address), opening_hours = COALESCE(?, opening_hours),
+                  lat = COALESCE(?, lat), lon = COALESCE(?, lon),
+                  updated_at = datetime('now')
+                WHERE id = ?`,
+          args: [phone, website, address, openingHours, lat, lon, existingId],
+        });
+        skipped++;
+        totalSkipped++;
+        continue;
+      }
+
+      // New provider — skip if its phone duplicates an existing provider's.
+      if (np.length >= 6 && seenPhones.has(np)) {
+        skipped++;
+        totalSkipped++;
+        continue;
+      }
+      if (np.length >= 6) seenPhones.add(np);
+
       const slug = await uniqueSlug(slugify(name) + (commune ? `-${commune}` : ""));
       let providerId;
       try {
         const res = await db.execute({
           sql: `INSERT INTO providers (slug, name, email, phone, website, address, commune,
-                  status, plan, source, source_ref, sales_rep)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'free', 'osm', ?, 'import:osm')
+                  opening_hours, lat, lon, status, plan, source, source_ref, sales_rep)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'free', 'osm', ?, 'import:osm')
                 RETURNING id`,
-          args: [slug, name, email, phone, website, address, commune, IMPORT_STATUS, ref],
+          args: [slug, name, email, phone, website, address, commune, openingHours, lat, lon, IMPORT_STATUS, ref],
         });
         providerId = Number(res.rows[0].id);
-      } catch (e) {
+      } catch {
         skipped++;
         totalSkipped++;
         continue;

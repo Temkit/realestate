@@ -150,7 +150,8 @@
       "titleHighlight": "compared in one click",
       "subtitle": "Describe your need, get up to 3 free quotes or book an appointment online. Garages, tradespeople, hairdressers and more.",
       "searchPlaceholder": "What service do you need? (e.g. oil change, plumber, haircut…)",
-      "searchButton": "Search"
+      "searchButton": "Search",
+      "count": "{count}+ providers in Luxembourg"
     },
     "trust": {
       "free": "Free quotes",
@@ -200,6 +201,11 @@
       "subtitle": "Receive customer requests in Luxembourg. Free to start, no hidden commission.",
       "cta": "List my business",
       "login": "Go to my dashboard"
-    }
+    },
+    "countBadge": "{count} providers",
+    "featured": {
+      "title": "Recently added providers"
+    },
+    "verifiedShort": "Verified"
   }
 }

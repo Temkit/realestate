@@ -63,6 +63,9 @@ export interface Provider {
   notes: string | null;
   source: string | null;
   source_ref: string | null;
+  opening_hours: string | null;
+  lat: number | null;
+  lon: number | null;
   created_at: string;
   updated_at: string | null;
 }

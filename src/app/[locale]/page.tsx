@@ -19,6 +19,14 @@ import {
 import { SiteHeader } from "@/components/marketplace/site-header";
 import { ServiceSearch } from "@/components/marketplace/service-search";
 import { Footer } from "@/components/footer";
+import {
+  getVerticalCounts,
+  listFeaturedProviders,
+} from "@/lib/marketplace/public-queries";
+import { communeDisplay } from "@/lib/marketplace/display";
+
+// Refresh homepage counts + featured hourly (DB-backed).
+export const revalidate = 3600;
 
 // Static launch verticals (spec §2) — resilient, no DB dependency on the
 // marketing homepage. The DB remains the source of truth for which pages exist.
@@ -39,6 +47,11 @@ export default async function HomePage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
+  const [counts, featured] = await Promise.all([
+    getVerticalCounts().catch(() => ({}) as Record<string, number>),
+    listFeaturedProviders(8).catch(() => []),
+  ]);
+  const total = Object.values(counts).reduce((a, n) => a + n, 0);
 
   const steps = [
     { Icon: MessageSquare, key: "describe" },
@@ -77,6 +90,11 @@ export default async function HomePage({
                 </span>
               ))}
             </div>
+            {total > 0 && (
+              <p className="mt-4 text-sm font-medium text-primary">
+                {t("hero.count", { count: total })}
+              </p>
+            )}
           </div>
         </section>
 
@@ -105,6 +123,11 @@ export default async function HomePage({
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {t(`verticalTaglines.${key}`)}
                   </p>
+                  {counts[slug] > 0 && (
+                    <p className="mt-1 text-xs font-medium text-primary">
+                      {t("countBadge", { count: counts[slug] })}
+                    </p>
+                  )}
                 </div>
               </Link>
             ))}
@@ -127,6 +150,30 @@ export default async function HomePage({
             </Link>
           </div>
         </section>
+
+        {/* Featured businesses */}
+        {featured.length > 0 && (
+          <section className="mx-auto max-w-7xl px-3.5 pb-6 sm:px-8">
+            <h2 className="mb-4 text-lg font-semibold">{t("featured.title")}</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {featured.map((p) => (
+                <Link
+                  key={p.slug}
+                  href={`/${locale}/pro/${p.slug}`}
+                  className="rounded-xl border bg-card p-4 transition-colors hover:border-primary/30"
+                >
+                  <p className="truncate font-medium">{p.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {p.commune ? communeDisplay(p.commune) : "Luxembourg"}
+                    {p.status === "active" && (
+                      <span className="ml-1 text-green-600">· {t("verifiedShort")}</span>
+                    )}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* How it works */}
         <section className="border-y bg-muted/30 px-3.5 py-14 sm:px-8">
