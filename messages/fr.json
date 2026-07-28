@@ -8,7 +8,8 @@
     "similarListings": "Annonces similaires",
     "noMatchingProperties": "Aucun bien correspondant",
     "tryAdjustingFilters": "Essayez de modifier vos filtres ou lancez une nouvelle recherche.",
-    "priceDisclaimer": "Les prix affichés sont indicatifs et peuvent différer de la source."
+    "priceDisclaimer": "Les prix affichés sont indicatifs et peuvent différer de la source.",
+    "backToServices": "Retour à tous les services lux24"
   },
   "search": {
     "buy": "Acheter",
@@ -134,11 +135,70 @@
     "legalNotice": "Mentions légales",
     "cookies": "Cookies",
     "contact": "Contact",
-    "disclaimer": "Prix indicatifs. Annonces issues de données publiques.",
-    "copyright": "© 2026 olu.lu",
+    "disclaimer": "lux24 — comparez et réservez tous vos services au Luxembourg.",
+    "copyright": "© 2026 lux24",
     "proSpace": "Espace pro"
   },
   "legal": {
     "backToHome": "Retour à l'accueil"
+  },
+  "marketplace": {
+    "proSpace": "Espace pro",
+    "hero": {
+      "title": "Tous vos services au Luxembourg,",
+      "titleHighlight": "comparés en un clic",
+      "subtitle": "Décrivez votre besoin, recevez jusqu'à 3 devis gratuits ou réservez un rendez-vous en ligne. Garages, artisans, coiffeurs et plus.",
+      "searchPlaceholder": "De quel service avez-vous besoin ? (ex : vidange, plombier, coiffeur…)",
+      "searchButton": "Rechercher"
+    },
+    "trust": {
+      "free": "Devis gratuits",
+      "verified": "Prestataires vérifiés",
+      "noCommitment": "Sans engagement"
+    },
+    "verticals": {
+      "garages": "Garages",
+      "artisans": "Artisans",
+      "cleaning": "Nettoyage",
+      "moving": "Déménagement",
+      "hair": "Coiffeurs",
+      "beauty": "Beauté",
+      "immo": "Immobilier"
+    },
+    "verticalTaglines": {
+      "garages": "Entretien & réparation auto",
+      "artisans": "Plomberie, électricité, peinture…",
+      "cleaning": "Maison, bureau, fin de bail",
+      "moving": "Local & international",
+      "hair": "Coupe, couleur, barbier",
+      "beauty": "Esthétique, ongles, massage",
+      "immo": "Louer ou acheter au Luxembourg"
+    },
+    "verticalsSection": {
+      "title": "Explorez les services",
+      "subtitle": "Choisissez une catégorie pour comparer les prestataires près de chez vous."
+    },
+    "howItWorks": {
+      "title": "Comment ça marche",
+      "step": "Étape",
+      "describe": {
+        "title": "Décrivez votre besoin",
+        "body": "Dites-nous ce que vous cherchez et où."
+      },
+      "compare": {
+        "title": "Comparez",
+        "body": "Recevez jusqu'à 3 devis de prestataires vérifiés."
+      },
+      "book": {
+        "title": "Réservez",
+        "body": "Prenez rendez-vous ou choisissez votre prestataire."
+      }
+    },
+    "pro": {
+      "title": "Vous êtes prestataire ?",
+      "subtitle": "Recevez des demandes de clients au Luxembourg. Gratuit pour démarrer, sans commission cachée.",
+      "cta": "Référencer mon entreprise",
+      "login": "Accéder à mon espace"
+    }
   }
 }

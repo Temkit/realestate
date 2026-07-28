@@ -6,7 +6,7 @@ import {
   listActiveVerticals,
 } from "@/lib/marketplace/public-queries";
 
-const BASE_URL = "https://olu.lu";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lux24.lu";
 
 const staticPages = [
   "",

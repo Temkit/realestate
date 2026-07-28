@@ -8,7 +8,8 @@
     "similarListings": "Similar listings",
     "noMatchingProperties": "No matching properties",
     "tryAdjustingFilters": "Try adjusting your filters or search for something different.",
-    "priceDisclaimer": "Prices shown are indicative and may differ from the listing source."
+    "priceDisclaimer": "Prices shown are indicative and may differ from the listing source.",
+    "backToServices": "Back to all lux24 services"
   },
   "search": {
     "buy": "Buy",
@@ -134,11 +135,70 @@
     "legalNotice": "Legal Notice",
     "cookies": "Cookies",
     "contact": "Contact",
-    "disclaimer": "Indicative prices. Listings sourced from public data.",
-    "copyright": "© 2026 olu.lu",
+    "disclaimer": "lux24 — compare and book every service in Luxembourg.",
+    "copyright": "© 2026 lux24",
     "proSpace": "Pro area"
   },
   "legal": {
     "backToHome": "Back to home"
+  },
+  "marketplace": {
+    "proSpace": "Pro area",
+    "hero": {
+      "title": "Every service in Luxembourg,",
+      "titleHighlight": "compared in one click",
+      "subtitle": "Describe your need, get up to 3 free quotes or book an appointment online. Garages, tradespeople, hairdressers and more.",
+      "searchPlaceholder": "What service do you need? (e.g. oil change, plumber, haircut…)",
+      "searchButton": "Search"
+    },
+    "trust": {
+      "free": "Free quotes",
+      "verified": "Verified providers",
+      "noCommitment": "No commitment"
+    },
+    "verticals": {
+      "garages": "Garages",
+      "artisans": "Tradespeople",
+      "cleaning": "Cleaning",
+      "moving": "Moving",
+      "hair": "Hairdressers",
+      "beauty": "Beauty",
+      "immo": "Real estate"
+    },
+    "verticalTaglines": {
+      "garages": "Car service & repair",
+      "artisans": "Plumbing, electrical, painting…",
+      "cleaning": "Home, office, end-of-lease",
+      "moving": "Local & international",
+      "hair": "Cut, color, barber",
+      "beauty": "Esthetics, nails, massage",
+      "immo": "Rent or buy in Luxembourg"
+    },
+    "verticalsSection": {
+      "title": "Explore services",
+      "subtitle": "Pick a category to compare providers near you."
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "step": "Step",
+      "describe": {
+        "title": "Describe your need",
+        "body": "Tell us what you're looking for and where."
+      },
+      "compare": {
+        "title": "Compare",
+        "body": "Get up to 3 quotes from verified providers."
+      },
+      "book": {
+        "title": "Book",
+        "body": "Book an appointment or pick your provider."
+      }
+    },
+    "pro": {
+      "title": "Are you a provider?",
+      "subtitle": "Receive customer requests in Luxembourg. Free to start, no hidden commission.",
+      "cta": "List my business",
+      "login": "Go to my dashboard"
+    }
   }
 }

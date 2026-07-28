@@ -29,39 +29,40 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://lux24.lu";
 
   const titles: Record<string, string> = {
-    fr: "olu.lu — Recherche immobilière au Luxembourg",
-    en: "olu.lu — Luxembourg Real Estate Search",
+    fr: "lux24 — Tous vos services au Luxembourg",
+    en: "lux24 — Every service in Luxembourg",
   };
   const descriptions: Record<string, string> = {
-    fr: "Trouvez votre prochain logement au Luxembourg. Recherche IA sur athome.lu, immotop.lu, wortimmo.lu et vivi.lu.",
-    en: "Find your next home in Luxembourg. AI-powered search across athome.lu, immotop.lu, wortimmo.lu and vivi.lu.",
+    fr: "Comparez et réservez tous les services au Luxembourg : garages, artisans, coiffeurs, déménagement, beauté et immobilier. Devis gratuits, rendez-vous en ligne.",
+    en: "Compare and book every service in Luxembourg: garages, tradespeople, hairdressers, moving, beauty and real estate. Free quotes, online booking.",
   };
 
   const title = titles[locale] || titles.fr;
   const description = descriptions[locale] || descriptions.fr;
-  const canonical = `https://olu.lu/${locale}`;
+  const canonical = `${base}/${locale}`;
 
   return {
-    metadataBase: new URL("https://olu.lu"),
+    metadataBase: new URL(base),
     title,
     description,
-    applicationName: "olu.lu",
-    authors: [{ name: "olu.lu" }],
+    applicationName: "lux24",
+    authors: [{ name: "lux24" }],
     keywords: [
       "Luxembourg",
+      "services",
+      "devis",
+      "garage",
+      "artisan",
+      "plombier",
+      "coiffeur",
+      "déménagement",
+      "nettoyage",
+      "rendez-vous",
       "immobilier",
-      "real estate",
-      "appartement",
-      "maison",
-      "bureau",
-      "location",
-      "vente",
-      "athome",
-      "immotop",
-      "Kirchberg",
-      "Mondorf",
+      "check24",
     ],
     manifest: "/manifest.json",
     icons: {
@@ -78,7 +79,7 @@ export async function generateMetadata({
       type: "website",
       title,
       description,
-      siteName: "olu.lu",
+      siteName: "lux24",
       url: canonical,
       locale: locale === "fr" ? "fr_LU" : "en_US",
       images: [
@@ -86,7 +87,7 @@ export async function generateMetadata({
           url: "/og-image.png",
           width: 1200,
           height: 630,
-          alt: "olu.lu — Luxembourg Real Estate Search",
+          alt: "lux24 — services au Luxembourg",
         },
       ],
     },
@@ -99,9 +100,9 @@ export async function generateMetadata({
     alternates: {
       canonical,
       languages: {
-        fr: "https://olu.lu/fr",
-        en: "https://olu.lu/en",
-        "x-default": "https://olu.lu/fr",
+        fr: `${base}/fr`,
+        en: `${base}/en`,
+        "x-default": `${base}/fr`,
       },
     },
     robots: {
@@ -120,6 +121,7 @@ export async function generateMetadata({
 
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://lux24.lu";
 
   if (!hasLocale(routing.locales, locale)) {
     notFound();
@@ -156,24 +158,23 @@ export default async function LocaleLayout({ children, params }: Props) {
               "@graph": [
                 {
                   "@type": "Organization",
-                  "@id": "https://olu.lu/#organization",
-                  name: "olu.lu",
-                  url: "https://olu.lu",
+                  "@id": `${siteUrl}/#organization`,
+                  name: "lux24",
+                  url: siteUrl,
                   logo: {
                     "@type": "ImageObject",
-                    url: "https://olu.lu/icon-512.png",
+                    url: `${siteUrl}/icon-512.png`,
                     width: 512,
                     height: 512,
                   },
                   description:
-                    "AI-powered Luxembourg real estate search across athome.lu, immotop.lu, wortimmo.lu, and vivi.lu.",
-                  email: "contact@olu.lu",
+                    "Compare and book every service in Luxembourg — garages, tradespeople, hairdressers, moving, beauty and real estate.",
+                  email: "contact@lux24.lu",
                   address: {
                     "@type": "PostalAddress",
                     addressCountry: "LU",
                     addressLocality: "Luxembourg",
                   },
-                  founder: { "@type": "Person", name: "Temkit Sid Ali" },
                   areaServed: {
                     "@type": "Country",
                     name: "Luxembourg",
@@ -181,21 +182,13 @@ export default async function LocaleLayout({ children, params }: Props) {
                 },
                 {
                   "@type": "WebSite",
-                  "@id": "https://olu.lu/#website",
-                  url: "https://olu.lu",
-                  name: "olu.lu",
+                  "@id": `${siteUrl}/#website`,
+                  url: siteUrl,
+                  name: "lux24",
                   description:
-                    "Luxembourg real estate search engine powered by AI.",
-                  publisher: { "@id": "https://olu.lu/#organization" },
+                    "Marketplace to compare and book services in Luxembourg.",
+                  publisher: { "@id": `${siteUrl}/#organization` },
                   inLanguage: [locale === "fr" ? "fr-LU" : "en-US"],
-                  potentialAction: {
-                    "@type": "SearchAction",
-                    target: {
-                      "@type": "EntryPoint",
-                      urlTemplate: `https://olu.lu/${locale}?q={search_term_string}`,
-                    },
-                    "query-input": "required name=search_term_string",
-                  },
                 },
               ],
             }),

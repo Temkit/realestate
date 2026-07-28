@@ -2,6 +2,8 @@ import Link from "next/link";
 import { COMMUNES } from "@/lib/seo/slugs";
 import type { Category, Vertical } from "@/lib/marketplace/types";
 import { cname, vname } from "@/lib/marketplace/display";
+import { SiteHeader } from "./site-header";
+import { Footer } from "@/components/footer";
 
 /** Vertical hub — /[locale]/[vertical]: categories + featured communes. */
 export function VerticalHub({
@@ -17,7 +19,9 @@ export function VerticalHub({
   const name = vname(vertical, locale);
 
   return (
-    <div className="mx-auto max-w-7xl px-3.5 py-10 sm:px-8">
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-7xl flex-1 px-3.5 py-10 sm:px-8">
       <nav className="mb-4 text-sm text-muted-foreground">
         <Link href={`/${locale}`} className="hover:text-foreground">
           {fr ? "Accueil" : "Home"}
@@ -69,6 +73,8 @@ export function VerticalHub({
           ))
         )}
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

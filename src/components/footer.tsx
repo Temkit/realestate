@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import NextLink from "next/link";
 
 export function Footer() {
   const t = useTranslations("footer");
@@ -14,10 +15,10 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="h-6 w-6 rounded bg-[#3b5bdb] flex items-center justify-center">
-                <span className="text-white text-[10px] font-extrabold">olu</span>
+                <span className="text-white text-[10px] font-extrabold">L</span>
               </div>
               <span className="text-sm font-bold">
-                olu<span className="text-muted-foreground font-normal">.lu</span>
+                lux<span className="text-muted-foreground font-normal">24</span>
               </span>
             </div>
             <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
@@ -42,13 +43,13 @@ export function Footer() {
             <Link href="/cookies" className="hover:text-foreground transition-colors">
               {t("cookies")}
             </Link>
-            <a href="mailto:contact@olu.lu" className="hover:text-foreground transition-colors">
+            <a href="mailto:contact@lux24.lu" className="hover:text-foreground transition-colors">
               {t("contact")}
             </a>
-            {/* Portal lives outside [locale] — plain anchor, not the i18n Link */}
-            <a href="/portal/login" className="hover:text-foreground transition-colors">
+            {/* Portal lives outside [locale] — plain next/link, not the i18n Link */}
+            <NextLink href="/portal/login" className="hover:text-foreground transition-colors">
               {t("proSpace")}
-            </a>
+            </NextLink>
           </nav>
         </div>
 

@@ -14,6 +14,8 @@ import { cname, communeDisplay, offerTitle, priceLabel } from "@/lib/marketplace
 import { computeAvailableSlots } from "@/lib/marketplace/slots";
 import { getRatingSummary, listApprovedReviews } from "@/lib/marketplace/reviews";
 import { StarRating } from "@/components/marketplace/star-rating";
+import { SiteHeader } from "@/components/marketplace/site-header";
+import { Footer } from "@/components/footer";
 import { BookingForm } from "@/components/marketplace/booking-form";
 import { LeadForm } from "@/components/marketplace/lead-form";
 import { SlotPickerForm } from "@/components/marketplace/slot-picker-form";
@@ -111,7 +113,9 @@ export default async function ProviderProfilePage({
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-3.5 py-10 sm:px-8">
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-5xl flex-1 px-3.5 py-10 sm:px-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -297,6 +301,8 @@ export default async function ProviderProfilePage({
           </div>
         </aside>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

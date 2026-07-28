@@ -3,7 +3,7 @@ import { Home } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Page not found | olu.lu",
+  title: "Page not found | lux24",
   robots: { index: false, follow: false },
 };
 
@@ -13,7 +13,7 @@ export default function NotFound() {
       <div className="text-center max-w-md">
         <div className="h-14 w-14 rounded-2xl bg-[#3b5bdb] flex items-center justify-center shadow-lg mx-auto mb-6">
           <span className="text-white text-lg font-extrabold tracking-tight">
-            olu
+            L
           </span>
         </div>
         <h1 className="text-5xl font-bold tracking-tight mb-3">404</h1>

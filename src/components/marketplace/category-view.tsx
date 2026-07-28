@@ -6,6 +6,8 @@ import { cname, communeDisplay, vname } from "@/lib/marketplace/display";
 import { LeadForm } from "./lead-form";
 import { ProviderCard } from "./provider-card";
 import { StatusBanner } from "./status-banner";
+import { SiteHeader } from "./site-header";
+import { Footer } from "@/components/footer";
 
 /**
  * Category page, optionally scoped to a commune — the SEO money page:
@@ -53,7 +55,9 @@ export function CategoryView({
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-3.5 py-10 sm:px-8">
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-7xl flex-1 px-3.5 py-10 sm:px-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -140,6 +144,8 @@ export function CategoryView({
           </div>
         </aside>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }
