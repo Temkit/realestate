@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/marketplace/admin-auth";
 import { countPendingReviews } from "@/lib/marketplace/reviews";
+import { countPendingClaims } from "@/lib/marketplace/admin-queries";
 import { logoutAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,10 @@ export default async function AdminProtectedLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   await requireAdmin();
-  const pendingReviews = await countPendingReviews().catch(() => 0);
+  const [pendingReviews, pendingClaims] = await Promise.all([
+    countPendingReviews().catch(() => 0),
+    countPendingClaims().catch(() => 0),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
@@ -26,6 +30,14 @@ export default async function AdminProtectedLayout({
           </Link>
           <Link href="/admin/appointments" className="text-muted-foreground hover:text-foreground">
             Appointments
+          </Link>
+          <Link href="/admin/claims" className="text-muted-foreground hover:text-foreground">
+            Claims
+            {pendingClaims > 0 && (
+              <span className="ml-1 rounded-full bg-sky-500/10 px-1.5 py-0.5 text-xs text-sky-600">
+                {pendingClaims}
+              </span>
+            )}
           </Link>
           <Link href="/admin/reviews" className="text-muted-foreground hover:text-foreground">
             Reviews

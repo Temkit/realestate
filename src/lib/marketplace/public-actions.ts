@@ -233,6 +233,53 @@ export async function submitAutoBookAction(formData: FormData): Promise<void> {
   redirect(`${backTo}?lead=confirmed`);
 }
 
+/** Claim a directory listing (unclaimed 'listed' provider). */
+export async function submitClaimAction(formData: FormData): Promise<void> {
+  const backTo = str(formData, "back_to") || "/";
+  // Honeypot + rate limit + consent (reuses the same guard as lead forms)
+  await guard(formData, backTo);
+
+  const providerId = Number(str(formData, "provider_id"));
+  const contactName = str(formData, "contact_name");
+  const email = str(formData, "email");
+  const phone = str(formData, "phone") || null;
+  const message = str(formData, "message") || null;
+
+  const parsed = z
+    .object({ contactName: z.string().trim().min(2).max(120), email: z.string().trim().email().max(200) })
+    .safeParse({ contactName, email });
+  if (!providerId || !parsed.success) redirect(`${backTo}?error=invalid`);
+
+  const db = getMarketplaceDb();
+  if (!db) redirect(`${backTo}?error=invalid`);
+
+  // Only 'listed' (unclaimed) providers can be claimed
+  const prov = await db.execute({
+    sql: "SELECT name, status FROM providers WHERE id = ?",
+    args: [providerId],
+  });
+  if (!prov.rows.length || prov.rows[0].status !== "listed") redirect(`${backTo}?error=invalid`);
+
+  const { randomId } = await import("./tokens");
+  await db.execute({
+    sql: `INSERT INTO provider_claims (id, provider_id, contact_name, email, phone, message)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [randomId(), providerId, contactName, email, phone, message],
+  });
+
+  const { sendClaimToOps } = await import("./email");
+  await sendClaimToOps({
+    providerName: String(prov.rows[0].name),
+    providerId,
+    contactName,
+    email,
+    phone,
+    message,
+  });
+
+  redirect(`${backTo}?claim=ok`);
+}
+
 /** Submit a review from the tokenized /avis/[token] page (P3b). */
 export async function submitReviewAction(formData: FormData): Promise<void> {
   const token = str(formData, "token");

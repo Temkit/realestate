@@ -190,6 +190,34 @@ export async function sendBookingConfirmedToUser(opts: {
   );
 }
 
+/** Notify ops that someone wants to claim a directory listing. */
+export async function sendClaimToOps(opts: {
+  providerName: string;
+  providerId: number;
+  contactName: string;
+  email: string;
+  phone: string | null;
+  message: string | null;
+}): Promise<{ sent: boolean; error?: string }> {
+  const to = process.env.MARKETPLACE_OPS_EMAIL || "pro@lux24.lu";
+  const rows = [
+    ["Entreprise", `${opts.providerName} (#${opts.providerId})`],
+    ["Contact", opts.contactName],
+    ["Email", opts.email],
+    ["Téléphone", opts.phone ?? "—"],
+    ["Message", opts.message ?? "—"],
+  ]
+    .map(([k, v]) => `<tr><td style="padding:4px 12px 4px 0;color:#78716c">${k}</td><td style="padding:4px 0">${esc(v)}</td></tr>`)
+    .join("");
+  return send(
+    to,
+    `Revendication de fiche — ${opts.providerName}`,
+    layout(`<h2 style="font-size:18px">Nouvelle demande de revendication</h2>
+      <table style="font-size:14px">${rows}</table>
+      <p style="font-size:13px;color:#78716c">Vérifiez puis activez la fiche dans /admin/claims.</p>`)
+  );
+}
+
 /** Review request to the customer after a completed appointment (P3b). */
 export async function sendReviewRequest(opts: {
   to: string;

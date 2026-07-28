@@ -181,6 +181,20 @@ export const STATEMENTS = [
 
   `CREATE INDEX IF NOT EXISTS idx_reviews_provider ON reviews(provider_id, status)`,
 
+  `CREATE TABLE IF NOT EXISTS provider_claims (
+    id           TEXT PRIMARY KEY,
+    provider_id  INTEGER NOT NULL REFERENCES providers(id),
+    contact_name TEXT NOT NULL,
+    email        TEXT NOT NULL,
+    phone        TEXT,
+    message      TEXT,
+    status       TEXT NOT NULL DEFAULT 'pending',
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    handled_at   TEXT
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_claims_status ON provider_claims(status, created_at)`,
+
   `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_dispatches_provider ON lead_dispatches(provider_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_offers_category ON offers(category_id, active)`,

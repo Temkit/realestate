@@ -43,6 +43,8 @@ export interface PublicProvider extends Provider {
 }
 
 const PLAN_WEIGHT: Record<string, number> = { pro: 2, starter: 1, free: 0 };
+// Claimed (active) providers always rank above unclaimed directory listings.
+const STATUS_WEIGHT: Record<string, number> = { active: 1, listed: 0 };
 
 /**
  * Active providers serving a category (optionally restricted to a commune),
@@ -68,7 +70,7 @@ export async function listProvidersForCategory(
   const res = await db.execute({
     sql: `SELECT p.* FROM providers p
           JOIN provider_categories pc ON pc.provider_id = p.id
-          WHERE pc.category_id = ? AND p.status = 'active' ${coverageClause}
+          WHERE pc.category_id = ? AND p.status IN ('active', 'listed') ${coverageClause}
           ORDER BY p.name`,
     args,
   });
@@ -88,10 +90,10 @@ export async function listProvidersForCategory(
       rating: ratings.get(id) ?? { avg: null, count: 0 },
     });
   }
-  // Rank: plan weight → higher rating → name. Unrated providers sort below
-  // rated ones at the same plan tier (avg null → -1).
+  // Rank: claimed(active) over listed → plan weight → higher rating → name.
   providers.sort(
     (a, b) =>
+      (STATUS_WEIGHT[b.status] ?? 0) - (STATUS_WEIGHT[a.status] ?? 0) ||
       (PLAN_WEIGHT[b.plan] ?? 0) - (PLAN_WEIGHT[a.plan] ?? 0) ||
       (b.rating.avg ?? -1) - (a.rating.avg ?? -1) ||
       a.name.localeCompare(b.name)
@@ -105,7 +107,7 @@ export async function getActiveProviderBySlug(
   const db = getMarketplaceDb();
   if (!db) return null;
   const res = await db.execute({
-    sql: "SELECT * FROM providers WHERE slug = ? AND status = 'active'",
+    sql: "SELECT * FROM providers WHERE slug = ? AND status IN ('active', 'listed')",
     args: [slug],
   });
   if (!res.rows.length) return null;

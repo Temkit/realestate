@@ -1,6 +1,8 @@
 /** Marketplace row types — mirror scripts/marketplace/schema.mjs. */
 
-export type ProviderStatus = "draft" | "active" | "paused" | "churned";
+// draft = imported, not public. listed = public directory entry (phone-only,
+// unclaimed, no leads). active = claimed/signed (receives leads + bookings).
+export type ProviderStatus = "draft" | "listed" | "active" | "paused" | "churned";
 export type ProviderPlan = "free" | "starter" | "pro";
 export type PriceType = "fixed" | "from" | "hourly" | "quote";
 export type BookingMode = "request" | "auto";

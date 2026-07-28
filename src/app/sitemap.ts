@@ -98,7 +98,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       const db = getMarketplaceDb()!;
       const providers = await db.execute({
-        sql: "SELECT slug FROM providers WHERE status = 'active'",
+        sql: "SELECT slug FROM providers WHERE status IN ('active', 'listed')",
         args: [],
       });
       for (const row of providers.rows) {

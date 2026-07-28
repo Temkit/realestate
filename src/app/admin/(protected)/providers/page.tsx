@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { listProviders, listVerticals } from "@/lib/marketplace/queries";
+import { countDrafts } from "@/lib/marketplace/admin-queries";
+import { publishDraftsAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-500/10 text-gray-600",
+  listed: "bg-sky-500/10 text-sky-600",
   active: "bg-green-500/10 text-green-600",
   paused: "bg-amber-500/10 text-amber-600",
   churned: "bg-red-500/10 text-red-600",
@@ -13,29 +16,47 @@ const STATUS_COLORS: Record<string, string> = {
 export default async function ProvidersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; vertical?: string }>;
+  searchParams: Promise<{ status?: string; vertical?: string; published?: string }>;
 }) {
-  const { status, vertical } = await searchParams;
+  const { status, vertical, published } = await searchParams;
   const verticals = await listVerticals();
   const verticalId = vertical ? Number(vertical) : undefined;
-  const providers = await listProviders({ status, verticalId });
+  const [providers, draftCount] = await Promise.all([
+    listProviders({ status, verticalId }),
+    countDrafts(),
+  ]);
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg font-semibold">Providers ({providers.length})</h1>
-        <Link
-          href="/admin/providers/new"
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          + New provider
-        </Link>
+        <div className="flex items-center gap-2">
+          {draftCount > 0 && (
+            <form action={publishDraftsAction}>
+              <button className="rounded-lg border border-sky-300 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-500/10">
+                Publish {draftCount} drafts as listed
+              </button>
+            </form>
+          )}
+          <Link
+            href="/admin/providers/new"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            + New provider
+          </Link>
+        </div>
       </div>
+
+      {published && (
+        <p className="mb-4 rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-700">
+          Published {published} providers as public listings.
+        </p>
+      )}
 
       <form method="GET" className="mb-4 flex flex-wrap gap-2 text-sm">
         <select name="status" defaultValue={status ?? ""} className="rounded-lg border bg-background px-2 py-1.5">
           <option value="">All statuses</option>
-          {["draft", "active", "paused", "churned"].map((s) => (
+          {["draft", "listed", "active", "paused", "churned"].map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>

@@ -51,6 +51,8 @@ const MAPPINGS = [
 
 const DRY = process.env.DRY_RUN === "1";
 const LIMIT = process.env.LIMIT ? Number(process.env.LIMIT) : Infinity;
+// 'draft' (default, needs admin publish) or 'listed' (public directory now).
+const IMPORT_STATUS = process.env.IMPORT_STATUS === "listed" ? "listed" : "draft";
 
 const url = process.env.TURSO_DATABASE_URL;
 if (!url) {
@@ -221,9 +223,9 @@ async function run() {
         const res = await db.execute({
           sql: `INSERT INTO providers (slug, name, email, phone, website, address, commune,
                   status, plan, source, source_ref, sales_rep)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 'free', 'osm', ?, 'import:osm')
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'free', 'osm', ?, 'import:osm')
                 RETURNING id`,
-          args: [slug, name, email, phone, website, address, commune, ref],
+          args: [slug, name, email, phone, website, address, commune, IMPORT_STATUS, ref],
         });
         providerId = Number(res.rows[0].id);
       } catch (e) {

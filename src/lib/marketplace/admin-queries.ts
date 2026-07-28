@@ -327,6 +327,108 @@ export async function getBillingForMonth(month: string): Promise<BillingRow[]> {
   });
 }
 
+// ── Claims (directory listing claims) ─────────────────────────────────
+
+export interface ClaimRow {
+  id: string;
+  provider_id: number;
+  provider_name: string;
+  provider_slug: string;
+  provider_status: string;
+  contact_name: string;
+  email: string;
+  phone: string | null;
+  message: string | null;
+  status: string;
+  created_at: string;
+}
+
+export async function listClaims(status = "pending"): Promise<ClaimRow[]> {
+  const db = requireMarketplaceDb();
+  const res = await db.execute({
+    sql: `SELECT cl.*, p.name AS provider_name, p.slug AS provider_slug, p.status AS provider_status
+          FROM provider_claims cl JOIN providers p ON p.id = cl.provider_id
+          WHERE cl.status = ? ORDER BY cl.created_at DESC LIMIT 200`,
+    args: [status],
+  });
+  return res.rows.map((r) => ({
+    id: String(r.id),
+    provider_id: Number(r.provider_id),
+    provider_name: String(r.provider_name),
+    provider_slug: String(r.provider_slug),
+    provider_status: String(r.provider_status),
+    contact_name: String(r.contact_name),
+    email: String(r.email),
+    phone: (r.phone as string) || null,
+    message: (r.message as string) || null,
+    status: String(r.status),
+    created_at: String(r.created_at),
+  }));
+}
+
+export async function countPendingClaims(): Promise<number> {
+  const db = requireMarketplaceDb();
+  const res = await db.execute({
+    sql: "SELECT COUNT(*) n FROM provider_claims WHERE status = 'pending'",
+    args: [],
+  });
+  return Number(res.rows[0].n);
+}
+
+/**
+ * Approve a claim: set the provider's email to the claimant's (if empty) and
+ * flip the provider to 'active' (now claimed — receives leads). Returns the
+ * provider id so its pages can be revalidated.
+ */
+export async function approveClaim(id: string): Promise<number | null> {
+  const db = requireMarketplaceDb();
+  const res = await db.execute({
+    sql: "SELECT provider_id, email FROM provider_claims WHERE id = ? AND status = 'pending'",
+    args: [id],
+  });
+  if (!res.rows.length) return null;
+  const providerId = Number(res.rows[0].provider_id);
+  const email = String(res.rows[0].email);
+  await db.batch([
+    {
+      sql: `UPDATE providers SET status = 'active',
+              email = CASE WHEN email = '' OR email IS NULL THEN ? ELSE email END,
+              updated_at = datetime('now')
+            WHERE id = ?`,
+      args: [email, providerId],
+    },
+    { sql: "UPDATE provider_claims SET status = 'approved', handled_at = datetime('now') WHERE id = ?", args: [id] },
+  ]);
+  return providerId;
+}
+
+export async function rejectClaim(id: string): Promise<void> {
+  const db = requireMarketplaceDb();
+  await db.execute({
+    sql: "UPDATE provider_claims SET status = 'rejected', handled_at = datetime('now') WHERE id = ?",
+    args: [id],
+  });
+}
+
+/** Bulk-publish: flip all draft providers to 'listed' (public directory). */
+export async function publishDraftsAsListed(): Promise<number> {
+  const db = requireMarketplaceDb();
+  const res = await db.execute({
+    sql: "UPDATE providers SET status = 'listed', updated_at = datetime('now') WHERE status = 'draft'",
+    args: [],
+  });
+  return res.rowsAffected;
+}
+
+export async function countDrafts(): Promise<number> {
+  const db = requireMarketplaceDb();
+  const res = await db.execute({
+    sql: "SELECT COUNT(*) n FROM providers WHERE status = 'draft'",
+    args: [],
+  });
+  return Number(res.rows[0].n);
+}
+
 // ── Availability rules (Level 2) ──────────────────────────────────────
 
 export interface AvailabilityRule {

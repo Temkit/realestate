@@ -19,6 +19,7 @@ import { Footer } from "@/components/footer";
 import { BookingForm } from "@/components/marketplace/booking-form";
 import { LeadForm } from "@/components/marketplace/lead-form";
 import { SlotPickerForm } from "@/components/marketplace/slot-picker-form";
+import { ClaimForm } from "@/components/marketplace/claim-form";
 import { StatusBanner } from "@/components/marketplace/status-banner";
 
 export async function generateMetadata({
@@ -57,11 +58,14 @@ export default async function ProviderProfilePage({
   const data = await getActiveProviderBySlug(slug);
   if (!data) notFound();
   const { provider, offers, categoryIds } = data;
+  // Unclaimed directory listings (imported) show contact + a claim CTA, not
+  // the quote/booking forms (they have no owner/email to receive requests).
+  const isClaimed = provider.status === "active";
 
   const [allCategories, verticals, bookable] = await Promise.all([
     listCategories(),
     listVerticals(),
-    isProviderBookable(provider.id),
+    isClaimed ? isProviderBookable(provider.id) : Promise.resolve(false),
   ]);
   const categories = allCategories.filter(
     (c) => categoryIds.includes(c.id) && c.active
@@ -247,58 +251,101 @@ export default async function ProviderProfilePage({
         </div>
 
         <aside>
-          <div className="rounded-2xl border bg-card p-5">
-            <h2 className="mb-1 text-base font-semibold">
-              {bookable
-                ? fr
-                  ? "Prendre rendez-vous"
-                  : "Book an appointment"
-                : fr
-                  ? "Demander un devis"
-                  : "Request a quote"}
-            </h2>
-            <p className="mb-4 text-xs text-muted-foreground">
-              {bookable
-                ? autoMode
+          {isClaimed ? (
+            <div className="rounded-2xl border bg-card p-5">
+              <h2 className="mb-1 text-base font-semibold">
+                {bookable
                   ? fr
-                    ? "Réservation immédiate — choisissez un créneau libre."
-                    : "Instant booking — pick an open slot."
+                    ? "Prendre rendez-vous"
+                    : "Book an appointment"
                   : fr
-                    ? "Le prestataire confirme votre créneau par email."
-                    : "The provider confirms your slot by email."
-                : fr
-                  ? "Réponse directe du prestataire."
-                  : "Direct reply from the provider."}
-            </p>
-            {bookable && autoMode && slotDays.length > 0 && categories.length > 0 ? (
-              <SlotPickerForm
-                locale={locale}
-                providerId={provider.id}
-                categories={categories}
-                days={slotDays}
-                backTo={path}
-              />
-            ) : bookable && categories.length > 0 ? (
-              <BookingForm
-                locale={locale}
-                providerId={provider.id}
-                categories={categories}
-                backTo={path}
-              />
-            ) : categories.length > 0 ? (
-              <LeadForm
-                locale={locale}
-                categoryId={categories[0].id}
-                backTo={path}
-                providerId={provider.id}
-                showCommune={false}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {fr ? "Profil en cours de configuration." : "Profile being set up."}
+                    ? "Demander un devis"
+                    : "Request a quote"}
+              </h2>
+              <p className="mb-4 text-xs text-muted-foreground">
+                {bookable
+                  ? autoMode
+                    ? fr
+                      ? "Réservation immédiate — choisissez un créneau libre."
+                      : "Instant booking — pick an open slot."
+                    : fr
+                      ? "Le prestataire confirme votre créneau par email."
+                      : "The provider confirms your slot by email."
+                  : fr
+                    ? "Réponse directe du prestataire."
+                    : "Direct reply from the provider."}
               </p>
-            )}
-          </div>
+              {bookable && autoMode && slotDays.length > 0 && categories.length > 0 ? (
+                <SlotPickerForm
+                  locale={locale}
+                  providerId={provider.id}
+                  categories={categories}
+                  days={slotDays}
+                  backTo={path}
+                />
+              ) : bookable && categories.length > 0 ? (
+                <BookingForm
+                  locale={locale}
+                  providerId={provider.id}
+                  categories={categories}
+                  backTo={path}
+                />
+              ) : categories.length > 0 ? (
+                <LeadForm
+                  locale={locale}
+                  categoryId={categories[0].id}
+                  backTo={path}
+                  providerId={provider.id}
+                  showCommune={false}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {fr ? "Profil en cours de configuration." : "Profile being set up."}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-2xl border bg-card p-5">
+                <h2 className="mb-3 text-base font-semibold">{fr ? "Contact" : "Contact"}</h2>
+                <div className="space-y-2 text-sm">
+                  {provider.phone && (
+                    <a href={`tel:${provider.phone}`} className="flex items-center gap-2 text-primary hover:underline">
+                      <Phone className="h-4 w-4" /> {provider.phone}
+                    </a>
+                  )}
+                  {provider.website && (
+                    <a href={provider.website} rel="nofollow noopener" target="_blank" className="flex items-center gap-2 text-primary hover:underline">
+                      <Globe className="h-4 w-4" /> {fr ? "Site web" : "Website"}
+                    </a>
+                  )}
+                  {provider.commune && (
+                    <p className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      {provider.address ? `${provider.address}, ` : ""}
+                      {communeDisplay(provider.commune)}
+                    </p>
+                  )}
+                  {!provider.phone && !provider.website && (
+                    <p className="text-muted-foreground">
+                      {fr ? "Coordonnées non renseignées." : "No contact details yet."}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
+                <h2 className="mb-1 text-base font-semibold">
+                  {fr ? "C'est votre entreprise ?" : "Is this your business?"}
+                </h2>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  {fr
+                    ? "Revendiquez cette fiche pour recevoir des demandes de devis, gérer vos tarifs et prendre des rendez-vous — gratuitement."
+                    : "Claim this listing to receive quote requests, manage your prices and take bookings — for free."}
+                </p>
+                <ClaimForm locale={locale} providerId={provider.id} providerName={provider.name} backTo={path} />
+              </div>
+            </div>
+          )}
         </aside>
       </div>
       </main>

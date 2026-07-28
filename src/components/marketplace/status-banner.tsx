@@ -11,7 +11,18 @@ function BannerInner({ locale }: { locale: string }) {
   const params = useSearchParams();
   const lead = params.get("lead") ?? undefined;
   const error = params.get("error") ?? undefined;
+  const claim = params.get("claim") ?? undefined;
   const fr = locale !== "en";
+
+  if (claim === "ok") {
+    return (
+      <p className="mb-6 rounded-xl bg-green-500/10 px-4 py-3 text-sm text-green-700" role="status">
+        {fr
+          ? "Merci ! Votre demande de revendication a été reçue. Nous vous contactons rapidement pour activer votre espace."
+          : "Thanks! Your claim request was received. We'll contact you shortly to activate your account."}
+      </p>
+    );
+  }
 
   if (lead) {
     const msg =

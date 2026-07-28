@@ -423,6 +423,38 @@ export async function setAppointmentStatusAdminAction(formData: FormData): Promi
   redirect("/admin/appointments");
 }
 
+// ── Claims + bulk publish ─────────────────────────────────────────────
+
+export async function moderateClaimAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = str(formData, "id");
+  const decision = str(formData, "decision");
+  if (id && (decision === "approve" || decision === "reject")) {
+    const { approveClaim, rejectClaim } = await import("@/lib/marketplace/admin-queries");
+    if (decision === "approve") {
+      const providerId = await approveClaim(id);
+      if (providerId) {
+        const cats = await getProviderCategoryIds(providerId);
+        await revalidateProviderPaths(cats);
+      }
+    } else {
+      await rejectClaim(id);
+    }
+  }
+  redirect("/admin/claims?saved=1");
+}
+
+export async function publishDraftsAction(): Promise<void> {
+  await requireAdmin();
+  const { publishDraftsAsListed } = await import("@/lib/marketplace/admin-queries");
+  const n = await publishDraftsAsListed();
+  // Revalidate every marketplace vertical path so newly-listed providers appear
+  const { revalidateVerticalPaths } = await import("@/lib/marketplace/revalidate");
+  const verticals = await listVerticals();
+  for (const v of verticals) await revalidateVerticalPaths(v.id);
+  redirect(`/admin/providers?status=listed&published=${n}`);
+}
+
 // ── Reviews moderation ────────────────────────────────────────────────
 
 export async function moderateReviewAction(formData: FormData): Promise<void> {
