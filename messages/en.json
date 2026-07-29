@@ -138,7 +138,10 @@
     "disclaimer": "lux24 — compare and book every service in Luxembourg.",
     "copyright": "© 2026 lux24",
     "proSpace": "Pro area",
-    "dataAttribution": "Some data from "
+    "dataAttribution": "Some data from ",
+    "business": "For businesses",
+    "guides": "Guides",
+    "faq": "FAQ"
   },
   "legal": {
     "backToHome": "Back to home"

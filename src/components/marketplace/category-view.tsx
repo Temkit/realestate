@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { COMMUNES } from "@/lib/seo/slugs";
 import type { PublicProvider } from "@/lib/marketplace/public-queries";
 import type { Category, Vertical } from "@/lib/marketplace/types";
 import { cname, communeDisplay, vname } from "@/lib/marketplace/display";
+import { categoryFaq, categoryIntro } from "@/lib/marketplace/content";
 import { LeadForm } from "./lead-form";
 import { ProviderCard } from "./provider-card";
 import { StatusBanner } from "./status-banner";
@@ -18,12 +20,14 @@ export function CategoryView({
   category,
   communeSlug,
   providers,
+  total,
   locale,
 }: {
   vertical: Vertical;
   category: Category;
   communeSlug: string | null;
   providers: PublicProvider[];
+  total: number;
   locale: string;
 }) {
   const fr = locale !== "en";
@@ -31,6 +35,8 @@ export function CategoryView({
   const commune = communeSlug ? communeDisplay(communeSlug) : null;
   const basePath = `/${locale}/${vertical.slug}/${category.slug}`;
   const path = communeSlug ? `${basePath}/${communeSlug}` : basePath;
+  // Full, filterable/sortable list lives on the vertical browse page.
+  const browseHref = `/${locale}/${vertical.slug}?cat=${category.slug}${communeSlug ? `&commune=${communeSlug}` : ""}`;
 
   const heading = commune
     ? fr
@@ -39,6 +45,18 @@ export function CategoryView({
     : fr
       ? `${catName} au Luxembourg`
       : `${catName} in Luxembourg`;
+
+  const intro = categoryIntro(catName, commune, locale);
+  const faq = categoryFaq(catName, commune, locale);
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -87,9 +105,15 @@ export function CategoryView({
       <h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl">{heading}</h1>
       <p className="mb-6 text-muted-foreground">
         {fr
-          ? `${providers.length} prestataire${providers.length === 1 ? "" : "s"} — devis gratuits, sans engagement.`
-          : `${providers.length} provider${providers.length === 1 ? "" : "s"} — free quotes, no obligation.`}
+          ? `${total} prestataire${total === 1 ? "" : "s"} — devis gratuits, sans engagement.`
+          : `${total} provider${total === 1 ? "" : "s"} — free quotes, no obligation.`}
       </p>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted-foreground">{intro}</p>
 
       <StatusBanner locale={locale} />
 
@@ -102,7 +126,24 @@ export function CategoryView({
                 : "No providers listed here yet — send your request and we'll forward it as soon as one joins lux24."}
             </div>
           ) : (
-            providers.map((p) => <ProviderCard key={p.id} provider={p} locale={locale} />)
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {providers.map((p) => (
+                  <ProviderCard key={p.id} provider={p} locale={locale} />
+                ))}
+              </div>
+              {total > providers.length && (
+                <Link
+                  href={browseHref}
+                  className="mt-2 inline-flex items-center gap-1 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
+                >
+                  {fr
+                    ? `Voir les ${total} prestataires — filtrer & trier`
+                    : `See all ${total} providers — filter & sort`}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+            </>
           )}
 
           {communeSlug && (
@@ -144,6 +185,20 @@ export function CategoryView({
           </div>
         </aside>
       </div>
+
+      <section className="mt-12 max-w-3xl border-t pt-8">
+        <h2 className="mb-4 text-lg font-semibold">
+          {fr ? "Questions fréquentes" : "Frequently asked questions"}
+        </h2>
+        <dl className="space-y-4">
+          {faq.map((f, i) => (
+            <div key={i}>
+              <dt className="font-medium">{f.q}</dt>
+              <dd className="mt-1 text-sm text-muted-foreground">{f.a}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
       </main>
       <Footer />
     </div>

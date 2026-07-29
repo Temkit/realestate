@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, BadgeCheck, Clock, Globe, MapPin, Navigation, Phone } from "lucide-react";
 import type { PublicProvider } from "@/lib/marketplace/public-queries";
 import {
@@ -8,6 +9,7 @@ import {
   priceLabel,
   shortHours,
 } from "@/lib/marketplace/display";
+import { isOpenNow } from "@/lib/marketplace/hours";
 import { StarRating } from "./star-rating";
 
 /** Compact, information-dense provider card used on every results page. */
@@ -22,14 +24,26 @@ export function ProviderCard({
   const description = fr ? provider.description_fr : provider.description_en;
   const claimed = provider.status === "active";
   const hours = shortHours(provider.opening_hours);
+  const open = isOpenNow(provider.opening_hours);
   const href = `/${locale}/pro/${provider.slug}`;
 
   return (
     <div className="flex flex-col rounded-xl border bg-card p-4 transition-colors hover:border-primary/40">
       <div className="flex items-start justify-between gap-2">
-        <Link href={href} className="font-semibold leading-tight hover:text-primary">
-          {provider.name}
-        </Link>
+        <div className="flex min-w-0 items-start gap-2.5">
+          {provider.logo_url && (
+            <Image
+              src={provider.logo_url}
+              alt=""
+              width={40}
+              height={40}
+              className="mt-0.5 h-10 w-10 shrink-0 rounded-lg border object-cover"
+            />
+          )}
+          <Link href={href} className="font-semibold leading-tight hover:text-primary">
+            {provider.name}
+          </Link>
+        </div>
         {claimed ? (
           <span
             className="flex shrink-0 items-center gap-0.5 rounded-full bg-green-500/10 px-1.5 py-0.5 text-[11px] text-green-600"
@@ -54,6 +68,11 @@ export function ProviderCard({
           <span className="flex items-center gap-1">
             <MapPin className="h-3 w-3" />
             {communeDisplay(provider.commune)}
+          </span>
+        )}
+        {open != null && (
+          <span className={`font-medium ${open ? "text-green-600" : "text-red-500"}`}>
+            {open ? (fr ? "Ouvert" : "Open") : fr ? "Fermé" : "Closed"}
           </span>
         )}
         {hours && (

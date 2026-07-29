@@ -6,9 +6,12 @@ import {
   getActiveVerticalBySlug,
   getCategoryCounts,
   listActiveCategories,
-  listProvidersForVertical,
+  queryProviders,
+  type ProviderSort,
 } from "@/lib/marketplace/public-queries";
 import { NEARBY_COMMUNES } from "@/lib/communes";
+
+const SORTS: ProviderSort[] = ["recommended", "rating", "name", "newest"];
 import { vname } from "@/lib/marketplace/display";
 import { VerticalHub } from "@/components/marketplace/vertical-hub";
 
@@ -100,28 +103,44 @@ export default async function ModeIndexPage({
   searchParams,
 }: {
   params: Promise<{ locale: string; mode: string }>;
-  searchParams: Promise<{ cat?: string; commune?: string }>;
+  searchParams: Promise<{
+    cat?: string;
+    commune?: string;
+    sort?: string;
+    verified?: string;
+    page?: string;
+  }>;
 }) {
   const { locale, mode } = await params;
   const modes = getModesForLocale(locale);
   const modeEntry = modes.find((m) => m.slug === mode);
   if (!modeEntry) {
-    // Marketplace vertical browse page (filters via ?cat / ?commune)
+    // Marketplace vertical browse page (filters via ?cat/?commune/?sort/?verified/?page)
     const vertical = await getActiveVerticalBySlug(mode);
     if (!vertical) notFound();
-    const { cat, commune } = await searchParams;
+    const sp = await searchParams;
     const [categories, counts] = await Promise.all([
       listActiveCategories(vertical.id),
       getCategoryCounts(vertical.id),
     ]);
-    const activeCategory = categories.find((c) => c.slug === cat)?.slug;
+    const activeCategory = categories.find((c) => c.slug === sp.cat)?.slug;
     const activeCommune =
-      commune && NEARBY_COMMUNES[commune] !== undefined ? commune : undefined;
+      sp.commune && NEARBY_COMMUNES[sp.commune] !== undefined ? sp.commune : undefined;
     const categoryId = categories.find((c) => c.slug === activeCategory)?.id;
-    const { providers, total } = await listProvidersForVertical(vertical.id, {
+    const activeSort: ProviderSort = SORTS.includes(sp.sort as ProviderSort)
+      ? (sp.sort as ProviderSort)
+      : "recommended";
+    const verifiedOnly = sp.verified === "1";
+    const page = Math.max(1, Number(sp.page) || 1);
+
+    const { providers, total, pageCount } = await queryProviders({
+      verticalId: vertical.id,
       categoryId,
       communeSlug: activeCommune,
-      limit: 60,
+      verifiedOnly,
+      sort: activeSort,
+      page,
+      pageSize: 24,
     });
     return (
       <VerticalHub
@@ -131,8 +150,12 @@ export default async function ModeIndexPage({
         counts={counts}
         total={total}
         providers={providers}
+        page={page}
+        pageCount={pageCount}
+        activeSort={activeSort}
         activeCategory={activeCategory}
         activeCommune={activeCommune}
+        verifiedOnly={verifiedOnly}
       />
     );
   }

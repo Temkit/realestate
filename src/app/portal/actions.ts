@@ -89,6 +89,32 @@ const profileSchema = z.object({
   languages: z.array(z.enum(["fr", "de", "lb", "en", "pt"])).default([]),
 });
 
+const OSM_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Compose an OSM opening_hours string from the 7-day portal form. */
+function composeHours(fd: FormData): string | null {
+  const parts: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    if (fd.get(`day_${i}_closed`) === "on") continue;
+    const open = String(fd.get(`day_${i}_open`) ?? "").trim();
+    const close = String(fd.get(`day_${i}_close`) ?? "").trim();
+    if (TIME_RE.test(open) && TIME_RE.test(close) && open < close) {
+      parts.push(`${OSM_DAYS[i]} ${open}-${close}`);
+    }
+  }
+  return parts.length ? parts.join("; ") : null;
+}
+
+/** Parse a photos textarea (one URL per line) into a capped, valid list. */
+function parsePhotos(raw: string): string[] {
+  return raw
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter((s) => /^https:\/\/\S+$/.test(s))
+    .slice(0, 8);
+}
+
 export async function saveProfileAction(formData: FormData): Promise<void> {
   const providerId = await requireProvider();
   let parsed: z.infer<typeof profileSchema>;
@@ -116,6 +142,8 @@ export async function saveProfileAction(formData: FormData): Promise<void> {
     description_en: orNull(parsed.description_en ?? ""),
     logo_url: orNull(parsed.logo_url ?? ""),
     languages: parsed.languages,
+    opening_hours: composeHours(formData),
+    photos: parsePhotos(str(formData, "photos")),
   };
   await updateProviderProfile(providerId, input);
   redirect("/portal/profile?saved=1");

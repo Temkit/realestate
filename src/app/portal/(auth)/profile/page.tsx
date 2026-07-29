@@ -1,5 +1,6 @@
 import { requireProvider } from "@/lib/marketplace/provider-auth";
 import { getProvider } from "@/lib/marketplace/queries";
+import { weeklyHours } from "@/lib/marketplace/hours";
 import { saveProfileAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -7,6 +8,19 @@ export const dynamic = "force-dynamic";
 const inputCls =
   "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary";
 const LANGUAGES = ["fr", "de", "lb", "en", "pt"] as const;
+const DAYS_FR = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+
+/** First open/close range per weekday (Mon–Sun) prefilled from stored hours. */
+function prefillHours(oh: string | null): { open: string; close: string; closed: boolean }[] {
+  const weekly = weeklyHours(oh, "fr");
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = weekly?.[i];
+    const range = day?.ranges[0];
+    if (!range) return { open: "09:00", close: "18:00", closed: true };
+    const [open, close] = range.split("–");
+    return { open, close, closed: false };
+  });
+}
 
 export default async function PortalProfilePage({
   searchParams,
@@ -17,6 +31,7 @@ export default async function PortalProfilePage({
   const { saved, error } = await searchParams;
   const provider = await getProvider(providerId);
   if (!provider) return null;
+  const hours = prefillHours(provider.opening_hours);
 
   return (
     <div className="max-w-2xl">
@@ -78,6 +93,37 @@ export default async function PortalProfilePage({
             ))}
           </div>
         </div>
+
+        <fieldset className="rounded-xl border p-4">
+          <legend className="px-1 text-sm font-medium">Horaires d&apos;ouverture</legend>
+          <div className="space-y-1.5">
+            {DAYS_FR.map((day, i) => (
+              <div key={i} className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="w-24 text-muted-foreground">{day}</span>
+                <input type="time" name={`day_${i}_open`} defaultValue={hours[i].open} className={inputCls + " w-auto"} />
+                <span className="text-muted-foreground">–</span>
+                <input type="time" name={`day_${i}_close`} defaultValue={hours[i].close} className={inputCls + " w-auto"} />
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <input type="checkbox" name={`day_${i}_closed`} defaultChecked={hours[i].closed} />
+                  Fermé
+                </label>
+              </div>
+            ))}
+          </div>
+        </fieldset>
+
+        <label className="block text-sm">
+          <span className="mb-1 block text-muted-foreground">
+            Photos (une URL https:// par ligne, max 8)
+          </span>
+          <textarea
+            name="photos"
+            rows={3}
+            defaultValue={provider.photos.join("\n")}
+            placeholder="https://…/photo1.jpg"
+            className={inputCls}
+          />
+        </label>
 
         <button className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
           Enregistrer

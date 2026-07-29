@@ -15,7 +15,7 @@ import { NEARBY_COMMUNES } from "@/lib/communes";
 import {
   getActiveCategoryBySlug,
   getActiveVerticalBySlug,
-  listProvidersForCategory,
+  queryProviders,
 } from "@/lib/marketplace/public-queries";
 import { cname, communeDisplay } from "@/lib/marketplace/display";
 import { CategoryView } from "@/components/marketplace/category-view";
@@ -91,13 +91,18 @@ export default async function CommuneSearchPage({
   if (!resolved) {
     const mkt = await resolveMarketplace(mode, propertyType, commune);
     if (!mkt) notFound();
-    const providers = await listProvidersForCategory(mkt.category.id, commune);
+    const { providers, total } = await queryProviders({
+      categoryId: mkt.category.id,
+      communeSlug: commune,
+      pageSize: 12,
+    });
     return (
       <CategoryView
         vertical={mkt.vertical}
         category={mkt.category}
         communeSlug={commune}
         providers={providers}
+        total={total}
         locale={locale}
       />
     );

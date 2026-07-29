@@ -192,6 +192,8 @@ export interface ProviderProfileInput {
   description_en: string | null;
   languages: string[];
   logo_url: string | null;
+  opening_hours: string | null;
+  photos: string[];
 }
 
 /**
@@ -207,12 +209,13 @@ export async function updateProviderProfile(
     sql: `UPDATE providers SET
             phone = ?, whatsapp = ?, website = ?, address = ?,
             description_fr = ?, description_en = ?, languages = ?, logo_url = ?,
-            updated_at = datetime('now')
+            opening_hours = ?, photos = ?, updated_at = datetime('now')
           WHERE id = ?`,
     args: [
       input.phone, input.whatsapp, input.website, input.address,
       input.description_fr, input.description_en,
-      JSON.stringify(input.languages), input.logo_url, providerId,
+      JSON.stringify(input.languages), input.logo_url,
+      input.opening_hours, JSON.stringify(input.photos), providerId,
     ],
   });
 }

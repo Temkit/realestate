@@ -101,56 +101,168 @@ export async function listProvidersForCategory(
   return providers;
 }
 
-/**
- * Browse a whole vertical in one query — optional category + commune filters.
- * Offers are omitted (avoids N+1); the card shows contact/hours/rating.
- */
-export async function listProvidersForVertical(
-  verticalId: number,
-  opts: { categoryId?: number; communeSlug?: string; limit?: number } = {}
-): Promise<{ providers: PublicProvider[]; total: number }> {
-  const db = getMarketplaceDb();
-  if (!db) return { providers: [], total: 0 };
+export type ProviderSort = "recommended" | "rating" | "name" | "newest";
 
-  const where: string[] = ["c.vertical_id = ?", "p.status IN ('active', 'listed')"];
-  const args: (string | number)[] = [verticalId];
-  if (opts.categoryId) {
+const SORT_SQL: Record<ProviderSort, string> = {
+  recommended: "(p.status = 'active') DESC, (ar IS NULL), ar DESC, p.name COLLATE NOCASE",
+  rating: "(ar IS NULL), ar DESC, p.name COLLATE NOCASE",
+  name: "p.name COLLATE NOCASE",
+  newest: "p.created_at DESC",
+};
+
+export interface ProviderQuery {
+  verticalId?: number;
+  categoryId?: number;
+  communeSlug?: string;
+  verifiedOnly?: boolean;
+  /** Free-text: matches provider name, category name, or commune. */
+  q?: string;
+  sort?: ProviderSort;
+  page?: number; // 1-based
+  pageSize?: number;
+}
+
+export interface ProviderResults {
+  providers: PublicProvider[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}
+
+/**
+ * Canonical provider listing — filters (vertical/category/commune/verified),
+ * sorting, and pagination in one place. Ratings and offers are bulk-loaded for
+ * the page (no N+1). Used by the vertical browse and category/commune pages.
+ */
+export async function queryProviders(q: ProviderQuery): Promise<ProviderResults> {
+  const page = Math.max(1, q.page ?? 1);
+  const pageSize = Math.min(60, Math.max(1, q.pageSize ?? 24));
+  const empty: ProviderResults = { providers: [], total: 0, page, pageSize, pageCount: 0 };
+
+  const db = getMarketplaceDb();
+  if (!db) return empty;
+
+  const where: string[] = [
+    q.verifiedOnly ? "p.status = 'active'" : "p.status IN ('active', 'listed')",
+  ];
+  const args: (string | number)[] = [];
+  if (q.verticalId) {
+    where.push("c.vertical_id = ?");
+    args.push(q.verticalId);
+  }
+  if (q.categoryId) {
     where.push("pc.category_id = ?");
-    args.push(opts.categoryId);
+    args.push(q.categoryId);
   }
-  if (opts.communeSlug) {
-    where.push(`p.id IN (SELECT provider_id FROM provider_coverage
-      WHERE commune_slug = '*' OR commune_slug = ?)`);
-    args.push(opts.communeSlug);
+  if (q.communeSlug) {
+    where.push(
+      `p.id IN (SELECT provider_id FROM provider_coverage WHERE commune_slug = '*' OR commune_slug = ?)`
+    );
+    args.push(q.communeSlug);
   }
+  if (q.q && q.q.trim()) {
+    const like = `%${q.q.trim().toLowerCase()}%`;
+    where.push(
+      `(lower(p.name) LIKE ? OR lower(c.name_fr) LIKE ? OR lower(c.name_en) LIKE ? OR lower(COALESCE(p.commune, '')) LIKE ?)`
+    );
+    args.push(like, like, like, like);
+  }
+  const whereSql = where.join(" AND ");
 
   const countRes = await db.execute({
     sql: `SELECT COUNT(DISTINCT p.id) AS n FROM providers p
           JOIN provider_categories pc ON pc.provider_id = p.id
           JOIN categories c ON c.id = pc.category_id
-          WHERE ${where.join(" AND ")}`,
+          WHERE ${whereSql}`,
     args,
   });
   const total = Number(countRes.rows[0].n);
+  const pageCount = Math.ceil(total / pageSize);
 
-  const limit = opts.limit ?? 60;
   const res = await db.execute({
-    sql: `SELECT DISTINCT p.* FROM providers p
+    sql: `SELECT p.*,
+            (SELECT AVG(rating) FROM reviews rv WHERE rv.provider_id = p.id AND rv.status = 'approved') AS ar
+          FROM providers p
           JOIN provider_categories pc ON pc.provider_id = p.id
           JOIN categories c ON c.id = pc.category_id
-          WHERE ${where.join(" AND ")}
-          ORDER BY (p.status = 'active') DESC, p.name
-          LIMIT ?`,
-    args: [...args, limit],
+          WHERE ${whereSql}
+          GROUP BY p.id
+          ORDER BY ${SORT_SQL[q.sort ?? "recommended"]}
+          LIMIT ? OFFSET ?`,
+    args: [...args, pageSize, (page - 1) * pageSize],
   });
 
   const ids = res.rows.map((r) => Number(r.id));
-  const ratings = await getRatingSummaries(ids);
-  const providers = res.rows.map((row) => ({
-    ...rowToPublicProvider(row as Record<string, unknown>),
-    offers: [] as Offer[],
-    rating: ratings.get(Number(row.id)) ?? { avg: null, count: 0 },
-  }));
+  const [ratings, offersByProvider] = await Promise.all([
+    getRatingSummaries(ids),
+    bulkActiveOffers(ids, q.categoryId),
+  ]);
+
+  const providers = res.rows.map((row) => {
+    const id = Number(row.id);
+    return {
+      ...rowToPublicProvider(row as Record<string, unknown>),
+      offers: offersByProvider.get(id) ?? [],
+      rating: ratings.get(id) ?? { avg: null, count: 0 },
+    };
+  });
+  return { providers, total, page, pageSize, pageCount };
+}
+
+/** Bulk-load active offers for a set of providers (optionally one category). */
+async function bulkActiveOffers(
+  providerIds: number[],
+  categoryId?: number
+): Promise<Map<number, Offer[]>> {
+  const map = new Map<number, Offer[]>();
+  if (!providerIds.length) return map;
+  const db = getMarketplaceDb();
+  if (!db) return map;
+  const placeholders = providerIds.map(() => "?").join(",");
+  const args: (string | number)[] = [...providerIds];
+  let catClause = "";
+  if (categoryId) {
+    catClause = "AND category_id = ?";
+    args.push(categoryId);
+  }
+  const res = await db.execute({
+    sql: `SELECT * FROM offers WHERE provider_id IN (${placeholders}) AND active = 1 ${catClause}
+          ORDER BY created_at DESC`,
+    args,
+  });
+  for (const r of res.rows) {
+    const pid = Number(r.provider_id);
+    const list = map.get(pid) ?? [];
+    list.push({
+      id: Number(r.id),
+      provider_id: pid,
+      category_id: Number(r.category_id),
+      title_en: String(r.title_en),
+      title_fr: String(r.title_fr),
+      price_type: r.price_type as Offer["price_type"],
+      price_cents: r.price_cents == null ? null : Number(r.price_cents),
+      attributes: {},
+      active: true,
+      created_at: String(r.created_at),
+      updated_at: (r.updated_at as string) || null,
+    });
+    map.set(pid, list);
+  }
+  return map;
+}
+
+/** Convenience wrapper for the homepage featured rows. */
+export async function listProvidersForVertical(
+  verticalId: number,
+  opts: { categoryId?: number; communeSlug?: string; limit?: number } = {}
+): Promise<{ providers: PublicProvider[]; total: number }> {
+  const { providers, total } = await queryProviders({
+    verticalId,
+    categoryId: opts.categoryId,
+    communeSlug: opts.communeSlug,
+    pageSize: opts.limit ?? 60,
+  });
   return { providers, total };
 }
 
@@ -247,6 +359,50 @@ export async function listFeaturedProviders(limit = 8): Promise<FeaturedProvider
     status: String(r.status),
     vertical_slug: (r.vertical_slug as string) || "garages",
   }));
+}
+
+export interface Suggestions {
+  providers: { name: string; slug: string; commune: string | null }[];
+  categories: { name_fr: string; name_en: string; slug: string; vertical_slug: string }[];
+}
+
+/** Autocomplete suggestions: matching provider names + category names. */
+export async function suggest(term: string, limit = 6): Promise<Suggestions> {
+  const t = term.trim().toLowerCase();
+  const db = getMarketplaceDb();
+  if (!db || t.length < 2) return { providers: [], categories: [] };
+  const like = `%${t}%`;
+
+  const [prov, cats] = await Promise.all([
+    db.execute({
+      sql: `SELECT name, slug, commune FROM providers
+            WHERE status IN ('active', 'listed') AND lower(name) LIKE ?
+            ORDER BY (status = 'active') DESC, name LIMIT ?`,
+      args: [like, limit],
+    }),
+    db.execute({
+      sql: `SELECT c.name_fr, c.name_en, c.slug, v.slug AS vertical_slug
+            FROM categories c JOIN verticals v ON v.id = c.vertical_id
+            WHERE c.active = 1 AND v.active = 1
+              AND (lower(c.name_fr) LIKE ? OR lower(c.name_en) LIKE ?)
+            LIMIT ?`,
+      args: [like, like, limit],
+    }),
+  ]);
+
+  return {
+    providers: prov.rows.map((r) => ({
+      name: String(r.name),
+      slug: String(r.slug),
+      commune: (r.commune as string) || null,
+    })),
+    categories: cats.rows.map((r) => ({
+      name_fr: String(r.name_fr),
+      name_en: String(r.name_en),
+      slug: String(r.slug),
+      vertical_slug: String(r.vertical_slug),
+    })),
+  };
 }
 
 export async function isProviderBookable(providerId: number): Promise<boolean> {

@@ -28,6 +28,15 @@ export function Footer() {
 
           {/* Links */}
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+            <Link href="/business" className="hover:text-foreground transition-colors">
+              {t("business")}
+            </Link>
+            <Link href="/guides" className="hover:text-foreground transition-colors">
+              {t("guides")}
+            </Link>
+            <Link href="/faq" className="hover:text-foreground transition-colors">
+              {t("faq")}
+            </Link>
             <Link href="/about" className="hover:text-foreground transition-colors">
               {t("about")}
             </Link>

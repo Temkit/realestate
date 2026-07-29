@@ -175,7 +175,7 @@ export default async function HomePage({
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold">{vname(vertical, locale)}</h3>
                     <Link
-                      href={`/${locale}/${vertical.slug}`}
+                      href={`/${vertical.slug}`}
                       className="text-sm text-primary hover:underline"
                     >
                       {t("featured.seeAll")}

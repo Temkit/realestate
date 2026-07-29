@@ -7,15 +7,21 @@ import { Globe, MapPin, Phone } from "lucide-react";
 import {
   getActiveProviderBySlug,
   isProviderBookable,
+  queryProviders,
 } from "@/lib/marketplace/public-queries";
 import { listCategories, listVerticals } from "@/lib/marketplace/queries";
 import { getMarketplaceDb } from "@/lib/marketplace/db";
 import { cname, communeDisplay, offerTitle, priceLabel } from "@/lib/marketplace/display";
 import { computeAvailableSlots } from "@/lib/marketplace/slots";
+import { weeklyHours, isOpenNow } from "@/lib/marketplace/hours";
 import { getRatingSummary, listApprovedReviews } from "@/lib/marketplace/reviews";
 import { StarRating } from "@/components/marketplace/star-rating";
 import { SiteHeader } from "@/components/marketplace/site-header";
 import { Footer } from "@/components/footer";
+import { HoursTable } from "@/components/marketplace/hours-table";
+import { MapEmbed } from "@/components/marketplace/map-embed";
+import { PhotoGallery } from "@/components/marketplace/photo-gallery";
+import { ProviderCard } from "@/components/marketplace/provider-card";
 import { BookingForm } from "@/components/marketplace/booking-form";
 import { LeadForm } from "@/components/marketplace/lead-form";
 import { SlotPickerForm } from "@/components/marketplace/slot-picker-form";
@@ -70,12 +76,24 @@ export default async function ProviderProfilePage({
   const categories = allCategories.filter(
     (c) => categoryIds.includes(c.id) && c.active
   );
-  const [rating, reviews] = await Promise.all([
+  const [rating, reviews, similarRes] = await Promise.all([
     getRatingSummary(provider.id),
     listApprovedReviews(provider.id, 10),
+    categoryIds[0]
+      ? queryProviders({
+          categoryId: categoryIds[0],
+          communeSlug: provider.commune ?? undefined,
+          pageSize: 5,
+        })
+      : Promise.resolve({ providers: [] }),
   ]);
+  const similar = ("providers" in similarRes ? similarRes.providers : [])
+    .filter((p) => p.id !== provider.id)
+    .slice(0, 3);
   const fr = locale !== "en";
   const description = fr ? provider.description_fr : provider.description_en;
+  const weekly = weeklyHours(provider.opening_hours, locale);
+  const openNow = isOpenNow(provider.opening_hours);
   const firstVertical = verticals.find((v) =>
     categories.some((c) => c.vertical_id === v.id)
   );
@@ -104,6 +122,12 @@ export default async function ProviderProfilePage({
           addressCountry: "LU",
         }
       : undefined,
+    geo:
+      provider.lat != null && provider.lon != null
+        ? { "@type": "GeoCoordinates", latitude: provider.lat, longitude: provider.lon }
+        : undefined,
+    image: provider.photos.length ? provider.photos : provider.logo_url ? [provider.logo_url] : undefined,
+    openingHours: provider.opening_hours ?? undefined,
     aggregateRating:
       rating.avg != null
         ? {
@@ -195,17 +219,27 @@ export default async function ProviderProfilePage({
       <StatusBanner locale={locale} />
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <div>
-          {description && <p className="mb-6 text-sm leading-relaxed">{description}</p>}
+        <div className="space-y-6">
+          {provider.photos.length > 0 && (
+            <PhotoGallery photos={provider.photos} name={provider.name} />
+          )}
+
+          {description && <p className="text-sm leading-relaxed">{description}</p>}
 
           {categories.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               {categories.map((c) => (
                 <span key={c.id} className="rounded-full border px-3 py-1 text-xs text-muted-foreground">
                   {cname(c, locale)}
                 </span>
               ))}
             </div>
+          )}
+
+          {weekly && <HoursTable weekly={weekly} openNow={openNow} locale={locale} />}
+
+          {provider.lat != null && provider.lon != null && (
+            <MapEmbed lat={provider.lat} lon={provider.lon} title={provider.name} />
           )}
 
           {offers.length > 0 && (
@@ -348,6 +382,19 @@ export default async function ProviderProfilePage({
           )}
         </aside>
       </div>
+
+      {similar.length > 0 && (
+        <section className="mt-12 border-t pt-8">
+          <h2 className="mb-4 text-lg font-semibold">
+            {fr ? "Prestataires similaires" : "Similar providers"}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {similar.map((p) => (
+              <ProviderCard key={p.id} provider={p} locale={locale} />
+            ))}
+          </div>
+        </section>
+      )}
       </main>
       <Footer />
     </div>

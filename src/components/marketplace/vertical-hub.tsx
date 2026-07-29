@@ -1,15 +1,20 @@
 import Link from "next/link";
+import { BadgeCheck } from "lucide-react";
 import { COMMUNES } from "@/lib/seo/slugs";
-import type { PublicProvider } from "@/lib/marketplace/public-queries";
+import type { PublicProvider, ProviderSort } from "@/lib/marketplace/public-queries";
 import type { Category, Vertical } from "@/lib/marketplace/types";
 import { cname, communeDisplay, vname } from "@/lib/marketplace/display";
+import { hrefWith } from "@/lib/marketplace/url";
 import { SiteHeader } from "./site-header";
 import { ProviderCard } from "./provider-card";
+import { SortBar } from "./sort-bar";
+import { Pagination } from "./pagination";
 import { Footer } from "@/components/footer";
 
 /**
- * Vertical browse page — all providers on ONE page with in-place category +
- * commune filters (no drill-down). Keeps SEO commune links at the bottom.
+ * Vertical browse page — every provider on one page with in-place category +
+ * commune + verified filters, sorting, and pagination. SEO category×commune
+ * deep links stay at the bottom.
  */
 export function VerticalHub({
   vertical,
@@ -17,30 +22,40 @@ export function VerticalHub({
   locale,
   providers,
   total,
+  page,
+  pageCount,
   counts = {},
+  activeSort,
   activeCategory,
   activeCommune,
+  verifiedOnly,
 }: {
   vertical: Vertical;
   categories: Category[];
   locale: string;
   providers: PublicProvider[];
   total: number;
+  page: number;
+  pageCount: number;
   counts?: Record<number, number>;
+  activeSort: ProviderSort;
   activeCategory?: string;
   activeCommune?: string;
+  verifiedOnly?: boolean;
 }) {
   const fr = locale !== "en";
   const name = vname(vertical, locale);
   const base = `/${locale}/${vertical.slug}`;
 
-  const hrefFor = (cat?: string, commune?: string) => {
-    const p = new URLSearchParams();
-    if (cat) p.set("cat", cat);
-    if (commune) p.set("commune", commune);
-    const q = p.toString();
-    return q ? `${base}?${q}` : base;
+  // Current query state, so every control preserves the others.
+  const current: Record<string, string | undefined> = {
+    cat: activeCategory,
+    commune: activeCommune,
+    sort: activeSort === "recommended" ? undefined : activeSort,
+    verified: verifiedOnly ? "1" : undefined,
   };
+  const link = (patch: Record<string, string | number | undefined>) =>
+    hrefWith(base, current, { page: undefined, ...patch });
 
   const activeCat = categories.find((c) => c.slug === activeCategory);
   const communeLabel = activeCommune ? communeDisplay(activeCommune) : null;
@@ -70,7 +85,7 @@ export function VerticalHub({
         {/* Category filter */}
         <div className="mb-3 flex flex-wrap gap-2">
           <Link
-            href={hrefFor(undefined, activeCommune)}
+            href={link({ cat: undefined })}
             className={`rounded-full border px-3 py-1.5 text-sm ${!activeCategory ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted"}`}
           >
             {fr ? "Tous" : "All"}
@@ -78,7 +93,7 @@ export function VerticalHub({
           {categories.map((c) => (
             <Link
               key={c.id}
-              href={hrefFor(c.slug, activeCommune)}
+              href={link({ cat: c.slug })}
               className={`rounded-full border px-3 py-1.5 text-sm ${activeCategory === c.slug ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted"}`}
             >
               {cname(c, locale)}
@@ -87,10 +102,18 @@ export function VerticalHub({
           ))}
         </div>
 
-        {/* Commune filter */}
-        <div className="mb-6 flex flex-wrap gap-1.5">
+        {/* Commune + verified filters */}
+        <div className="mb-4 flex flex-wrap items-center gap-1.5">
           <Link
-            href={hrefFor(activeCategory, undefined)}
+            href={link({ verified: verifiedOnly ? undefined : "1" })}
+            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ${verifiedOnly ? "bg-green-500/10 font-medium text-green-600" : "text-muted-foreground hover:bg-muted"}`}
+          >
+            <BadgeCheck className="h-3.5 w-3.5" />
+            {fr ? "Vérifiés" : "Verified"}
+          </Link>
+          <span className="mx-1 h-4 w-px bg-border" />
+          <Link
+            href={link({ commune: undefined })}
             className={`rounded-full px-2.5 py-1 text-xs ${!activeCommune ? "bg-foreground/10 font-medium" : "text-muted-foreground hover:bg-muted"}`}
           >
             {fr ? "Toutes communes" : "All communes"}
@@ -98,13 +121,19 @@ export function VerticalHub({
           {COMMUNES.map((c) => (
             <Link
               key={c.slug}
-              href={hrefFor(activeCategory, c.slug)}
+              href={link({ commune: c.slug })}
               className={`rounded-full px-2.5 py-1 text-xs ${activeCommune === c.slug ? "bg-foreground/10 font-medium" : "text-muted-foreground hover:bg-muted"}`}
             >
               {c.display}
             </Link>
           ))}
         </div>
+
+        <SortBar
+          locale={locale}
+          activeSort={activeSort}
+          hrefForSort={(s) => link({ sort: s === "recommended" ? undefined : s })}
+        />
 
         {/* Results */}
         {providers.length === 0 ? (
@@ -120,13 +149,13 @@ export function VerticalHub({
             ))}
           </div>
         )}
-        {total > providers.length && (
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            {fr
-              ? `${providers.length} affichés sur ${total} — affinez avec un filtre.`
-              : `Showing ${providers.length} of ${total} — narrow with a filter.`}
-          </p>
-        )}
+
+        <Pagination
+          page={page}
+          pageCount={pageCount}
+          hrefForPage={(pg) => hrefWith(base, current, { page: pg === 1 ? undefined : pg })}
+          locale={locale}
+        />
 
         {/* SEO: category × commune deep links */}
         {seoCatSlug && (

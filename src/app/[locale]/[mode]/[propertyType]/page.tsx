@@ -9,7 +9,7 @@ import {
 import {
   getActiveCategoryBySlug,
   getActiveVerticalBySlug,
-  listProvidersForCategory,
+  queryProviders,
 } from "@/lib/marketplace/public-queries";
 import { cname } from "@/lib/marketplace/display";
 import { CategoryView } from "@/components/marketplace/category-view";
@@ -112,13 +112,17 @@ export default async function TypeIndexPage({
   if (!modeEntry || !typeEntry) {
     const mkt = await resolveMarketplace(mode, propertyType);
     if (!mkt) notFound();
-    const providers = await listProvidersForCategory(mkt.category.id);
+    const { providers, total } = await queryProviders({
+      categoryId: mkt.category.id,
+      pageSize: 12,
+    });
     return (
       <CategoryView
         vertical={mkt.vertical}
         category={mkt.category}
         communeSlug={null}
         providers={providers}
+        total={total}
         locale={locale}
       />
     );
