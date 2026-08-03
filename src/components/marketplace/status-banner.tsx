@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { Dots } from "./dots";
 
 /**
  * Success/error banner driven by ?lead= / ?error= after a form redirect.
@@ -42,7 +43,8 @@ function BannerInner({ locale }: { locale: string }) {
             ? "Demande envoyée ! Les prestataires vous contacteront directement."
             : "Request sent! Providers will contact you directly.";
     return (
-      <p className="mb-6 rounded-xl bg-green-500/10 px-4 py-3 text-sm text-green-700" role="status">
+      <p className="mb-6 flex items-center gap-2.5 rounded-xl bg-green-500/10 px-4 py-3 text-sm text-green-700" role="status">
+        <Dots size={6} />
         {msg}
       </p>
     );

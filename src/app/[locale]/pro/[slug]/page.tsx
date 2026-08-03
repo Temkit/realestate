@@ -16,6 +16,7 @@ import { computeAvailableSlots } from "@/lib/marketplace/slots";
 import { weeklyHours, isOpenNow } from "@/lib/marketplace/hours";
 import { getRatingSummary, listApprovedReviews } from "@/lib/marketplace/reviews";
 import { StarRating } from "@/components/marketplace/star-rating";
+import { Dots } from "@/components/marketplace/dots";
 import { SiteHeader } from "@/components/marketplace/site-header";
 import { Footer } from "@/components/footer";
 import { HoursTable } from "@/components/marketplace/hours-table";
@@ -244,7 +245,8 @@ export default async function ProviderProfilePage({
 
           {offers.length > 0 && (
             <div className="rounded-2xl border bg-card p-5">
-              <h2 className="mb-3 text-base font-semibold">
+              <h2 className="mb-3 flex items-center gap-2 text-base font-semibold">
+                <Dots size={6} />
                 {fr ? "Prestations & tarifs" : "Services & prices"}
               </h2>
               <ul className="space-y-2">
@@ -265,7 +267,8 @@ export default async function ProviderProfilePage({
 
           {reviews.length > 0 && (
             <div className="mt-6">
-              <h2 className="mb-3 text-base font-semibold">
+              <h2 className="mb-3 flex items-center gap-2 text-base font-semibold">
+                <Dots size={6} />
                 {fr ? "Avis clients" : "Customer reviews"}
               </h2>
               <div className="space-y-3">
@@ -385,7 +388,8 @@ export default async function ProviderProfilePage({
 
       {similar.length > 0 && (
         <section className="mt-12 border-t pt-8">
-          <h2 className="mb-4 text-lg font-semibold">
+          <h2 className="mb-4 flex items-center gap-2.5 text-lg font-semibold">
+            <Dots size={6} />
             {fr ? "Prestataires similaires" : "Similar providers"}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

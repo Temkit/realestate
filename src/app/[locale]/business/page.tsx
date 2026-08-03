@@ -3,6 +3,7 @@ import NextLink from "next/link";
 import { setRequestLocale } from "next-intl/server";
 import { BadgeCheck, CalendarCheck, Euro, MessageSquare } from "lucide-react";
 import { SiteHeader } from "@/components/marketplace/site-header";
+import { SectionDots } from "@/components/marketplace/dots";
 import { Footer } from "@/components/footer";
 
 export const revalidate = 86400;
@@ -81,6 +82,7 @@ export default async function BusinessPage({
       <main id="main-content" className="flex-1">
         <section className="hero-mesh px-3.5 py-16 sm:px-8 sm:py-24">
           <div className="mx-auto max-w-2xl text-center">
+            <SectionDots className="mb-4" />
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
               {fr ? "Développez votre activité au Luxembourg" : "Grow your business in Luxembourg"}
             </h1>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 import { GUIDES } from "@/lib/marketplace/guides";
 import { SiteHeader } from "@/components/marketplace/site-header";
+import { Dots } from "@/components/marketplace/dots";
 import { Footer } from "@/components/footer";
 
 export const revalidate = 86400;
@@ -37,6 +38,7 @@ export default async function GuidesIndex({
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main className="mx-auto w-full max-w-4xl flex-1 px-3.5 py-10 sm:px-8">
+        <Dots size={7} className="mb-3" />
         <h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl">
           {fr ? "Guides & conseils" : "Guides & tips"}
         </h1>

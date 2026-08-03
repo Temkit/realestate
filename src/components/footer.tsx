@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import NextLink from "next/link";
 import { Logo } from "@/components/marketplace/logo";
+import { Dots } from "@/components/marketplace/dots";
 
 export function Footer() {
   const t = useTranslations("footer");
@@ -58,7 +59,10 @@ export function Footer() {
           </nav>
         </div>
 
-        <div className="mt-6 pt-6 border-t text-xs text-muted-foreground/60">
+        <div className="mt-6 flex justify-center border-t pt-5">
+          <Dots size={6} />
+        </div>
+        <div className="mt-4 text-xs text-muted-foreground/60">
           {t("copyright")}
           <span className="mx-1.5">·</span>
           <span>

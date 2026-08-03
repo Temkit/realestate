@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dots } from "@/components/marketplace/dots";
 
 export default function Loading() {
   return (
@@ -11,8 +12,9 @@ export default function Loading() {
       </div>
       <div className="max-w-6xl mx-auto px-4 py-24">
         <div className="text-center">
-          <Skeleton className="h-12 w-80 mx-auto mb-4" />
-          <Skeleton className="h-5 w-64 mx-auto" />
+          <Dots size={10} pulse className="mb-8" />
+          <Skeleton className="h-12 w-80 max-w-full mx-auto mb-4" />
+          <Skeleton className="h-5 w-64 max-w-full mx-auto" />
         </div>
       </div>
     </div>

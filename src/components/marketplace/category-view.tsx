@@ -5,6 +5,7 @@ import type { PublicProvider } from "@/lib/marketplace/public-queries";
 import type { Category, Vertical } from "@/lib/marketplace/types";
 import { cname, communeDisplay, vname } from "@/lib/marketplace/display";
 import { categoryFaq, categoryIntro } from "@/lib/marketplace/content";
+import { Dots } from "./dots";
 import { LeadForm } from "./lead-form";
 import { ProviderCard } from "./provider-card";
 import { StatusBanner } from "./status-banner";
@@ -103,7 +104,8 @@ export function CategoryView({
       </nav>
 
       <h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl">{heading}</h1>
-      <p className="mb-6 text-muted-foreground">
+      <p className="mb-6 flex items-center gap-2 text-muted-foreground">
+        <Dots size={5} />
         {fr
           ? `${total} prestataire${total === 1 ? "" : "s"} — devis gratuits, sans engagement.`
           : `${total} provider${total === 1 ? "" : "s"} — free quotes, no obligation.`}
@@ -121,9 +123,12 @@ export function CategoryView({
         <div className="space-y-4 lg:col-span-2">
           {providers.length === 0 ? (
             <div className="rounded-2xl border bg-card p-8 text-center text-sm text-muted-foreground">
-              {fr
-                ? "Pas encore de prestataire référencé ici — envoyez votre demande, nous la transmettons dès qu'un prestataire rejoint lëtz24."
-                : "No providers listed here yet — send your request and we'll forward it as soon as one joins lëtz24."}
+              <Dots size={9} className="mb-4 opacity-70" />
+              <p>
+                {fr
+                  ? "Pas encore de prestataire référencé ici — envoyez votre demande, nous la transmettons dès qu'un prestataire rejoint lëtz24."
+                  : "No providers listed here yet — send your request and we'll forward it as soon as one joins lëtz24."}
+              </p>
             </div>
           ) : (
             <>
@@ -170,7 +175,8 @@ export function CategoryView({
 
         <aside>
           <div className="sticky top-6 rounded-2xl border bg-card p-5">
-            <h2 className="mb-1 text-base font-semibold">
+            <h2 className="mb-1 flex items-center gap-2 text-base font-semibold">
+              <Dots size={6} />
               {fr ? "Recevez jusqu'à 3 devis" : "Get up to 3 quotes"}
             </h2>
             <p className="mb-4 text-xs text-muted-foreground">
@@ -187,7 +193,8 @@ export function CategoryView({
       </div>
 
       <section className="mt-12 max-w-3xl border-t pt-8">
-        <h2 className="mb-4 text-lg font-semibold">
+        <h2 className="mb-4 flex items-center gap-2.5 text-lg font-semibold">
+          <Dots size={6} />
           {fr ? "Questions fréquentes" : "Frequently asked questions"}
         </h2>
         <dl className="space-y-4">

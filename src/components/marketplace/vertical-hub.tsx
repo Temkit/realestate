@@ -9,6 +9,7 @@ import { SiteHeader } from "./site-header";
 import { ProviderCard } from "./provider-card";
 import { SortBar } from "./sort-bar";
 import { Pagination } from "./pagination";
+import { Dots } from "./dots";
 import { Footer } from "@/components/footer";
 
 /**
@@ -78,7 +79,8 @@ export function VerticalHub({
           {communeLabel && <span className="text-muted-foreground"> · {communeLabel}</span>}
           <span className="text-muted-foreground"> {fr ? "au Luxembourg" : "in Luxembourg"}</span>
         </h1>
-        <p className="mb-5 mt-1 text-sm text-muted-foreground">
+        <p className="mb-5 mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+          <Dots size={5} />
           {total} {fr ? "prestataires" : "providers"} · {fr ? "devis gratuits, rendez-vous en ligne" : "free quotes, online booking"}
         </p>
 
@@ -138,9 +140,12 @@ export function VerticalHub({
         {/* Results */}
         {providers.length === 0 ? (
           <div className="rounded-2xl border bg-card p-8 text-center text-sm text-muted-foreground">
-            {fr
-              ? "Aucun prestataire pour ce filtre. Élargissez la recherche ou envoyez une demande."
-              : "No providers for this filter. Widen the search or send a request."}
+            <Dots size={9} className="mb-4 opacity-70" />
+            <p>
+              {fr
+                ? "Aucun prestataire pour ce filtre. Élargissez la recherche ou envoyez une demande."
+                : "No providers for this filter. Widen the search or send a request."}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -160,7 +165,8 @@ export function VerticalHub({
         {/* SEO: category × commune deep links */}
         {seoCatSlug && (
           <section className="mt-10 border-t pt-6">
-            <h2 className="mb-2 text-sm font-medium text-muted-foreground">
+            <h2 className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Dots size={5} />
               {fr ? "Par commune" : "By commune"}
             </h2>
             <div className="flex flex-wrap gap-2">

@@ -4,6 +4,7 @@ import { setRequestLocale } from "next-intl/server";
 import { queryProviders } from "@/lib/marketplace/public-queries";
 import { hrefWith } from "@/lib/marketplace/url";
 import { SiteHeader } from "@/components/marketplace/site-header";
+import { Dots } from "@/components/marketplace/dots";
 import { ServiceSearch } from "@/components/marketplace/service-search";
 import { ProviderCard } from "@/components/marketplace/provider-card";
 import { Pagination } from "@/components/marketplace/pagination";
@@ -48,6 +49,7 @@ export default async function SearchPage({
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main className="mx-auto w-full max-w-5xl flex-1 px-3.5 py-8 sm:px-8">
+        <Dots size={7} className="mb-3" />
         <h1 className="mb-4 text-2xl font-bold tracking-tight">
           {term
             ? fr

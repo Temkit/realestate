@@ -26,6 +26,7 @@ import {
 } from "@/lib/marketplace/public-queries";
 import { vname } from "@/lib/marketplace/display";
 import { ProviderCard } from "@/components/marketplace/provider-card";
+import { Dots, SectionDots } from "@/components/marketplace/dots";
 
 // Refresh homepage counts + featured hourly (DB-backed).
 export const revalidate = 3600;
@@ -88,7 +89,10 @@ export default async function HomePage({
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
               {t("hero.title")}{" "}
-              <span className="text-primary">{t("hero.titleHighlight")}</span>
+              <span className="whitespace-nowrap">
+                <span className="text-primary">{t("hero.titleHighlight")}</span>
+                <Dots size={9} className="ml-3 align-baseline" />
+              </span>
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
               {t("hero.subtitle")}
@@ -114,6 +118,7 @@ export default async function HomePage({
 
         {/* Verticals grid */}
         <section id="services" className="mx-auto max-w-7xl scroll-mt-20 px-3.5 py-14 sm:px-8">
+          <SectionDots className="mb-3" />
           <h2 className="mb-2 text-center text-2xl font-bold tracking-tight">
             {t("verticalsSection.title")}
           </h2>
@@ -168,7 +173,10 @@ export default async function HomePage({
         {/* Featured providers — a row per vertical */}
         {featuredByVertical.length > 0 && (
           <section className="mx-auto max-w-7xl px-3.5 pb-8 sm:px-8">
-            <h2 className="mb-4 text-lg font-semibold">{t("featured.title")}</h2>
+            <h2 className="mb-4 flex items-center gap-2.5 text-lg font-semibold">
+              <Dots size={6} />
+              {t("featured.title")}
+            </h2>
             <div className="space-y-8">
               {featuredByVertical.map(({ vertical, providers }) => (
                 <div key={vertical.id}>
@@ -195,6 +203,7 @@ export default async function HomePage({
         {/* How it works */}
         <section className="border-y bg-muted/30 px-3.5 py-14 sm:px-8">
           <div className="mx-auto max-w-5xl">
+            <SectionDots className="mb-3" />
             <h2 className="mb-10 text-center text-2xl font-bold tracking-tight">
               {t("howItWorks.title")}
             </h2>
@@ -218,6 +227,7 @@ export default async function HomePage({
         {/* List your business CTA */}
         <section className="mx-auto max-w-5xl px-3.5 py-16 sm:px-8">
           <div className="rounded-3xl border bg-card p-8 text-center sm:p-12">
+            <SectionDots className="mb-4" />
             <h2 className="text-2xl font-bold tracking-tight">{t("pro.title")}</h2>
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{t("pro.subtitle")}</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">

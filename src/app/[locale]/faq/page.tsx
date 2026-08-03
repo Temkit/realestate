@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { SiteHeader } from "@/components/marketplace/site-header";
+import { Dots } from "@/components/marketplace/dots";
 import { Footer } from "@/components/footer";
 
 export const revalidate = 86400;
@@ -65,6 +66,7 @@ export default async function FaqPage({
       <SiteHeader />
       <main className="mx-auto w-full max-w-2xl flex-1 px-3.5 py-10 sm:px-8">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <Dots size={7} className="mb-3" />
         <h1 className="mb-8 text-2xl font-bold tracking-tight sm:text-3xl">
           {fr ? "Questions fréquentes" : "Frequently asked questions"}
         </h1>
