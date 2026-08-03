@@ -24,7 +24,7 @@ export default async function AdminLoginPage({
         action={loginAction}
         className="w-full max-w-sm space-y-4 rounded-2xl border bg-card p-8"
       >
-        <h1 className="text-xl font-semibold">lux24 admin</h1>
+        <h1 className="text-xl font-semibold">lëtz24 admin</h1>
         {error && (
           <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600">
             {ERRORS[error] ?? "Login failed."}

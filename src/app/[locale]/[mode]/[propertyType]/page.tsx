@@ -54,13 +54,13 @@ export async function generateMetadata({
     const catName = cname(mkt.category, locale);
     const title =
       locale === "fr"
-        ? `${catName} au Luxembourg — comparez & recevez des devis | lux24`
-        : `${catName} in Luxembourg — compare & get quotes | lux24`;
+        ? `${catName} au Luxembourg — comparez & recevez des devis | lëtz24`
+        : `${catName} in Luxembourg — compare & get quotes | lëtz24`;
     const description =
       locale === "fr"
         ? `Trouvez un prestataire pour « ${catName} » au Luxembourg. Jusqu'à 3 devis gratuits, prise de rendez-vous en ligne.`
         : `Find a provider for "${catName}" in Luxembourg. Up to 3 free quotes, online appointment booking.`;
-    const canonical = `https://olu.lu/${locale}/${mode}/${propertyType}`;
+    const canonical = `https://letz24.lu/${locale}/${mode}/${propertyType}`;
     return {
       title,
       description,
@@ -71,13 +71,13 @@ export async function generateMetadata({
 
   const title =
     locale === "fr"
-      ? `${typeEntry.display}s ${modeEntry.internal === "buy" ? "à acheter" : "à louer"} au Luxembourg | olu.lu`
-      : `${typeEntry.display}s for ${modeEntry.internal === "buy" ? "sale" : "rent"} in Luxembourg | olu.lu`;
+      ? `${typeEntry.display}s ${modeEntry.internal === "buy" ? "à acheter" : "à louer"} au Luxembourg | letz24.lu`
+      : `${typeEntry.display}s for ${modeEntry.internal === "buy" ? "sale" : "rent"} in Luxembourg | letz24.lu`;
   const description =
     locale === "fr"
       ? `Toutes les annonces de ${typeEntry.display.toLowerCase()}s ${modeEntry.internal === "buy" ? "à acheter" : "à louer"} au Luxembourg. Parcourez 12 communes : Luxembourg-Ville, Esch-sur-Alzette, Kirchberg, Mondorf, Strassen et plus.`
       : `All ${typeEntry.display.toLowerCase()}s for ${modeEntry.internal === "buy" ? "sale" : "rent"} in Luxembourg. Browse 12 communes: Luxembourg City, Esch-sur-Alzette, Kirchberg, Mondorf, Strassen and more.`;
-  const canonical = `https://olu.lu/${locale}/${mode}/${propertyType}`;
+  const canonical = `https://letz24.lu/${locale}/${mode}/${propertyType}`;
 
   return {
     title,
@@ -91,7 +91,7 @@ export async function generateMetadata({
       description,
       url: canonical,
       type: "website",
-      siteName: "olu.lu",
+      siteName: "letz24.lu",
       locale: locale === "fr" ? "fr_LU" : "en_US",
       images: ["/og-image.png"],
     },

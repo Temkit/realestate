@@ -47,7 +47,7 @@ export default async function PortalDashboardPage() {
           <p className="font-medium">Passez au plan Premium</p>
           <p className="mt-1 text-muted-foreground">
             Mise en avant dans les résultats, réservation automatique en ligne,
-            et badge « vérifié ». Contactez votre conseiller lux24.
+            et badge « vérifié ». Contactez votre conseiller lëtz24.
           </p>
         </div>
       )}

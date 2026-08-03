@@ -20,7 +20,7 @@ export async function GET(
     const url = process.env.TURSO_DATABASE_URL;
     const authToken = process.env.TURSO_AUTH_TOKEN;
     if (!url || !authToken) {
-      return NextResponse.redirect("https://olu.lu", { status: 302 });
+      return NextResponse.redirect("https://letz24.lu", { status: 302 });
     }
 
     const db = createClient({ url, authToken });
@@ -51,8 +51,8 @@ export async function GET(
     }
 
     // Not found — redirect to home
-    return NextResponse.redirect("https://olu.lu", { status: 302 });
+    return NextResponse.redirect("https://letz24.lu", { status: 302 });
   } catch {
-    return NextResponse.redirect("https://olu.lu", { status: 302 });
+    return NextResponse.redirect("https://letz24.lu", { status: 302 });
   }
 }

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 const ERRORS: Record<string, string> = {
   expired: "Ce lien a expiré. Demandez-en un nouveau ci-dessous.",
-  inactive: "Ce compte n'est pas actif. Contactez lux24.",
+  inactive: "Ce compte n'est pas actif. Contactez lëtz24.",
 };
 
 export default async function PortalLoginPage({
@@ -21,7 +21,7 @@ export default async function PortalLoginPage({
     <main className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-4 rounded-2xl border bg-card p-8">
         <div>
-          <h1 className="text-xl font-semibold">Espace pro lux24</h1>
+          <h1 className="text-xl font-semibold">Espace pro lëtz24</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Recevez un lien de connexion par email.
           </p>

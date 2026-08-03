@@ -122,8 +122,8 @@ export function CategoryView({
           {providers.length === 0 ? (
             <div className="rounded-2xl border bg-card p-8 text-center text-sm text-muted-foreground">
               {fr
-                ? "Pas encore de prestataire référencé ici — envoyez votre demande, nous la transmettons dès qu'un prestataire rejoint lux24."
-                : "No providers listed here yet — send your request and we'll forward it as soon as one joins lux24."}
+                ? "Pas encore de prestataire référencé ici — envoyez votre demande, nous la transmettons dès qu'un prestataire rejoint lëtz24."
+                : "No providers listed here yet — send your request and we'll forward it as soon as one joins lëtz24."}
             </div>
           ) : (
             <>

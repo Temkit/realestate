@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lëtz24 — Logo, simplified</title>
+<style>
+  :root{
+    --bg:#f5f7fb;--surface:#fff;--text:#0c1a33;--muted:#5a6c8c;--line:#e0e6f0;
+    --brand:#0b5be3;--brand-2:#0847b3;--accent:#e11d2e;
+    --shadow:0 1px 2px rgba(12,26,51,.05),0 16px 36px -16px rgba(12,26,51,.22);
+    --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0a1220;--surface:#132339;--text:#e8eef7;--muted:#93a3bc;--line:#243855;
+    --brand:#4c8dff;--brand-2:#2f6fe6;--accent:#ff4d5e;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 20px 44px -20px rgba(0,0,0,.65);
+  }}
+  :root[data-theme="light"]{--bg:#f5f7fb;--surface:#fff;--text:#0c1a33;--muted:#5a6c8c;--line:#e0e6f0;--brand:#0b5be3;--brand-2:#0847b3;--accent:#e11d2e;--shadow:0 1px 2px rgba(12,26,51,.05),0 16px 36px -16px rgba(12,26,51,.22);}
+  :root[data-theme="dark"]{--bg:#0a1220;--surface:#132339;--text:#e8eef7;--muted:#93a3bc;--line:#243855;--brand:#4c8dff;--brand-2:#2f6fe6;--accent:#ff4d5e;--shadow:0 1px 2px rgba(0,0,0,.3),0 20px 44px -20px rgba(0,0,0,.65);}
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);letter-spacing:-.01em;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px;}
+
+  .toggle{position:fixed;top:16px;right:18px;z-index:9;display:inline-flex;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px;box-shadow:var(--shadow);}
+  .toggle button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;cursor:pointer;}
+  .toggle button[aria-pressed="true"]{background:var(--brand);color:#fff;}
+
+  /* wordmark */
+  .wm{display:inline-flex;align-items:center;gap:.26em;font-family:var(--font);font-weight:800;letter-spacing:-.05em;line-height:1;color:var(--text);}
+  .wm .e{position:relative;display:inline-block;}
+  .wm .trema{position:absolute;left:50%;top:-.32em;transform:translateX(-50%);display:flex;gap:.13em;}
+  .wm .trema i{width:.16em;height:.16em;border-radius:50%;display:block;}
+  .wm .trema i:first-child{background:currentColor;}
+  .wm .trema i:last-child{background:var(--accent);}
+  .wm .pill{background:var(--brand);color:#fff;border-radius:.3em;padding:.05em .22em .09em;}
+  .wm.knock .pill{background:#fff;color:var(--brand);}
+
+  /* hero */
+  .hero{text-align:center;padding:70px 24px 40px;}
+  .hero .lead{display:inline-flex;align-items:center;gap:.5em;}
+  .hero .pin{width:clamp(70px,13vw,120px);height:auto;}
+  .hero .wm{font-size:clamp(52px,12vw,120px);}
+  .hero .tag{margin-top:22px;color:var(--muted);font-size:16px;}
+
+  /* options */
+  .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;padding:20px 0 30px;}
+  @media (max-width:760px){.opts{grid-template-columns:1fr;}}
+  .opt{background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);
+       padding:40px 24px 22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;transition:transform .18s ease;}
+  .opt:hover{transform:translateY(-4px);}
+  .opt .show{height:120px;display:flex;align-items:center;justify-content:center;}
+  .opt .label{font-weight:700;font-size:15px;margin-top:12px;}
+  .opt .note{font-size:13px;color:var(--muted);max-width:24ch;}
+  .opt .best{font-size:11px;font-weight:700;color:#fff;background:var(--accent);padding:3px 10px;border-radius:999px;margin-bottom:2px;}
+
+  .tile{width:96px;height:96px;border-radius:24%;background:linear-gradient(150deg,var(--brand),var(--brand-2));
+        display:grid;place-items:center;box-shadow:var(--shadow);}
+  .tile .e2{color:#fff;font-weight:800;font-size:52px;line-height:1;position:relative;letter-spacing:-.04em;}
+  .tile .e2 .trema{position:absolute;left:50%;top:-.30em;transform:translateX(-50%);display:flex;gap:.12em;}
+  .tile .e2 .trema i{width:.16em;height:.16em;border-radius:50%;background:#fff;display:block;}
+  .tile .e2 .trema i:last-child{background:var(--accent);}
+
+  /* sizes strip */
+  .strip{display:flex;align-items:flex-end;justify-content:center;gap:22px;flex-wrap:wrap;padding:26px 0 10px;}
+  .strip .cell{text-align:center;color:var(--muted);font-size:11px;}
+  .strip .cell .box{display:flex;align-items:center;justify-content:center;margin-bottom:8px;}
+
+  .foot{text-align:center;color:var(--muted);font-size:13px;padding:24px 0 60px;}
+  h2{font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-align:center;margin:26px 0 4px;}
+</style>
+</head>
+<body>
+  <div class="toggle" role="group" aria-label="Theme">
+    <button type="button" data-set="light" aria-pressed="false">Light</button>
+    <button type="button" data-set="dark" aria-pressed="false">Dark</button>
+  </div>
+
+  <!-- HERO: the primary lockup, big and clear -->
+  <div class="hero">
+    <div class="lead">
+      <svg class="pin" viewBox="0 0 64 68" aria-label="pin">
+        <path d="M32 4 C18 4 7 15 7 29 C7 47 32 64 32 64 C32 64 57 47 57 29 C57 15 46 4 32 4 Z" fill="var(--brand)"/>
+        <circle cx="32" cy="27" r="10" fill="#fff"/>
+        <circle cx="32" cy="27" r="5" fill="var(--accent)"/>
+      </svg>
+      <span class="wm">l<span class="e">e<span class="trema"><i></i><i></i></span></span>tz<span class="pill">24</span></span>
+    </div>
+    <p class="tag">Tous vos services au Luxembourg — comparés, réservés.</p>
+  </div>
+
+  <div class="wrap">
+    <h2>Trois options simples</h2>
+    <div class="opts">
+
+      <!-- A: Pin + wordmark -->
+      <div class="opt">
+        <span class="best">Recommandé</span>
+        <div class="show">
+          <svg width="86" height="92" viewBox="0 0 64 68" aria-label="pin logo">
+            <path d="M32 4 C18 4 7 15 7 29 C7 47 32 64 32 64 C32 64 57 47 57 29 C57 15 46 4 32 4 Z" fill="var(--brand)"/>
+            <circle cx="32" cy="27" r="10" fill="#fff"/>
+            <circle cx="32" cy="27" r="5" fill="var(--accent)"/>
+          </svg>
+        </div>
+        <span class="label">Le pin</span>
+        <p class="note">Point de repère local. Universel, se lit d'un coup d'œil.</p>
+      </div>
+
+      <!-- B: Wordmark only -->
+      <div class="opt">
+        <div class="show">
+          <span class="wm" style="font-size:40px">l<span class="e">e<span class="trema"><i></i><i></i></span></span>tz<span class="pill">24</span></span>
+        </div>
+        <span class="label">Le mot seul</span>
+        <p class="note">Type fort, point rouge, «&nbsp;24&nbsp;» en pastille. Sobre et direct.</p>
+      </div>
+
+      <!-- C: App tile ë -->
+      <div class="opt">
+        <div class="show">
+          <div class="tile"><span class="e2">e<span class="trema"><i></i><i></i></span></span></div>
+        </div>
+        <span class="label">L'icône</span>
+        <p class="note">Pastille bleue, «&nbsp;ë&nbsp;» blanc. Parfait pour l'app et le favicon.</p>
+      </div>
+
+    </div>
+
+    <!-- Recommended one at real sizes -->
+    <h2>Le pin, à toutes les tailles</h2>
+    <div class="strip">
+      <div class="cell"><div class="box"><svg width="72" height="76" viewBox="0 0 64 68"><path d="M32 4 C18 4 7 15 7 29 C7 47 32 64 32 64 C32 64 57 47 57 29 C57 15 46 4 32 4 Z" fill="var(--brand)"/><circle cx="32" cy="27" r="10" fill="#fff"/><circle cx="32" cy="27" r="5" fill="var(--accent)"/></svg></div>72px</div>
+      <div class="cell"><div class="box"><svg width="44" height="47" viewBox="0 0 64 68"><path d="M32 4 C18 4 7 15 7 29 C7 47 32 64 32 64 C32 64 57 47 57 29 C57 15 46 4 32 4 Z" fill="var(--brand)"/><circle cx="32" cy="27" r="10" fill="#fff"/><circle cx="32" cy="27" r="5" fill="var(--accent)"/></svg></div>44px</div>
+      <div class="cell"><div class="box"><svg width="28" height="30" viewBox="0 0 64 68"><path d="M32 4 C18 4 7 15 7 29 C7 47 32 64 32 64 C32 64 57 47 57 29 C57 15 46 4 32 4 Z" fill="var(--brand)"/><circle cx="32" cy="27" r="10" fill="#fff"/><circle cx="32" cy="27" r="5" fill="var(--accent)"/></svg></div>28px</div>
+      <div class="cell"><div class="box"><svg width="16" height="17" viewBox="0 0 64 68"><path d="M32 4 C18 4 7 15 7 29 C7 47 32 64 32 64 C32 64 57 47 57 29 C57 15 46 4 32 4 Z" fill="var(--brand)"/><circle cx="32" cy="27" r="10" fill="#fff"/><circle cx="32" cy="27" r="5" fill="var(--accent)"/></svg></div>16px</div>
+    </div>
+
+    <div class="foot">letz24.lu — dis-moi laquelle te parle et je livre le SVG final + le jeu de favicons.</div>
+  </div>
+
+<script>
+  (function(){
+    var root=document.documentElement, btns=document.querySelectorAll('.toggle button');
+    function sync(){var t=root.getAttribute('data-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches);
+      btns.forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.set===(d?'dark':'light')));});}
+    btns.forEach(function(b){b.addEventListener('click',function(){root.setAttribute('data-theme',b.dataset.set);sync();});});
+    sync();
+  })();
+</script>
+</body>
+</html>

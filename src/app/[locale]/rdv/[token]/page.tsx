@@ -9,7 +9,7 @@ import { cancelAppointmentAction } from "@/lib/marketplace/public-actions";
 import { getMarketplaceDb } from "@/lib/marketplace/db";
 
 export const metadata: Metadata = {
-  title: "Rendez-vous | lux24",
+  title: "Rendez-vous | lëtz24",
   robots: { index: false, follow: false },
 };
 

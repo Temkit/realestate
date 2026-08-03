@@ -6,7 +6,7 @@
 import type { Property } from "@/lib/types";
 import type { ResolvedParams } from "./slugs";
 
-const BASE_URL = "https://olu.lu";
+const BASE_URL = "https://letz24.lu";
 
 export function buildListingJsonLd(
   resolved: ResolvedParams,

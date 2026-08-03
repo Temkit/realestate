@@ -10,8 +10,8 @@ export async function generateMetadata({
   const { locale } = await params;
   const fr = locale === "fr";
   const title = fr
-    ? "Immobilier au Luxembourg — recherche IA | lux24"
-    : "Luxembourg Real Estate — AI search | lux24";
+    ? "Immobilier au Luxembourg — recherche IA | lëtz24"
+    : "Luxembourg Real Estate — AI search | lëtz24";
   const description = fr
     ? "Recherche immobilière intelligente au Luxembourg : appartements, maisons, bureaux à louer ou à acheter, tous les portails en une recherche."
     : "Smart real-estate search in Luxembourg: apartments, houses and offices to rent or buy, all portals in one search.";

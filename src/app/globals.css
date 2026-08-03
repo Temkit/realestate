@@ -55,8 +55,11 @@
   --card-foreground: oklch(0.145 0.015 50);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0.015 50);
-  --primary: oklch(0.48 0.19 265);
+  --primary: oklch(0.52 0.21 262); /* lëtz24 brand blue #1554e8 */
   --primary-foreground: oklch(0.985 0 0);
+  /* Brand logotype colours (see src/components/marketplace/logo.tsx) */
+  --logo-blue: #1554e8;
+  --logo-red: #e63946;
   --secondary: oklch(0.955 0.005 75);
   --secondary-foreground: oklch(0.30 0.02 50);
   --muted: oklch(0.960 0.004 75);
@@ -91,8 +94,10 @@
   --card-foreground: oklch(0.96 0.005 75);
   --popover: oklch(0.195 0.012 50);
   --popover-foreground: oklch(0.96 0.005 75);
-  --primary: oklch(0.72 0.14 265);
+  --primary: oklch(0.66 0.17 262); /* lëtz24 brand blue, luminous for dark */
   --primary-foreground: oklch(0.15 0.02 265);
+  --logo-blue: #5f92ff;
+  --logo-red: #ff5a68;
   --secondary: oklch(0.24 0.01 50);
   --secondary-foreground: oklch(0.88 0.01 75);
   --muted: oklch(0.24 0.008 50);

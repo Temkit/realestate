@@ -193,7 +193,7 @@ export function PropertyDetail({
                         const url = property.listingUrl || (property.listingUrls && property.listingUrls[0]) || window.location.href;
                         const shareData = {
                           title: `${property.propertyType} — ${property.city || property.address}`,
-                          text: `${property.propertyType} ${property.price > 0 ? `€${formatNumber(property.price)}` : ""} ${property.sqft > 0 ? `· ${property.sqft}m²` : ""} on olu.lu`,
+                          text: `${property.propertyType} ${property.price > 0 ? `€${formatNumber(property.price)}` : ""} ${property.sqft > 0 ? `· ${property.sqft}m²` : ""} on letz24.lu`,
                           url,
                         };
                         try {

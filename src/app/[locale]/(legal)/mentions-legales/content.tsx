@@ -14,10 +14,10 @@ export function MentionsLegales() {
     >
       <h2>{isFr ? "Éditeur du site" : "Site Publisher"}</h2>
       <p>
-        <strong>olu.lu</strong><br />
+        <strong>letz24.lu</strong><br />
         {isFr ? "Projet personnel" : "Personal project"}<br />
         {isFr ? "Responsable" : "Responsible person"}: Temkit Sid Ali<br />
-        {isFr ? "Contact" : "Contact"}: <a href="mailto:contact@olu.lu">contact@olu.lu</a>
+        {isFr ? "Contact" : "Contact"}: <a href="mailto:contact@letz24.lu">contact@letz24.lu</a>
       </p>
 
       <h2>{isFr ? "Hébergement" : "Hosting"}</h2>
@@ -38,8 +38,8 @@ export function MentionsLegales() {
       <h2>{isFr ? "Nature du service" : "Nature of Service"}</h2>
       <p>
         {isFr
-          ? "olu.lu est un agrégateur de recherche immobilière. Les annonces affichées proviennent de sources publiques (athome.lu, immotop.lu, wortimmo.lu, etc.). olu.lu n'est pas une agence immobilière et ne participe à aucune transaction."
-          : "olu.lu is a real estate search aggregator. Listings displayed come from public sources (athome.lu, immotop.lu, wortimmo.lu, etc.). olu.lu is not a real estate agency and does not participate in any transaction."}
+          ? "letz24.lu est un agrégateur de recherche immobilière. Les annonces affichées proviennent de sources publiques (athome.lu, immotop.lu, wortimmo.lu, etc.). letz24.lu n'est pas une agence immobilière et ne participe à aucune transaction."
+          : "letz24.lu is a real estate search aggregator. Listings displayed come from public sources (athome.lu, immotop.lu, wortimmo.lu, etc.). letz24.lu is not a real estate agency and does not participate in any transaction."}
       </p>
     </LegalPage>
   );

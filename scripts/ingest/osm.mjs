@@ -86,7 +86,7 @@ function buildQuery(selectors) {
 
 // Overpass requires a descriptive User-Agent and can rate-limit (429);
 // retry across endpoints with backoff.
-const UA = "lux24-directory-ingest/1.0 (+https://lux24.lu; contact@lux24.lu)";
+const UA = "lux24-directory-ingest/1.0 (+https://letz24.lu; contact@letz24.lu)";
 
 async function overpass(query) {
   let lastErr;

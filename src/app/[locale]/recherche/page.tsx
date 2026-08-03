@@ -19,7 +19,7 @@ export async function generateMetadata({
   const { locale } = await params;
   const fr = locale === "fr";
   return {
-    title: fr ? "Recherche — lux24" : "Search — lux24",
+    title: fr ? "Recherche — lëtz24" : "Search — lëtz24",
     robots: { index: false, follow: true },
   };
 }

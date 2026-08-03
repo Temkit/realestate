@@ -15,15 +15,15 @@ export function TermsOfService() {
       <h2>{isFr ? "Objet" : "Purpose"}</h2>
       <p>
         {isFr
-          ? "Les présentes conditions régissent l'utilisation du site olu.lu, un agrégateur de recherche immobilière au Luxembourg."
-          : "These terms govern the use of olu.lu, a real estate search aggregator in Luxembourg."}
+          ? "Les présentes conditions régissent l'utilisation du site letz24.lu, un agrégateur de recherche immobilière au Luxembourg."
+          : "These terms govern the use of letz24.lu, a real estate search aggregator in Luxembourg."}
       </p>
 
       <h2>{isFr ? "Nature du service" : "Nature of Service"}</h2>
       <p>
         {isFr
-          ? "olu.lu est un outil de recherche qui agrège des annonces immobilières provenant de sources publiques (athome.lu, immotop.lu, wortimmo.lu, etc.). olu.lu n'est pas une agence immobilière, ne propose aucun bien à la vente ou à la location, et ne participe à aucune transaction immobilière."
-          : "olu.lu is a search tool that aggregates real estate listings from public sources (athome.lu, immotop.lu, wortimmo.lu, etc.). olu.lu is not a real estate agency, does not offer any property for sale or rent, and does not participate in any real estate transaction."}
+          ? "letz24.lu est un outil de recherche qui agrège des annonces immobilières provenant de sources publiques (athome.lu, immotop.lu, wortimmo.lu, etc.). letz24.lu n'est pas une agence immobilière, ne propose aucun bien à la vente ou à la location, et ne participe à aucune transaction immobilière."
+          : "letz24.lu is a search tool that aggregates real estate listings from public sources (athome.lu, immotop.lu, wortimmo.lu, etc.). letz24.lu is not a real estate agency, does not offer any property for sale or rent, and does not participate in any real estate transaction."}
       </p>
 
       <h2>{isFr ? "Exactitude des informations" : "Accuracy of Information"}</h2>
@@ -36,15 +36,15 @@ export function TermsOfService() {
       <h2>{isFr ? "Propriété intellectuelle" : "Intellectual Property"}</h2>
       <p>
         {isFr
-          ? "Les annonces immobilières appartiennent à leurs portails et agences respectifs. olu.lu fournit uniquement des liens vers les annonces originales."
-          : "Real estate listings belong to their respective portals and agencies. olu.lu only provides links to the original listings."}
+          ? "Les annonces immobilières appartiennent à leurs portails et agences respectifs. letz24.lu fournit uniquement des liens vers les annonces originales."
+          : "Real estate listings belong to their respective portals and agencies. letz24.lu only provides links to the original listings."}
       </p>
 
       <h2>{isFr ? "Limitation de responsabilité" : "Limitation of Liability"}</h2>
       <p>
         {isFr
-          ? "olu.lu ne pourra être tenu responsable des dommages directs ou indirects résultant de l'utilisation du site, notamment en cas d'informations inexactes, d'indisponibilité du service, ou de décisions prises sur la base des informations affichées."
-          : "olu.lu shall not be held liable for any direct or indirect damages resulting from the use of the site, including inaccurate information, service unavailability, or decisions made based on displayed information."}
+          ? "letz24.lu ne pourra être tenu responsable des dommages directs ou indirects résultant de l'utilisation du site, notamment en cas d'informations inexactes, d'indisponibilité du service, ou de décisions prises sur la base des informations affichées."
+          : "letz24.lu shall not be held liable for any direct or indirect damages resulting from the use of the site, including inaccurate information, service unavailability, or decisions made based on displayed information."}
       </p>
 
       <h2>{isFr ? "Droit applicable" : "Applicable Law"}</h2>

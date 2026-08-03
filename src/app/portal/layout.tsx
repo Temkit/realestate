@@ -3,7 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import "../globals.css";
 
 export const metadata: Metadata = {
-  title: "Espace pro — lux24",
+  title: "Espace pro — lëtz24",
   robots: { index: false, follow: false },
 };
 

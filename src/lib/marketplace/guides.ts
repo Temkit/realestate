@@ -30,8 +30,8 @@ export const GUIDES: Guide[] = [
       {
         h: { fr: "Vérifiez les avis et la réputation", en: "Check reviews and reputation" },
         p: {
-          fr: "Les avis clients donnent une bonne idée du sérieux d'un garage. Sur lux24, les prestataires « Vérifiés » ont confirmé leur fiche et sont joignables directement.",
-          en: "Customer reviews give a good sense of a garage's reliability. On lux24, 'Verified' providers have confirmed their listing and are reachable directly.",
+          fr: "Les avis clients donnent une bonne idée du sérieux d'un garage. Sur lëtz24, les prestataires « Vérifiés » ont confirmé leur fiche et sont joignables directement.",
+          en: "Customer reviews give a good sense of a garage's reliability. On lëtz24, 'Verified' providers have confirmed their listing and are reachable directly.",
         },
       },
       {
@@ -76,8 +76,8 @@ export const GUIDES: Guide[] = [
       {
         h: { fr: "Comparez plusieurs devis", en: "Compare several quotes" },
         p: {
-          fr: "Pour les travaux non urgents, demandez trois devis gratuits sur lux24 et comparez le détail des prestations, pas seulement le prix total.",
-          en: "For non-urgent work, request three free quotes on lux24 and compare the breakdown, not just the total price.",
+          fr: "Pour les travaux non urgents, demandez trois devis gratuits sur lëtz24 et comparez le détail des prestations, pas seulement le prix total.",
+          en: "For non-urgent work, request three free quotes on lëtz24 and compare the breakdown, not just the total price.",
         },
       },
     ],

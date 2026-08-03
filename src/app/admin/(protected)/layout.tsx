@@ -20,7 +20,7 @@ export default async function AdminProtectedLayout({
       <header className="mb-8 flex items-center justify-between border-b pb-4">
         <nav className="flex items-center gap-5 text-sm">
           <Link href="/admin" className="font-semibold">
-            lux24 admin
+            lëtz24 admin
           </Link>
           <Link href="/admin/providers" className="text-muted-foreground hover:text-foreground">
             Providers

@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "./logo";
 
 /** Launch verticals — slugs are stable (spec §2). Kept static for a fast header. */
 const VERTICALS = [
@@ -25,13 +26,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-3.5 sm:px-8">
-        <Link href="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#3b5bdb] shadow-sm">
-            <span className="text-sm font-extrabold tracking-tight text-white">L</span>
-          </div>
-          <span className="text-[1.125rem] font-bold tracking-tight">
-            lux<span className="font-normal text-muted-foreground">24</span>
-          </span>
+        <Link href="/" aria-label="lëtz24 — accueil" onClick={() => setOpen(false)}>
+          <Logo className="h-8 w-auto" />
         </Link>
 
         <nav className="hidden items-center gap-5 text-sm lg:flex">

@@ -15,7 +15,7 @@ export async function generateMetadata({
   const { locale } = await params;
   const fr = locale === "fr";
   return {
-    title: fr ? "Référencez votre entreprise | lux24" : "List your business | lux24",
+    title: fr ? "Référencez votre entreprise | lëtz24" : "List your business | lëtz24",
     description: fr
       ? "Recevez des demandes de clients au Luxembourg. Gratuit pour démarrer, sans commission cachée."
       : "Receive customer requests in Luxembourg. Free to start, no hidden commission.",
@@ -65,12 +65,12 @@ export default async function BusinessPage({
 
   const steps = fr
     ? [
-        ["Trouvez votre fiche", "Votre entreprise est peut-être déjà listée sur lux24."],
+        ["Trouvez votre fiche", "Votre entreprise est peut-être déjà listée sur lëtz24."],
         ["Revendiquez-la", "Confirmez que vous la gérez — c'est gratuit et immédiat."],
         ["Recevez des clients", "Complétez vos tarifs et horaires, et commencez à recevoir des demandes."],
       ]
     : [
-        ["Find your listing", "Your business may already be listed on lux24."],
+        ["Find your listing", "Your business may already be listed on lëtz24."],
         ["Claim it", "Confirm you manage it — free and instant."],
         ["Get customers", "Add your prices and hours, and start receiving requests."],
       ];
@@ -86,14 +86,14 @@ export default async function BusinessPage({
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
               {fr
-                ? "lux24 met votre entreprise devant des clients qui cherchent exactement votre service. Gratuit pour démarrer, sans commission cachée."
-                : "lux24 puts your business in front of customers looking for exactly your service. Free to start, no hidden commission."}
+                ? "lëtz24 met votre entreprise devant des clients qui cherchent exactement votre service. Gratuit pour démarrer, sans commission cachée."
+                : "lëtz24 puts your business in front of customers looking for exactly your service. Free to start, no hidden commission."}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <NextLink href="/portal/login" className="rounded-xl bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:opacity-90">
                 {fr ? "Accéder à mon espace" : "Go to my dashboard"}
               </NextLink>
-              <a href="mailto:pro@lux24.lu" className="rounded-xl border px-6 py-3 text-sm font-medium hover:bg-muted">
+              <a href="mailto:pro@letz24.lu" className="rounded-xl border px-6 py-3 text-sm font-medium hover:bg-muted">
                 {fr ? "Nous contacter" : "Contact us"}
               </a>
             </div>

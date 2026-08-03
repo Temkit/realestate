@@ -6,18 +6,18 @@ import type { Metadata } from "next";
 import type { ResolvedParams } from "./slugs";
 import { getAlternateUrl } from "./slugs";
 
-const BASE_URL = "https://olu.lu";
+const BASE_URL = "https://letz24.lu";
 
 const TEMPLATES = {
   fr: {
     title: (type: string, mode: string, commune: string) =>
-      `${type} ${mode === "buy" ? "à acheter" : "à louer"} à ${commune} | olu.lu`,
+      `${type} ${mode === "buy" ? "à acheter" : "à louer"} à ${commune} | letz24.lu`,
     description: (type: string, mode: string, commune: string, count: number) =>
       `${count > 0 ? count : ""} ${type.toLowerCase()}${count !== 1 ? "s" : ""} ${mode === "buy" ? "à vendre" : "en location"} à ${commune}, Luxembourg. Prix, photos et analyse du marché immobilier.`,
   },
   en: {
     title: (type: string, mode: string, commune: string) =>
-      `${type} for ${mode === "buy" ? "sale" : "rent"} in ${commune} | olu.lu`,
+      `${type} for ${mode === "buy" ? "sale" : "rent"} in ${commune} | letz24.lu`,
     description: (type: string, mode: string, commune: string, count: number) =>
       `${count > 0 ? count : ""} ${type.toLowerCase()}${count !== 1 ? "s" : ""} for ${mode === "buy" ? "sale" : "rent"} in ${commune}, Luxembourg. Prices, photos and real estate market analysis.`,
   },
@@ -55,7 +55,7 @@ export function generatePageMetadata(
       description,
       type: "website",
       url: canonical,
-      siteName: "olu.lu",
+      siteName: "letz24.lu",
     },
     twitter: {
       card: "summary_large_image",

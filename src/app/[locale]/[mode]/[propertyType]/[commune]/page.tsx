@@ -58,13 +58,13 @@ export async function generateMetadata({
     const communeName = communeDisplay(commune);
     const title =
       locale === "fr"
-        ? `${catName} à ${communeName} — devis gratuits | lux24`
-        : `${catName} in ${communeName} — free quotes | lux24`;
+        ? `${catName} à ${communeName} — devis gratuits | lëtz24`
+        : `${catName} in ${communeName} — free quotes | lëtz24`;
     const description =
       locale === "fr"
         ? `Comparez les prestataires « ${catName} » à ${communeName} et alentours. Jusqu'à 3 devis gratuits, rendez-vous en ligne.`
         : `Compare "${catName}" providers in ${communeName} and nearby. Up to 3 free quotes, online booking.`;
-    const canonical = `https://olu.lu/${locale}/${mode}/${propertyType}/${commune}`;
+    const canonical = `https://letz24.lu/${locale}/${mode}/${propertyType}/${commune}`;
     return {
       title,
       description,

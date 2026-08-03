@@ -7,7 +7,7 @@ import { appointmentHasReview } from "@/lib/marketplace/reviews";
 import { ReviewForm } from "@/components/marketplace/review-form";
 
 export const metadata: Metadata = {
-  title: "Laisser un avis | lux24",
+  title: "Laisser un avis | lëtz24",
   robots: { index: false, follow: false },
 };
 

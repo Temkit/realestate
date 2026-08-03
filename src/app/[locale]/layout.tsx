@@ -13,7 +13,7 @@ type Props = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3b5bdb",
+  themeColor: "#1554e8",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -29,11 +29,11 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://lux24.lu";
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://letz24.lu";
 
   const titles: Record<string, string> = {
-    fr: "lux24 — Tous vos services au Luxembourg",
-    en: "lux24 — Every service in Luxembourg",
+    fr: "lëtz24 — Tous vos services au Luxembourg",
+    en: "lëtz24 — Every service in Luxembourg",
   };
   const descriptions: Record<string, string> = {
     fr: "Comparez et réservez tous les services au Luxembourg : garages, artisans, coiffeurs, déménagement, beauté et immobilier. Devis gratuits, rendez-vous en ligne.",
@@ -48,8 +48,8 @@ export async function generateMetadata({
     metadataBase: new URL(base),
     title,
     description,
-    applicationName: "lux24",
-    authors: [{ name: "lux24" }],
+    applicationName: "lëtz24",
+    authors: [{ name: "lëtz24" }],
     keywords: [
       "Luxembourg",
       "services",
@@ -79,7 +79,7 @@ export async function generateMetadata({
       type: "website",
       title,
       description,
-      siteName: "lux24",
+      siteName: "lëtz24",
       url: canonical,
       locale: locale === "fr" ? "fr_LU" : "en_US",
       images: [
@@ -87,7 +87,7 @@ export async function generateMetadata({
           url: "/og-image.png",
           width: 1200,
           height: 630,
-          alt: "lux24 — services au Luxembourg",
+          alt: "lëtz24 — services au Luxembourg",
         },
       ],
     },
@@ -121,7 +121,7 @@ export async function generateMetadata({
 
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://lux24.lu";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://letz24.lu";
 
   if (!hasLocale(routing.locales, locale)) {
     notFound();
@@ -159,7 +159,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                 {
                   "@type": "Organization",
                   "@id": `${siteUrl}/#organization`,
-                  name: "lux24",
+                  name: "lëtz24",
                   url: siteUrl,
                   logo: {
                     "@type": "ImageObject",
@@ -169,7 +169,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                   },
                   description:
                     "Compare and book every service in Luxembourg — garages, tradespeople, hairdressers, moving, beauty and real estate.",
-                  email: "contact@lux24.lu",
+                  email: "contact@letz24.lu",
                   address: {
                     "@type": "PostalAddress",
                     addressCountry: "LU",
@@ -184,7 +184,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                   "@type": "WebSite",
                   "@id": `${siteUrl}/#website`,
                   url: siteUrl,
-                  name: "lux24",
+                  name: "lëtz24",
                   description:
                     "Marketplace to compare and book services in Luxembourg.",
                   publisher: { "@id": `${siteUrl}/#organization` },

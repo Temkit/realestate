@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lëtz24 — Logo exploration</title>
+<style>
+  :root{
+    --bg:#f5f7fb;--surface:#fff;--card:#fff;--text:#0c1a33;--muted:#5a6c8c;--line:#dde4ef;
+    --brand:#0b5be3;--brand-2:#0847b3;--accent:#e11d2e;--celeste:#2cb8e8;--ink:#0c1a33;
+    --shadow:0 1px 2px rgba(12,26,51,.05),0 14px 34px -14px rgba(12,26,51,.20);
+    --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --maxw:1120px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0a1220;--surface:#101d31;--card:#132339;--text:#e8eef7;--muted:#93a3bc;--line:#243855;
+    --brand:#4c8dff;--brand-2:#2f6fe6;--accent:#ff4d5e;--celeste:#5ccbf0;--ink:#050b16;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 18px 42px -18px rgba(0,0,0,.65);
+  }}
+  :root[data-theme="light"]{--bg:#f5f7fb;--surface:#fff;--card:#fff;--text:#0c1a33;--muted:#5a6c8c;--line:#dde4ef;--brand:#0b5be3;--brand-2:#0847b3;--accent:#e11d2e;--celeste:#2cb8e8;--ink:#0c1a33;--shadow:0 1px 2px rgba(12,26,51,.05),0 14px 34px -14px rgba(12,26,51,.20);}
+  :root[data-theme="dark"]{--bg:#0a1220;--surface:#101d31;--card:#132339;--text:#e8eef7;--muted:#93a3bc;--line:#243855;--brand:#4c8dff;--brand-2:#2f6fe6;--accent:#ff4d5e;--celeste:#5ccbf0;--ink:#050b16;--shadow:0 1px 2px rgba(0,0,0,.3),0 18px 42px -18px rgba(0,0,0,.65);}
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.55;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px;}
+  h1,h2,h3{margin:0;line-height:1.1;letter-spacing:-.03em;text-wrap:balance;}
+  p{margin:0;}
+  a{color:var(--brand);text-decoration:none;}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:8px;}
+  .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--brand);}
+  .eyebrow::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .muted{color:var(--muted);}
+
+  /* wordmark */
+  .wm{display:inline-flex;align-items:center;gap:.28em;font-weight:800;letter-spacing:-.045em;line-height:1;color:var(--text);}
+  .wm .e{position:relative;display:inline-block;}
+  .wm .trema{position:absolute;left:50%;top:-.30em;transform:translateX(-50%);display:flex;gap:.12em;}
+  .wm .trema i{width:.155em;height:.155em;border-radius:50%;display:block;}
+  .wm .trema i:first-child{background:currentColor;}
+  .wm .trema i:last-child{background:var(--accent);}
+  .wm .pill{background:var(--brand);color:#fff;border-radius:.32em;padding:.06em .24em .1em;}
+  .wm.knock{color:#fff;} .wm.knock .pill{background:#fff;color:var(--brand);}
+
+  header.top{border-bottom:1px solid var(--line);position:relative;overflow:hidden;}
+  header.top::before{content:"";position:absolute;inset:-50% -10% auto -10%;height:120%;
+    background:radial-gradient(50% 100% at 25% 0%,color-mix(in srgb,var(--brand) 20%,transparent),transparent 70%);pointer-events:none;}
+  header.top .wrap{position:relative;padding:54px 24px 40px;}
+  header.top h1{font-size:clamp(28px,4vw,42px);font-weight:800;margin-top:16px;}
+  header.top p{color:var(--muted);margin-top:12px;max-width:60ch;font-size:16px;}
+
+  .toggle{position:absolute;top:16px;right:20px;z-index:5;display:inline-flex;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px;box-shadow:var(--shadow);}
+  .toggle button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;cursor:pointer;}
+  .toggle button[aria-pressed="true"]{background:var(--brand);color:#fff;}
+
+  .board{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;padding:44px 0 20px;}
+  @media (max-width:860px){.board{grid-template-columns:1fr;}}
+  .route{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;}
+  .stage{display:flex;align-items:center;gap:22px;padding:30px 26px;border-bottom:1px solid var(--line);min-height:132px;}
+  .mk{flex:0 0 auto;display:inline-flex;}
+  .mk svg{width:60px;height:60px;display:block;}
+  .lock-wm{font-size:34px;}
+  .meta{display:flex;align-items:center;gap:16px;padding:16px 20px;}
+  .apps{display:flex;gap:10px;flex:0 0 auto;}
+  .tile{width:48px;height:48px;border-radius:24%;display:grid;place-items:center;box-shadow:var(--shadow);}
+  .tile.brand{background:linear-gradient(150deg,var(--brand),var(--brand-2));color:#fff;}
+  .tile.ink{background:var(--ink);color:#fff;}
+  .tile.paper{background:var(--surface);border:1px solid var(--line);color:var(--brand);}
+  .tile svg{width:30px;height:30px;}
+  .rmeta{display:flex;flex-direction:column;gap:3px;}
+  .rname{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;}
+  .num{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;}
+  .rdesc{font-size:13px;color:var(--muted);}
+  .pickflag{margin-left:auto;font-size:11px;font-weight:700;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);padding:3px 9px;border-radius:999px;white-space:nowrap;}
+
+  .rec{margin:20px 0 60px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:16px;box-shadow:var(--shadow);padding:26px 28px;}
+  .rec h2{font-size:22px;font-weight:800;}
+  .rec p{color:var(--muted);margin-top:10px;font-size:15px;max-width:74ch;}
+  .rec .row{display:flex;gap:14px;margin-top:18px;flex-wrap:wrap;}
+  .rec .row .tile{width:56px;height:56px;} .rec .row .tile svg{width:34px;height:34px;}
+  .foot{padding:0 0 60px;color:var(--muted);font-size:13px;text-align:center;}
+</style>
+</head>
+<body>
+  <div class="toggle" role="group" aria-label="Theme">
+    <button type="button" data-set="light" aria-pressed="false">Light</button>
+    <button type="button" data-set="dark" aria-pressed="false">Dark</button>
+  </div>
+
+  <header class="top">
+    <div class="wrap">
+      <span class="eyebrow">Logo exploration · Round 2</span>
+      <h1>Six routes for <span class="wm" style="font-size:.9em;vertical-align:-2px">l<span class="e">e<span class="trema"><i></i><i></i></span></span>tz<span class="pill">24</span></span></h1>
+      <p>Each route is a different idea — not a restyle of one. Every mark is built from simple geometry so it holds from a 512px app icon down to a 16px favicon, and works in one color. My recommendation is at the bottom.</p>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="board">
+
+      <!-- 1 TRÉMA PIN -->
+      <div class="route">
+        <div class="stage">
+          <span class="mk" style="color:var(--brand)">
+            <svg viewBox="0 0 64 64" fill="none" aria-label="Tréma pin mark">
+              <path d="M32 7 C19 7 9 17 9 29 C9 44 32 58 32 58 C32 58 55 44 55 29 C55 17 45 7 32 7 Z" fill="none" stroke="currentColor" stroke-width="4.5"/>
+              <circle cx="26" cy="27" r="4.2" fill="currentColor"/>
+              <circle cx="38" cy="27" r="4.2" fill="var(--accent)"/>
+            </svg>
+          </span>
+          <span class="wm lock-wm">l<span class="e">e<span class="trema"><i></i><i></i></span></span>tz<span class="pill">24</span></span>
+        </div>
+        <div class="meta">
+          <div class="apps">
+            <span class="tile brand"><svg viewBox="0 0 64 64" fill="none"><path d="M32 7 C19 7 9 17 9 29 C9 44 32 58 32 58 C32 58 55 44 55 29 C55 17 45 7 32 7 Z" fill="none" stroke="#fff" stroke-width="4.5"/><circle cx="26" cy="27" r="4.2" fill="#fff"/><circle cx="38" cy="27" r="4.2" fill="var(--accent)"/></svg></span>
+          </div>
+          <div class="rmeta"><span class="rname"><span class="num">01</span> Tréma Pin <span class="pickflag">Recommended</span></span><span class="rdesc">The two dots of the ë become a map pin — one red = a location "ping". Local + wayfinding.</span></div>
+        </div>
+      </div>
+
+      <!-- 2 24 ROUNDEL -->
+      <div class="route">
+        <div class="stage">
+          <span class="mk" style="color:var(--brand)">
+            <svg viewBox="0 0 64 64" aria-label="24 roundel mark">
+              <circle cx="32" cy="32" r="25" fill="none" stroke="currentColor" stroke-width="4.5"/>
+              <text x="32" y="41" text-anchor="middle" font-family="system-ui,sans-serif" font-size="24" font-weight="800" fill="currentColor">24</text>
+              <circle cx="51" cy="14" r="7.5" fill="var(--accent)" stroke="var(--card)" stroke-width="3"/>
+            </svg>
+          </span>
+          <span class="wm lock-wm">l<span class="e">e<span class="trema"><i></i><i></i></span></span>tz<span class="pill">24</span></span>
+        </div>
+        <div class="meta">
+          <div class="apps">
+            <span class="tile brand"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="25" fill="none" stroke="#fff" stroke-width="4.5"/><text x="32" y="41" text-anchor="middle" font-family="system-ui,sans-serif" font-size="24" font-weight="800" fill="#fff">24</text><circle cx="51" cy="14" r="7.5" fill="var(--accent)" stroke="var(--brand)" stroke-width="3"/></svg></span>
+          </div>
+          <div class="rmeta"><span class="rname"><span class="num">02</span> 24 Roundel <span class="pickflag" style="color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,transparent)">App mark</span></span><span class="rdesc">A trust-seal "24" with a red notification ping — reads instantly as an always-on comparison app.</span></div>
+        </div>
+      </div>
+
+      <!-- 3 L-CHECK -->
+      <div class="route">
+        <div class="stage">
+          <span class="mk" style="color:var(--brand)">
+            <svg viewBox="0 0 64 64" fill="none" aria-label="L check mark">
+              <path d="M20 12 V44 H33" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M31 45 L52 20" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="wm lock-wm">l<span class="e">e<span class="trema"><i></i><i></i></span></span>tz<span class="pill">24</span></span>
+        </div>
+        <div class="meta">
+          <div class="apps">
+            <span class="tile brand"><svg viewBox="0 0 64 64" fill="none"><path d="M20 12 V44 H33" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M31 45 L52 20" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"/></svg></span>
+          </div>
+          <div class="rmeta"><span class="rname"><span class="num">03</span> L-Check</span><span class="rdesc">The "L" (Lëtz / Luxembourg) kicks up into a checkmark — "compared, chosen, done." Verified by design.</span></div>
+        </div>
+      </div>
+
+      <!-- 4 PING BUBBLE -->
+      <div class="route">
+        <div class="stage">
+          <span class="mk" style="color:var(--brand)">
+            <svg viewBox="0 0 64 64" fill="none" aria-label="Ping bubble mark">
+              <path d="M13 14 H51 A6 6 0 0 1 57 20 V38 A6 6 0 0 1 51 44 H30 L20 54 V44 H13 A6 6 0 0 1 7 38 V20 A6 6 0 0 1 13 14 Z" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round"/>
+              <circle cx="22" cy="29" r="3.6" fill="currentColor"/>
+              <circle cx="32" cy="29" r="3.6" fill="var(--accent)"/>
+              <circle cx="42" cy="29" r="3.6" fill="currentColor"/>
+            </svg>
+          </span>
+          <span class="wm lock-wm">l<span class="e">e<span class="trema"><i></i><i></i></span></span>tz<span class="pill">24</span></span>
+        </div>
+        <div class="meta">
+          <div class="apps">
+            <span class="tile brand"><svg viewBox="0 0 64 64" fill="none"><path d="M13 14 H51 A6 6 0 0 1 57 20 V38 A6 6 0 0 1 51 44 H30 L20 54 V44 H13 A6 6 0 0 1 7 38 V20 A6 6 0 0 1 13 14 Z" fill="none" stroke="#fff" stroke-width="4.5" stroke-linejoin="round"/><circle cx="22" cy="29" r="3.6" fill="#fff"/><circle cx="32" cy="29" r="3.6" fill="var(--accent)"/><circle cx="42" cy="29" r="3.6" fill="#fff"/></svg></span>
+          </div>
+          <div class="rmeta"><span class="rname"><span class="num">04</span> Ping Bubble</span><span class="rdesc">A request/quote bubble — the middle dot is the red accent. Puts the human connection (client ↔ pro) front and center.</span></div>
+        </div>
+      </div>
+
+      <!-- 5 FLAG SHIELD -->
+      <div class="route">
+        <div class="stage">
+          <span class="mk">
+            <svg viewBox="0 0 64 64" aria-label="Flag shield mark">
+              <defs><clipPath id="sh1"><path d="M16 9 H48 A5 5 0 0 1 53 14 V33 C53 46 32 56 32 56 C32 56 11 46 11 33 V14 A5 5 0 0 1 16 9 Z"/></clipPath></defs>
+              <g clip-path="url(#sh1)">
+                <rect x="0" y="0" width="64" height="24" fill="#e11d2e"/>
+                <rect x="0" y="24" width="64" height="13" fill="#ffffff"/>
+                <rect x="0" y="37" width="64" height="27" fill="#2cb8e8"/>
+              </g>
+              <path d="M16 9 H48 A5 5 0 0 1 53 14 V33 C53 46 32 56 32 56 C32 56 11 46 11 33 V14 A5 5 0 0 1 16 9 Z" fill="none" stroke="color-mix(in srgb,#0c1a33 12%,transparent)" stroke-width="1.5"/>
+            </svg>
+          </span>
+          <span class="wm lock-wm">l<span class="e">e<span class="trema"><i></i><i></i></span></span>tz<span class="pill">24</span></span>
+        </div>
+        <div class="meta">
+          <div class="apps">
+            <span class="tile paper"><svg viewBox="0 0 64 64"><defs><clipPath id="sh2"><path d="M16 9 H48 A5 5 0 0 1 53 14 V33 C53 46 32 56 32 56 C32 56 11 46 11 33 V14 A5 5 0 0 1 16 9 Z"/></clipPath></defs><g clip-path="url(#sh2)"><rect x="0" y="0" width="64" height="24" fill="#e11d2e"/><rect x="0" y="24" width="64" height="13" fill="#fff"/><rect x="0" y="37" width="64" height="27" fill="#2cb8e8"/></g></svg></span>
+          </div>
+          <div class="rmeta"><span class="rname"><span class="num">05</span> Flag Shield</span><span class="rdesc">The national colours (red / white / celeste) in a modern écusson. Unmistakably Luxembourg — heritage & trust.</span></div>
+        </div>
+      </div>
+
+      <!-- 6 COMPARE BARS -->
+      <div class="route">
+        <div class="stage">
+          <span class="mk" style="color:var(--brand)">
+            <svg viewBox="0 0 64 64" aria-label="Compare bars mark">
+              <rect x="12" y="15" width="36" height="9" rx="4.5" fill="var(--accent)"/>
+              <rect x="12" y="28" width="28" height="9" rx="4.5" fill="currentColor"/>
+              <rect x="12" y="41" width="19" height="9" rx="4.5" fill="currentColor" opacity="0.5"/>
+            </svg>
+          </span>
+          <span class="wm lock-wm">l<span class="e">e<span class="trema"><i></i><i></i></span></span>tz<span class="pill">24</span></span>
+        </div>
+        <div class="meta">
+          <div class="apps">
+            <span class="tile brand"><svg viewBox="0 0 64 64"><rect x="12" y="15" width="36" height="9" rx="4.5" fill="var(--accent)"/><rect x="12" y="28" width="28" height="9" rx="4.5" fill="#fff"/><rect x="12" y="41" width="19" height="9" rx="4.5" fill="#fff" opacity="0.55"/></svg></span>
+          </div>
+          <div class="rmeta"><span class="rname"><span class="num">06</span> Compare Bars</span><span class="rdesc">A ranking / leaderboard — the top bar wins in red. The most literal nod to the comparison-engine DNA (Check24).</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RECOMMENDATION -->
+    <div class="rec">
+      <span class="eyebrow">My recommendation</span>
+      <h2 style="margin-top:12px">Route 01 as the logo, Route 02 as the app icon.</h2>
+      <p>The <strong>Tréma Pin</strong> is the most ownable: it grows straight out of the name's own letterform, says "local Luxembourg" and "find a service near me" in one shape, and stays legible as pure line-art at any size and in one color. Pair it with the <strong>24 Roundel</strong> for the app icon and favicon, where a bold, filled shape reads better on a home screen. Both carry the single red dot — that's the thread that ties the whole identity together, even when the wordmark isn't present. Flag Shield is the strong runner-up if you want to lean harder into national identity.</p>
+      <div class="row">
+        <span class="tile brand"><svg viewBox="0 0 64 64" fill="none"><path d="M32 7 C19 7 9 17 9 29 C9 44 32 58 32 58 C32 58 55 44 55 29 C55 17 45 7 32 7 Z" fill="none" stroke="#fff" stroke-width="4.5"/><circle cx="26" cy="27" r="4.2" fill="#fff"/><circle cx="38" cy="27" r="4.2" fill="var(--accent)"/></svg></span>
+        <span class="tile ink"><svg viewBox="0 0 64 64" fill="none"><path d="M32 7 C19 7 9 17 9 29 C9 44 32 58 32 58 C32 58 55 44 55 29 C55 17 45 7 32 7 Z" fill="none" stroke="#fff" stroke-width="4.5"/><circle cx="26" cy="27" r="4.2" fill="#fff"/><circle cx="38" cy="27" r="4.2" fill="var(--accent)"/></svg></span>
+        <span class="tile brand"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="25" fill="none" stroke="#fff" stroke-width="4.5"/><text x="32" y="41" text-anchor="middle" font-family="system-ui,sans-serif" font-size="24" font-weight="800" fill="#fff">24</text><circle cx="51" cy="14" r="7.5" fill="var(--accent)" stroke="var(--brand)" stroke-width="3"/></svg></span>
+        <span class="tile paper"><svg viewBox="0 0 64 64" fill="none"><path d="M32 7 C19 7 9 17 9 29 C9 44 32 58 32 58 C32 58 55 44 55 29 C55 17 45 7 32 7 Z" fill="none" stroke="var(--brand)" stroke-width="4.5"/><circle cx="26" cy="27" r="4.2" fill="var(--brand)"/><circle cx="38" cy="27" r="4.2" fill="var(--accent)"/></svg></span>
+      </div>
+    </div>
+
+    <div class="foot">letz24.lu — marks shown as construction studies. On sign-off I'd deliver final vector SVGs, a favicon/app-icon set, and clear-space + minimum-size rules.</div>
+  </div>
+
+<script>
+  (function(){
+    var root=document.documentElement, btns=document.querySelectorAll('.toggle button');
+    function sync(){var t=root.getAttribute('data-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches);
+      btns.forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.set===(d?'dark':'light')));});}
+    btns.forEach(function(b){b.addEventListener('click',function(){root.setAttribute('data-theme',b.dataset.set);sync();});});
+    sync();
+  })();
+</script>
+</body>
+</html>

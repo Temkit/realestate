@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lëtz24 — la marque en deux points</title>
+<style>
+  :root{
+    --bg:#fafbff; --panel:#eef3ff; --text:#0e1b3d; --muted:#5d6b8f; --line:#dfe6f5;
+    --blue:#0f5bff; --blue-deep:#0a46c8; --red:#ef3b4c;
+    --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --shadow:0 1px 2px rgba(14,27,61,.05),0 18px 40px -18px rgba(14,27,61,.18);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0b1225; --panel:#121d3a; --text:#eef2ff; --muted:#8d9cc4; --line:#22305a;
+    --blue:#5d93ff; --blue-deep:#3f78f0; --red:#ff5a68;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 20px 44px -20px rgba(0,0,0,.6);
+  }}
+  :root[data-theme="light"]{--bg:#fafbff;--panel:#eef3ff;--text:#0e1b3d;--muted:#5d6b8f;--line:#dfe6f5;--blue:#0f5bff;--blue-deep:#0a46c8;--red:#ef3b4c;--shadow:0 1px 2px rgba(14,27,61,.05),0 18px 40px -18px rgba(14,27,61,.18);}
+  :root[data-theme="dark"]{--bg:#0b1225;--panel:#121d3a;--text:#eef2ff;--muted:#8d9cc4;--line:#22305a;--blue:#5d93ff;--blue-deep:#3f78f0;--red:#ff5a68;--shadow:0 1px 2px rgba(0,0,0,.35),0 20px 44px -20px rgba(0,0,0,.6);}
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;}
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px;}
+  .toggle{position:fixed;top:16px;right:18px;z-index:9;display:inline-flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px;box-shadow:var(--shadow);}
+  .toggle button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;cursor:pointer;}
+  .toggle button[aria-pressed="true"]{background:var(--blue);color:#fff;}
+
+  /* ============ THE LOGO ============ */
+  .logo{display:inline-block;font-weight:800;letter-spacing:-.045em;line-height:1;color:var(--blue);white-space:nowrap;}
+  .logo .e{position:relative;display:inline-block;}
+  .logo .e .dots{position:absolute;left:50%;top:-.255em;transform:translateX(-50%);display:flex;gap:.06em;}
+  .logo .e .dots i{width:.165em;height:.165em;border-radius:50%;display:block;}
+  .logo .e .dots i:first-child{background:var(--blue);}
+  .logo .e .dots i:last-child{background:var(--red);}
+  .logo .n{color:var(--red);}
+  /* variants */
+  .logo.rev{color:#fff;} .logo.rev .n{color:#fff;}
+  .logo.rev .e .dots i:first-child{background:#fff;} .logo.rev .e .dots i:last-child{background:var(--red);}
+  .logo.mono{color:var(--text);} .logo.mono .n{color:var(--text);}
+  .logo.mono .e .dots i:first-child,.logo.mono .e .dots i:last-child{background:var(--text);}
+
+  /* two-dot mark alone */
+  .dotmark{display:inline-flex;gap:.34em;}
+  .dotmark i{border-radius:50%;display:block;}
+  .dotmark i:first-child{background:var(--blue);}
+  .dotmark i:last-child{background:var(--red);}
+
+  /* ============ PAGE ============ */
+  .hero{text-align:center;padding:96px 24px 56px;}
+  .hero .logo{font-size:clamp(64px,14vw,148px);}
+  .hero p{margin:34px auto 0;color:var(--muted);font-size:17px;max-width:44ch;line-height:1.6;}
+  .hero p b{color:var(--text);font-weight:700;}
+  .hero .story{display:inline-flex;align-items:center;gap:10px;margin-top:22px;font-size:14px;color:var(--muted);
+    background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:9px 18px;}
+  .hero .story .dotmark i{width:9px;height:9px;}
+
+  h2{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:52px 0 18px;text-align:center;}
+
+  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media(max-width:700px){.row{grid-template-columns:1fr;}}
+  .cell{border:1px solid var(--line);border-radius:18px;min-height:132px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px;background:var(--bg);box-shadow:var(--shadow);}
+  .cell.blue{background:linear-gradient(160deg,var(--blue),var(--blue-deep));border-color:transparent;}
+  .cell .logo{font-size:34px;}
+  .cap{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .cell.blue .cap{color:rgba(255,255,255,.75);}
+
+  /* icon set */
+  .icons{display:flex;align-items:flex-end;justify-content:center;gap:30px;flex-wrap:wrap;}
+  .ic{text-align:center;color:var(--muted);font-size:11px;}
+  .ic>div{margin-bottom:9px;display:flex;align-items:flex-end;justify-content:center;}
+  .tile{background:linear-gradient(160deg,var(--blue),var(--blue-deep));color:#fff;display:grid;place-items:center;
+        font-weight:800;letter-spacing:-.04em;box-shadow:var(--shadow);}
+  .tile .e{position:relative;}
+  .tile .e .dots{position:absolute;left:50%;top:-.255em;transform:translateX(-50%);display:flex;gap:.06em;}
+  .tile .e .dots i{width:.165em;height:.165em;border-radius:50%;background:#fff;display:block;}
+  .tile .e .dots i:last-child{background:var(--red);}
+  .tile.mini{display:flex;align-items:center;justify-content:center;gap:3px;}
+  .tile.mini i{width:5px;height:5px;border-radius:50%;background:#fff;display:block;}
+  .tile.mini i:last-child{background:var(--red);}
+
+  /* product context */
+  .mock{border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow);background:var(--bg);}
+  .mock .bar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);}
+  .mock .bar .logo{font-size:24px;}
+  .mock .bar nav{display:flex;gap:18px;font-size:13px;font-weight:600;color:var(--muted);}
+  .mock .body{display:flex;gap:10px;padding:24px 20px 28px;flex-wrap:wrap;align-items:center;}
+  .field{flex:1;min-width:220px;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+         border-radius:12px;padding:13px 16px;color:var(--muted);font-size:14px;}
+  .btn{border:0;border-radius:12px;background:var(--blue);color:#fff;font:inherit;font-weight:700;font-size:14px;padding:13px 22px;cursor:pointer;}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--text);
+        background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 13px;}
+  .chip .dt{width:7px;height:7px;border-radius:50%;background:var(--red);}
+
+  /* palette */
+  .pal{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  @media(max-width:700px){.pal{grid-template-columns:repeat(2,1fr);}}
+  .sw{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--bg);box-shadow:var(--shadow);}
+  .sw .c{height:64px;} .sw .m{padding:10px 13px;font-size:12px;}
+  .sw .m b{display:block;font-size:13px;} .sw .m span{color:var(--muted);font-variant-numeric:tabular-nums;}
+
+  .why{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media(max-width:700px){.why{grid-template-columns:1fr;}}
+  .why .w{border:1px solid var(--line);border-radius:16px;padding:20px;background:var(--bg);box-shadow:var(--shadow);}
+  .why .w b{display:flex;align-items:center;gap:8px;font-size:14px;}
+  .why .w b::before{content:"✓";color:var(--blue);font-weight:800;}
+  .why .w p{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.55;}
+
+  .foot{text-align:center;color:var(--muted);font-size:13px;padding:56px 24px 64px;}
+  .foot .dotmark i{width:8px;height:8px;}
+
+  @media (prefers-reduced-motion:no-preference){
+    .hero .logo{animation:in .7s cubic-bezier(.2,.7,.2,1) both;}
+    .hero p,.hero .story{animation:in .7s .12s cubic-bezier(.2,.7,.2,1) both;}
+    @keyframes in{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  }
+</style>
+</head>
+<body>
+  <div class="toggle" role="group" aria-label="Theme">
+    <button type="button" data-set="light" aria-pressed="false">Light</button>
+    <button type="button" data-set="dark" aria-pressed="false">Dark</button>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <span class="logo" aria-label="lëtz24">l<span class="e">e<span class="dots"><i></i><i></i></span></span>tz<span class="n">24</span></span>
+    <p>Toute la marque tient dans <b>deux points</b> — ceux du <b>ë</b> de Lëtzebuerg.<br>
+       Le point bleu, c'est <b>vous</b>. Le point rouge, c'est <b>votre prestataire</b>.<br>
+       lëtz24 les met côte à côte.</p>
+    <span class="story"><span class="dotmark"><i></i><i></i></span> vous + votre pro, réunis</span>
+  </div>
+
+  <div class="wrap">
+
+    <h2>Versions</h2>
+    <div class="row">
+      <div class="cell"><span class="logo">l<span class="e">e<span class="dots"><i></i><i></i></span></span>tz<span class="n">24</span></span><span class="cap">Principale</span></div>
+      <div class="cell blue"><span class="logo rev">l<span class="e">e<span class="dots"><i></i><i></i></span></span>tz<span class="n">24</span></span><span class="cap">Sur bleu</span></div>
+      <div class="cell"><span class="logo mono">l<span class="e">e<span class="dots"><i></i><i></i></span></span>tz<span class="n">24</span></span><span class="cap">Une couleur</span></div>
+    </div>
+
+    <h2>Icône — du store au favicon</h2>
+    <div class="icons">
+      <div class="ic"><div><span class="tile" style="width:92px;height:92px;border-radius:21px;font-size:54px"><span class="e">e<span class="dots"><i></i><i></i></span></span></span></div>512</div>
+      <div class="ic"><div><span class="tile" style="width:58px;height:58px;border-radius:14px;font-size:34px"><span class="e">e<span class="dots"><i></i><i></i></span></span></span></div>180</div>
+      <div class="ic"><div><span class="tile" style="width:34px;height:34px;border-radius:8px;font-size:20px"><span class="e">e<span class="dots"><i></i><i></i></span></span></span></div>32</div>
+      <div class="ic"><div><span class="tile mini" style="width:18px;height:18px;border-radius:5px"><i></i><i></i></span></div>16 · les deux points seuls</div>
+    </div>
+
+    <h2>Sur le produit</h2>
+    <div class="mock">
+      <div class="bar">
+        <span class="logo">l<span class="e">e<span class="dots"><i></i><i></i></span></span>tz<span class="n">24</span></span>
+        <nav><span>Garages</span><span>Artisans</span><span>Coiffeurs</span><span>Beauté</span></nav>
+      </div>
+      <div class="body">
+        <div class="field">⌕&nbsp; Vidange, plombier, coiffeur…</div>
+        <button class="btn" type="button">Rechercher</button>
+        <span class="chip"><span class="dt"></span> RDV confirmé — Garage Muller, mardi 10:00</span>
+      </div>
+    </div>
+
+    <h2>Couleurs — trois, pas plus</h2>
+    <div class="pal">
+      <div class="sw"><div class="c" style="background:#0f5bff"></div><div class="m"><b>Bleu lëtz</b><span>#0F5BFF</span></div></div>
+      <div class="sw"><div class="c" style="background:#ef3b4c"></div><div class="m"><b>Rouge 24</b><span>#EF3B4C</span></div></div>
+      <div class="sw"><div class="c" style="background:#0e1b3d"></div><div class="m"><b>Encre</b><span>#0E1B3D</span></div></div>
+      <div class="sw"><div class="c" style="background:#eef3ff;border-bottom:1px solid var(--line)"></div><div class="m"><b>Brume</b><span>#EEF3FF</span></div></div>
+    </div>
+
+    <h2>Pourquoi ça marche</h2>
+    <div class="why">
+      <div class="w"><b>Une histoire en une phrase</b><p>Deux points, deux personnes : le client et le pro. On peut l'expliquer à n'importe qui en trois secondes.</p></div>
+      <div class="w"><b>Lisible à 16 px</b><p>Le mot reste un seul bloc, sans espace ni pastille. Et quand c'est trop petit pour le mot, les deux points suffisent.</p></div>
+      <div class="w"><b>Luxembourgeois sans folklore</b><p>Le ë de Lëtzebuerg et le bleu-rouge du pays — sans drapeau, sans lion, sans cliché.</p></div>
+    </div>
+
+    <div class="foot">
+      <span class="dotmark"><i></i><i></i></span><br><br>
+      letz24.lu — livraison finale : SVG vectorisé (kerning figé), jeu complet de favicons &amp; icônes, mini-charte d'usage.
+    </div>
+  </div>
+
+<script>
+  (function(){
+    var root=document.documentElement, btns=document.querySelectorAll('.toggle button');
+    function sync(){var t=root.getAttribute('data-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches);
+      btns.forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.set===(d?'dark':'light')));});}
+    btns.forEach(function(b){b.addEventListener('click',function(){root.setAttribute('data-theme',b.dataset.set);sync();});});
+    sync();
+  })();
+</script>
+</body>
+</html>

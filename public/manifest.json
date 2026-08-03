@@ -1,11 +1,11 @@
 {
-  "name": "olu.lu — Luxembourg Real Estate Search",
-  "short_name": "olu.lu",
-  "description": "Find your next home in Luxembourg. AI-powered search across athome.lu, immotop.lu, and more.",
+  "name": "lëtz24 — Tous vos services au Luxembourg",
+  "short_name": "lëtz24",
+  "description": "Comparez et réservez tous les services au Luxembourg : garages, artisans, coiffeurs, déménagement, beauté et immobilier.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1c1917",
-  "theme_color": "#3b5bdb",
+  "background_color": "#f7f9fe",
+  "theme_color": "#1554e8",
   "orientation": "portrait",
   "icons": [
     {
@@ -28,5 +28,8 @@
     }
   ],
   "lang": "fr",
-  "categories": ["business", "utilities"]
+  "categories": [
+    "business",
+    "utilities"
+  ]
 }

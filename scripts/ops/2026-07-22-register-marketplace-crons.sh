@@ -4,7 +4,7 @@
 # scheduled at booking-confirm time by src/lib/marketplace/leads.ts.)
 #
 # Usage:
-#   QSTASH_TOKEN=... APP_URL=https://olu.lu ./scripts/ops/2026-07-22-register-marketplace-crons.sh
+#   QSTASH_TOKEN=... APP_URL=https://letz24.lu ./scripts/ops/2026-07-22-register-marketplace-crons.sh
 #
 # List schedules: curl -s -H "Authorization: Bearer $QSTASH_TOKEN" https://qstash.upstash.io/v2/schedules | jq
 # Delete:         curl -s -X DELETE -H "Authorization: Bearer $QSTASH_TOKEN" https://qstash.upstash.io/v2/schedules/<id>
@@ -16,7 +16,7 @@ if [ -z "${QSTASH_TOKEN:-}" ]; then
   exit 1
 fi
 if [ -z "${APP_URL:-}" ]; then
-  echo "Error: APP_URL not set (e.g. https://olu.lu)"
+  echo "Error: APP_URL not set (e.g. https://letz24.lu)"
   exit 1
 fi
 

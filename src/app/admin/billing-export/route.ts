@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="lux24-billing-${month}.csv"`,
+      "Content-Disposition": `attachment; filename="letz24-billing-${month}.csv"`,
       "X-Robots-Tag": "noindex, nofollow",
     },
   });

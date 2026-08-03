@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lëtz24 — logo</title>
+<style>
+  :root{
+    --bg:#f7f9fc; --panel:#eef3fb; --text:#1a2540; --muted:#6b7690; --line:#dde5f1;
+    --blue:#1668e8; --red:#e4162f;
+    --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0c1322; --panel:#131f36; --text:#e9eefb; --muted:#8fa0c0; --line:#213154;
+    --blue:#5b95ff; --red:#ff4a5c;
+  }}
+  :root[data-theme="light"]{--bg:#f7f9fc;--panel:#eef3fb;--text:#1a2540;--muted:#6b7690;--line:#dde5f1;--blue:#1668e8;--red:#e4162f;}
+  :root[data-theme="dark"]{--bg:#0c1322;--panel:#131f36;--text:#e9eefb;--muted:#8fa0c0;--line:#213154;--blue:#5b95ff;--red:#ff4a5c;}
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;}
+  .wrap{max-width:920px;margin:0 auto;padding:0 24px;}
+  .toggle{position:fixed;top:16px;right:18px;z-index:9;display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px;}
+  .toggle button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;cursor:pointer;}
+  .toggle button[aria-pressed="true"]{background:var(--blue);color:#fff;}
+
+  /* ---- THE LOGO ---- */
+  .logo{display:inline-flex;align-items:baseline;font-family:var(--font);font-weight:800;letter-spacing:-.05em;line-height:1;color:var(--blue);white-space:nowrap;}
+  .logo .e{position:relative;display:inline-block;}
+  .logo .e .d{position:absolute;left:0;right:0;top:-.29em;display:flex;justify-content:center;gap:.055em;}      /* tight dots */
+  .logo .e .d i{width:.17em;height:.17em;border-radius:50%;display:block;background:currentColor;}
+  .logo .e .d i.r{background:var(--red);}
+  .logo .num{color:var(--red);}
+  /* variants */
+  .logo.mono{color:var(--text);} .logo.mono .num{color:var(--text);} .logo.mono .e .d i.r{background:var(--text);}
+  .logo.rev{color:#fff;} .logo.rev .num{color:#fff;} .logo.rev .e .d i.r{background:#fff;}
+  .logo.rev.keep .num{color:var(--red);} .logo.rev.keep .e .d i.r{background:var(--red);}
+
+  header{padding:52px 0 6px;}
+  h1{margin:0;font-size:clamp(23px,3.2vw,30px);font-weight:800;letter-spacing:-.03em;}
+  .sub{color:var(--muted);margin-top:8px;font-size:15px;max-width:60ch;}
+
+  .stage{margin:26px 0;border:1px solid var(--line);border-radius:22px;
+         background:linear-gradient(180deg,var(--panel),var(--bg));min-height:250px;display:grid;place-items:center;}
+  .stage .logo{font-size:clamp(58px,12vw,116px);}
+
+  h2{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:38px 0 16px;}
+  .row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  @media(max-width:720px){.row{grid-template-columns:repeat(2,1fr);}}
+  .cell{border:1px solid var(--line);border-radius:16px;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;background:var(--bg);}
+  .cell.blue{background:var(--blue);border-color:transparent;}
+  .cell.ink{background:var(--text);border-color:transparent;}
+  .cell .logo{font-size:30px;}
+  .cap{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .cell.blue .cap,.cell.ink .cap{color:rgba(255,255,255,.72);}
+
+  /* app icon */
+  .mark{background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:800;letter-spacing:-.04em;position:relative;}
+  .mark .e{position:relative;} .mark .e .d{position:absolute;left:0;right:0;top:-.29em;display:flex;justify-content:center;gap:.055em;}
+  .mark .e .d i{width:.17em;height:.17em;border-radius:50%;background:#fff;display:block;}
+  .mark .e .d i.r{background:var(--red);}
+  .sizes{display:flex;align-items:end;gap:26px;flex-wrap:wrap;}
+  .s{color:var(--muted);font-size:11px;text-align:center;}
+  .s>div{margin-bottom:8px;display:flex;align-items:end;justify-content:center;}
+
+  .foot{color:var(--muted);font-size:13px;text-align:center;padding:36px 0 60px;}
+</style>
+</head>
+<body>
+  <div class="toggle" role="group" aria-label="Theme">
+    <button type="button" data-set="light" aria-pressed="false">Light</button>
+    <button type="button" data-set="dark" aria-pressed="false">Dark</button>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <h1>lëtz24 — refined</h1>
+      <p class="sub">Blue word, red “24”, and the tréma dots pulled tight — one blue, one red — so the two brand colours live right inside the letter.</p>
+    </header>
+
+    <div class="stage">
+      <span class="logo">l<span class="e">e<span class="d"><i></i><i class="r"></i></span></span>tz<span class="num">24</span></span>
+    </div>
+
+    <h2>Core versions</h2>
+    <div class="row">
+      <div class="cell"><span class="logo">l<span class="e">e<span class="d"><i></i><i class="r"></i></span></span>tz<span class="num">24</span></span><span class="cap">Primary</span></div>
+      <div class="cell"><span class="logo mono">l<span class="e">e<span class="d"><i></i><i class="r"></i></span></span>tz<span class="num">24</span></span><span class="cap">One colour</span></div>
+      <div class="cell blue"><span class="logo rev keep">l<span class="e">e<span class="d"><i></i><i class="r"></i></span></span>tz<span class="num">24</span></span><span class="cap">On blue · red 24</span></div>
+      <div class="cell ink"><span class="logo rev">l<span class="e">e<span class="d"><i></i><i class="r"></i></span></span>tz<span class="num">24</span></span><span class="cap">Reversed</span></div>
+    </div>
+
+    <h2>App icon &amp; favicon</h2>
+    <div class="sizes">
+      <div class="s"><div><span class="mark" style="width:88px;height:88px;border-radius:20px;font-size:50px"><span class="e">e<span class="d"><i></i><i class="r"></i></span></span></span></div>512</div>
+      <div class="s"><div><span class="mark" style="width:56px;height:56px;border-radius:13px;font-size:32px"><span class="e">e<span class="d"><i></i><i class="r"></i></span></span></span></div>180</div>
+      <div class="s"><div><span class="mark" style="width:32px;height:32px;border-radius:8px;font-size:18px"><span class="e">e<span class="d"><i></i><i class="r"></i></span></span></span></div>32</div>
+      <div class="s"><div><span class="mark" style="width:16px;height:16px;border-radius:4px;font-size:10px"><span class="e">e<span class="d"><i></i><i class="r"></i></span></span></span></div>16</div>
+    </div>
+
+    <div class="foot">lëtz24 · blue + red, two-colour wordmark. Final: outlined SVG + favicon set.</div>
+  </div>
+
+<script>
+  (function(){
+    var root=document.documentElement, btns=document.querySelectorAll('.toggle button');
+    function sync(){var t=root.getAttribute('data-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches);
+      btns.forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.set===(d?'dark':'light')));});}
+    btns.forEach(function(b){b.addEventListener('click',function(){root.setAttribute('data-theme',b.dataset.set);sync();});});
+    sync();
+  })();
+</script>
+</body>
+</html>

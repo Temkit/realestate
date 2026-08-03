@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { Logo, LogoIcon } from "@/components/marketplace/logo";
 import { SearchBar } from "@/components/search-bar";
 import { PropertyCard } from "@/components/property-card";
 import { PropertyDetail } from "@/components/property-detail";
@@ -157,11 +158,9 @@ export function ImmoHome() {
             className="flex items-center gap-2.5 cursor-pointer"
             onClick={resetConversation}
           >
-            <div className="h-8 w-8 rounded-lg bg-[#3b5bdb] flex items-center justify-center shadow-sm">
-              <span className="text-white text-sm font-extrabold tracking-tight">olu</span>
-            </div>
-            <span className="text-[1.125rem] font-bold tracking-tight">
-              olu<span className="text-muted-foreground font-normal">.lu</span>
+            <Logo className="h-7 w-auto" />
+            <span className="text-sm font-semibold text-muted-foreground border-l pl-2.5">
+              Immo
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -197,9 +196,7 @@ export function ImmoHome() {
           {!results && !isLoading && (
             <div className="text-center mb-8 sm:mb-12 animate-fade-in-up">
               {/* Logo */}
-              <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-[#3b5bdb] flex items-center justify-center shadow-lg mx-auto mb-6">
-                <span className="text-white text-lg sm:text-xl font-extrabold tracking-tight">olu</span>
-              </div>
+              <LogoIcon className="h-14 w-14 sm:h-16 sm:w-16 mx-auto mb-6 drop-shadow-lg" />
 
               {/* Title — animated when idle, static when clarifying */}
               {pendingAnalysis ? (
@@ -255,7 +252,7 @@ export function ImmoHome() {
             />
           )}
 
-          {/* Back to the full lux24 services marketplace */}
+          {/* Back to the full lëtz24 services marketplace */}
           {!results && !isLoading && !pendingAnalysis && (
             <p className="mt-6 text-center text-sm text-muted-foreground">
               <Link href="/" className="hover:text-foreground underline underline-offset-4">

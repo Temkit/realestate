@@ -14,7 +14,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const fr = locale === "fr";
-  const title = fr ? "Guides & conseils | lux24" : "Guides & tips | lux24";
+  const title = fr ? "Guides & conseils | lëtz24" : "Guides & tips | lëtz24";
   return {
     title,
     description: fr

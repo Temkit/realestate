@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 
 export const metadata: Metadata = {
-  title: "lux24 admin",
+  title: "lëtz24 admin",
   robots: { index: false, follow: false },
 };
 

@@ -8,10 +8,10 @@
 import { Resend } from "resend";
 import type { BookingWindow } from "./types";
 
-const FROM = process.env.MARKETPLACE_EMAIL_FROM || "lux24 <onboarding@resend.dev>";
+const FROM = process.env.MARKETPLACE_EMAIL_FROM || "lëtz24 <onboarding@resend.dev>";
 
 export function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL || "https://olu.lu";
+  return process.env.NEXT_PUBLIC_SITE_URL || "https://letz24.lu";
 }
 
 let resend: Resend | null | undefined;
@@ -49,11 +49,11 @@ function esc(s: string): string {
 function layout(body: string): string {
   return `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:16px;color:#1c1917">
     ${body}
-    <p style="margin-top:32px;font-size:12px;color:#78716c">lux24 — services au Luxembourg</p>
+    <p style="margin-top:32px;font-size:12px;color:#78716c">lëtz24 — services au Luxembourg</p>
   </div>`;
 }
 
-function button(href: string, label: string, color = "#3b5bdb"): string {
+function button(href: string, label: string, color = "#1554e8"): string {
   return `<a href="${href}" style="display:inline-block;margin:4px 8px 4px 0;padding:10px 18px;background:${color};color:#fff;border-radius:8px;text-decoration:none;font-size:14px">${esc(label)}</a>`;
 }
 
@@ -104,7 +104,7 @@ export async function sendLeadToProvider(opts: {
     `Nouvelle demande client — ${lead.categoryNameFr}`,
     layout(`
       <h2 style="font-size:18px">Bonjour ${esc(opts.providerName)},</h2>
-      <p>Vous avez reçu une nouvelle demande via lux24 :</p>
+      <p>Vous avez reçu une nouvelle demande via lëtz24 :</p>
       <table style="font-size:14px">${rows}</table>
       ${links}
       <p style="font-size:13px;color:#78716c">Répondez directement au client par email ou téléphone.</p>
@@ -199,7 +199,7 @@ export async function sendClaimToOps(opts: {
   phone: string | null;
   message: string | null;
 }): Promise<{ sent: boolean; error?: string }> {
-  const to = process.env.MARKETPLACE_OPS_EMAIL || "pro@lux24.lu";
+  const to = process.env.MARKETPLACE_OPS_EMAIL || "pro@letz24.lu";
   const rows = [
     ["Entreprise", `${opts.providerName} (#${opts.providerId})`],
     ["Contact", opts.contactName],
@@ -252,10 +252,10 @@ export async function sendProviderLoginLink(opts: {
 }): Promise<{ sent: boolean; error?: string }> {
   return send(
     opts.to,
-    "Votre lien de connexion — Espace pro lux24",
+    "Votre lien de connexion — Espace pro lëtz24",
     layout(`
       <h2 style="font-size:18px">Bonjour ${esc(opts.providerName)},</h2>
-      <p>Cliquez pour accéder à votre espace pro lux24 (leads, rendez-vous, tarifs, disponibilités) :</p>
+      <p>Cliquez pour accéder à votre espace pro lëtz24 (leads, rendez-vous, tarifs, disponibilités) :</p>
       <p style="margin-top:16px">${button(opts.loginUrl, "Ouvrir mon espace pro")}</p>
       <p style="font-size:13px;color:#78716c">Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
     `)
@@ -302,8 +302,8 @@ export async function sendBookingCancelledToUser(opts: {
     fr ? `Rendez-vous annulé — ${opts.providerName}` : `Appointment cancelled — ${opts.providerName}`,
     layout(
       fr
-        ? `<p>Bonjour ${esc(opts.name)}, <strong>${esc(opts.providerName)}</strong> a dû annuler votre rendez-vous${when ? ` du <strong>${when}</strong>` : ""}. N'hésitez pas à réserver un autre créneau sur lux24.</p>`
-        : `<p>Hello ${esc(opts.name)}, <strong>${esc(opts.providerName)}</strong> had to cancel your appointment${when ? ` on <strong>${when}</strong>` : ""}. Feel free to book another slot on lux24.</p>`
+        ? `<p>Bonjour ${esc(opts.name)}, <strong>${esc(opts.providerName)}</strong> a dû annuler votre rendez-vous${when ? ` du <strong>${when}</strong>` : ""}. N'hésitez pas à réserver un autre créneau sur lëtz24.</p>`
+        : `<p>Hello ${esc(opts.name)}, <strong>${esc(opts.providerName)}</strong> had to cancel your appointment${when ? ` on <strong>${when}</strong>` : ""}. Feel free to book another slot on lëtz24.</p>`
     )
   );
 }

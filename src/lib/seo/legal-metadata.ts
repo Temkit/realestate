@@ -5,7 +5,7 @@
 
 import type { Metadata } from "next";
 
-const BASE = "https://olu.lu";
+const BASE = "https://letz24.lu";
 
 interface LegalMeta {
   titleFr: string;
@@ -17,48 +17,48 @@ interface LegalMeta {
 
 const LEGAL_PAGES: Record<string, LegalMeta> = {
   about: {
-    titleFr: "À propos d'olu.lu — Recherche immobilière IA au Luxembourg",
-    titleEn: "About olu.lu — AI Real Estate Search for Luxembourg",
+    titleFr: "À propos d'letz24.lu — Recherche immobilière IA au Luxembourg",
+    titleEn: "About letz24.lu — AI Real Estate Search for Luxembourg",
     descFr:
-      "olu.lu agrège les annonces immobilières du Luxembourg avec une recherche IA. Découvrez comment nous aidons à trouver appartements, maisons et bureaux.",
+      "letz24.lu agrège les annonces immobilières du Luxembourg avec une recherche IA. Découvrez comment nous aidons à trouver appartements, maisons et bureaux.",
     descEn:
-      "olu.lu aggregates Luxembourg real estate listings with AI-powered search. Learn how we help find apartments, houses and offices across all major portals.",
+      "letz24.lu aggregates Luxembourg real estate listings with AI-powered search. Learn how we help find apartments, houses and offices across all major portals.",
     path: "about",
   },
   privacy: {
-    titleFr: "Politique de confidentialité | olu.lu",
-    titleEn: "Privacy Policy | olu.lu",
+    titleFr: "Politique de confidentialité | letz24.lu",
+    titleEn: "Privacy Policy | letz24.lu",
     descFr:
-      "Politique de confidentialité d'olu.lu conforme RGPD et CNPD Luxembourg. Comment nous collectons, utilisons et protégeons vos données personnelles.",
+      "Politique de confidentialité d'letz24.lu conforme RGPD et CNPD Luxembourg. Comment nous collectons, utilisons et protégeons vos données personnelles.",
     descEn:
-      "olu.lu privacy policy compliant with GDPR and Luxembourg CNPD. How we collect, use and protect your personal data in our real estate search service.",
+      "letz24.lu privacy policy compliant with GDPR and Luxembourg CNPD. How we collect, use and protect your personal data in our real estate search service.",
     path: "privacy",
   },
   terms: {
-    titleFr: "Conditions d'utilisation | olu.lu",
-    titleEn: "Terms of Service | olu.lu",
+    titleFr: "Conditions d'utilisation | letz24.lu",
+    titleEn: "Terms of Service | letz24.lu",
     descFr:
-      "Conditions d'utilisation d'olu.lu. Service gratuit de recherche immobilière au Luxembourg. Limites de responsabilité et droits des utilisateurs.",
+      "Conditions d'utilisation d'letz24.lu. Service gratuit de recherche immobilière au Luxembourg. Limites de responsabilité et droits des utilisateurs.",
     descEn:
-      "olu.lu terms of service. Free Luxembourg real estate search service. Limitations of liability and user rights explained clearly.",
+      "letz24.lu terms of service. Free Luxembourg real estate search service. Limitations of liability and user rights explained clearly.",
     path: "terms",
   },
   cookies: {
-    titleFr: "Politique des cookies et stockage | olu.lu",
-    titleEn: "Cookie & Storage Policy | olu.lu",
+    titleFr: "Politique des cookies et stockage | letz24.lu",
+    titleEn: "Cookie & Storage Policy | letz24.lu",
     descFr:
-      "Politique des cookies d'olu.lu. Aucun cookie publicitaire, aucun traceur tiers. Stockage local uniquement pour favoris et préférences.",
+      "Politique des cookies d'letz24.lu. Aucun cookie publicitaire, aucun traceur tiers. Stockage local uniquement pour favoris et préférences.",
     descEn:
-      "olu.lu cookie policy. No advertising cookies, no third-party trackers. Local storage only for favorites and user preferences.",
+      "letz24.lu cookie policy. No advertising cookies, no third-party trackers. Local storage only for favorites and user preferences.",
     path: "cookies",
   },
   "mentions-legales": {
-    titleFr: "Mentions légales | olu.lu",
-    titleEn: "Legal Notice | olu.lu",
+    titleFr: "Mentions légales | letz24.lu",
+    titleEn: "Legal Notice | letz24.lu",
     descFr:
-      "Mentions légales d'olu.lu. Éditeur, hébergement, responsable du traitement. Informations légales conformes à la législation luxembourgeoise.",
+      "Mentions légales d'letz24.lu. Éditeur, hébergement, responsable du traitement. Informations légales conformes à la législation luxembourgeoise.",
     descEn:
-      "olu.lu legal notice. Publisher, hosting, data controller details. Legal information compliant with Luxembourg regulations.",
+      "letz24.lu legal notice. Publisher, hosting, data controller details. Legal information compliant with Luxembourg regulations.",
     path: "mentions-legales",
   },
 };
@@ -86,7 +86,7 @@ export function getLegalMetadata(page: keyof typeof LEGAL_PAGES, locale: string)
       description,
       url: canonical,
       type: "website",
-      siteName: "olu.lu",
+      siteName: "letz24.lu",
       locale: locale === "fr" ? "fr_LU" : "en_US",
       images: ["/og-image.png"],
     },

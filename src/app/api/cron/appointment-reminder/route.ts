@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   const { sent } = await sendAppointmentReminder({
     to: String(r.provider_email),
     recipientName: String(r.provider_name),
-    otherPartyName: String(r.user_name ?? "client lux24"),
+    otherPartyName: String(r.user_name ?? "client lëtz24"),
     startsAt,
     locale: "fr",
   });

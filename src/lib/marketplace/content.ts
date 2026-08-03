@@ -34,7 +34,7 @@ export function categoryFaq(
     return [
       {
         q: `Combien coûte un ${cat} ${where} ?`,
-        a: `Les tarifs varient selon la prestation, le prestataire et l'urgence. Le plus simple est de demander plusieurs devis gratuits sur lux24 et de les comparer sans engagement.`,
+        a: `Les tarifs varient selon la prestation, le prestataire et l'urgence. Le plus simple est de demander plusieurs devis gratuits sur lëtz24 et de les comparer sans engagement.`,
       },
       {
         q: `Comment choisir un bon ${cat} ${where} ?`,
@@ -45,7 +45,7 @@ export function categoryFaq(
         a: `Oui. De nombreux prestataires acceptent la demande de rendez-vous directement depuis leur fiche ; vous recevez une confirmation par email.`,
       },
       {
-        q: `Le service lux24 est-il gratuit ?`,
+        q: `Le service lëtz24 est-il gratuit ?`,
         a: `Oui, pour vous c'est entièrement gratuit et sans engagement. Vous décrivez votre besoin, nous transmettons votre demande aux prestataires concernés.`,
       },
     ];
@@ -53,7 +53,7 @@ export function categoryFaq(
   return [
     {
       q: `How much does a ${cat} cost ${where}?`,
-      a: `Prices vary by service, provider and urgency. The easiest way is to request several free quotes on lux24 and compare them with no obligation.`,
+      a: `Prices vary by service, provider and urgency. The easiest way is to request several free quotes on lëtz24 and compare them with no obligation.`,
     },
     {
       q: `How do I choose a good ${cat} ${where}?`,
@@ -64,7 +64,7 @@ export function categoryFaq(
       a: `Yes. Many providers accept appointment requests directly from their listing; you get an email confirmation.`,
     },
     {
-      q: `Is lux24 free to use?`,
+      q: `Is lëtz24 free to use?`,
       a: `Yes, it's completely free and no-obligation for you. Describe your need and we forward your request to matching providers.`,
     },
   ];

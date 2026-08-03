@@ -14,11 +14,11 @@ export function PrivacyPolicy() {
     >
       <h2>{isFr ? "Responsable du traitement" : "Data Controller"}</h2>
       <p>
-        olu.lu — <a href="mailto:contact@olu.lu">contact@olu.lu</a>
+        letz24.lu — <a href="mailto:contact@letz24.lu">contact@letz24.lu</a>
       </p>
 
       <h2>{isFr ? "Données collectées" : "Data Collected"}</h2>
-      <p>{isFr ? "olu.lu collecte et traite les données suivantes :" : "olu.lu collects and processes the following data:"}</p>
+      <p>{isFr ? "letz24.lu collecte et traite les données suivantes :" : "letz24.lu collects and processes the following data:"}</p>
       <ul>
         <li><strong>{isFr ? "Requêtes de recherche" : "Search queries"}</strong> — {isFr ? "envoyées à l'API Perplexity pour traitement. Non stockées sur nos serveurs." : "sent to the Perplexity API for processing. Not stored on our servers."}</li>
         <li><strong>{isFr ? "Stockage local (localStorage)" : "Local storage (localStorage)"}</strong> — {isFr ? "favoris, préférences de recherche, historique des recherches récentes. Stocké uniquement dans votre navigateur." : "favorites, search preferences, recent search history. Stored only in your browser."}</li>
@@ -57,7 +57,7 @@ export function PrivacyPolicy() {
         {isFr
           ? "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, de suppression, de portabilité et d'opposition. Pour exercer ces droits, contactez-nous à"
           : "Under the GDPR, you have the right to access, rectify, delete, port, and object to your data. To exercise these rights, contact us at"}{" "}
-        <a href="mailto:contact@olu.lu">contact@olu.lu</a>.
+        <a href="mailto:contact@letz24.lu">contact@letz24.lu</a>.
       </p>
 
       <h2>{isFr ? "Autorité de contrôle" : "Supervisory Authority"}</h2>

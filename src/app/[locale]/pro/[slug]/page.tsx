@@ -39,16 +39,16 @@ export async function generateMetadata({
   if (!data) return { title: "Not found" };
   const { provider } = data;
   const fr = locale !== "en";
-  const title = `${provider.name}${provider.commune ? ` — ${communeDisplay(provider.commune)}` : ""} | lux24`;
+  const title = `${provider.name}${provider.commune ? ` — ${communeDisplay(provider.commune)}` : ""} | lëtz24`;
   const description =
     (fr ? provider.description_fr : provider.description_en) ||
     (fr
-      ? `Contactez ${provider.name} au Luxembourg — devis gratuit et prise de rendez-vous via lux24.`
-      : `Contact ${provider.name} in Luxembourg — free quote and appointment booking via lux24.`);
+      ? `Contactez ${provider.name} au Luxembourg — devis gratuit et prise de rendez-vous via lëtz24.`
+      : `Contact ${provider.name} in Luxembourg — free quote and appointment booking via lëtz24.`);
   return {
     title,
     description,
-    alternates: { canonical: `https://olu.lu/${locale}/pro/${slug}` },
+    alternates: { canonical: `https://letz24.lu/${locale}/pro/${slug}` },
   };
 }
 
@@ -112,7 +112,7 @@ export default async function ProviderProfilePage({
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: provider.name,
-    url: `https://olu.lu${path}`,
+    url: `https://letz24.lu${path}`,
     telephone: provider.phone ?? undefined,
     address: provider.commune
       ? {

@@ -15,7 +15,7 @@ function page(title: string, body: string): Response {
      <meta name="robots" content="noindex, nofollow"><title>${title}</title></head>
      <body style="font-family:sans-serif;max-width:480px;margin:80px auto;padding:0 16px;color:#1c1917">
      <h1 style="font-size:20px">${title}</h1><p>${body}</p>
-     <p style="margin-top:32px;font-size:12px;color:#78716c">lux24</p></body></html>`,
+     <p style="margin-top:32px;font-size:12px;color:#78716c">lëtz24</p></body></html>`,
     { headers: { "Content-Type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow" } }
   );
 }

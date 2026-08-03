@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lëtz24 — logotype dessiné</title>
+<style>
+  :root{
+    --bg:#f7f9fe; --panel:#edf2fc; --text:#0f1d3f; --muted:#5e6c8e; --line:#dde5f4;
+    --blue:#1554e8; --blue-deep:#0d3fbf; --red:#e63946;
+    --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --shadow:0 1px 2px rgba(15,29,63,.05),0 18px 40px -18px rgba(15,29,63,.16);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0a1122; --panel:#111c38; --text:#ecf1fd; --muted:#8b9bc2; --line:#20305c;
+    --blue:#5f92ff; --blue-deep:#3c74f5; --red:#ff5a68;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 20px 44px -20px rgba(0,0,0,.6);
+  }}
+  :root[data-theme="light"]{--bg:#f7f9fe;--panel:#edf2fc;--text:#0f1d3f;--muted:#5e6c8e;--line:#dde5f4;--blue:#1554e8;--blue-deep:#0d3fbf;--red:#e63946;--shadow:0 1px 2px rgba(15,29,63,.05),0 18px 40px -18px rgba(15,29,63,.16);}
+  :root[data-theme="dark"]{--bg:#0a1122;--panel:#111c38;--text:#ecf1fd;--muted:#8b9bc2;--line:#20305c;--blue:#5f92ff;--blue-deep:#3c74f5;--red:#ff5a68;--shadow:0 1px 2px rgba(0,0,0,.35),0 20px 44px -20px rgba(0,0,0,.6);}
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;}
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px;}
+  .toggle{position:fixed;top:16px;right:18px;z-index:9;display:inline-flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px;box-shadow:var(--shadow);}
+  .toggle button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;cursor:pointer;}
+  .toggle button[aria-pressed="true"]{background:var(--blue);color:#fff;}
+
+  /* ---------- drawn logotype ---------- */
+  .logo{display:inline-block;color:var(--blue);line-height:0;}
+  .logo svg{display:block;height:auto;}
+  .logo .stroke{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+  .logo .num{stroke:var(--red);}
+  .logo .dot-a{fill:currentColor;}
+  .logo .dot-b{fill:var(--red);}
+  /* variants */
+  .logo.mono{color:var(--text);} .logo.mono .num{stroke:currentColor;} .logo.mono .dot-b{fill:currentColor;}
+  .logo.rev{color:#fff;} .logo.rev .num{stroke:#fff;} .logo.rev .dot-a{fill:#fff;} .logo.rev .dot-b{fill:var(--red);}
+
+  .hero{text-align:center;padding:100px 24px 60px;}
+  .hero .logo svg{width:clamp(300px,64vw,620px);}
+  .hero p{margin:38px auto 0;color:var(--muted);font-size:16.5px;max-width:46ch;line-height:1.65;}
+  .hero p b{color:var(--text);font-weight:700;}
+
+  h2{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:54px 0 18px;text-align:center;}
+
+  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media(max-width:700px){.row{grid-template-columns:1fr;}}
+  .cell{border:1px solid var(--line);border-radius:18px;min-height:136px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:var(--bg);box-shadow:var(--shadow);}
+  .cell.blue{background:linear-gradient(160deg,var(--blue),var(--blue-deep));border-color:transparent;}
+  .cell .logo svg{width:150px;}
+  .cap{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .cell.blue .cap{color:rgba(255,255,255,.75);}
+
+  .icons{display:flex;align-items:flex-end;justify-content:center;gap:34px;flex-wrap:wrap;}
+  .ic{text-align:center;color:var(--muted);font-size:11px;}
+  .ic>div{margin-bottom:10px;display:flex;align-items:flex-end;justify-content:center;}
+  .ic svg{display:block;}
+
+  .grid-note{display:flex;justify-content:center;margin-top:6px;}
+  .construction{border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:34px 26px 26px;box-shadow:var(--shadow);text-align:center;}
+  .construction svg{width:min(520px,86%);}
+  .construction p{margin:18px auto 0;font-size:13px;color:var(--muted);max-width:52ch;line-height:1.6;}
+
+  .foot{text-align:center;color:var(--muted);font-size:13px;padding:56px 24px 64px;line-height:1.7;}
+</style>
+</head>
+<body>
+  <div class="toggle" role="group" aria-label="Theme">
+    <button type="button" data-set="light" aria-pressed="false">Light</button>
+    <button type="button" data-set="dark" aria-pressed="false">Dark</button>
+  </div>
+
+  <!-- ============ HERO : the drawn mark ============ -->
+  <div class="hero">
+    <span class="logo" role="img" aria-label="lëtz24">
+      <svg viewBox="0 0 206 72">
+        <!-- tréma -->
+        <circle class="dot-a" cx="34.5" cy="13" r="4.6"/>
+        <circle class="dot-b" cx="45.5" cy="13" r="4.6"/>
+        <!-- l -->
+        <path class="stroke" stroke-width="9" d="M12 12 V58"/>
+        <!-- e : crossbar + open bowl, one gesture -->
+        <path class="stroke" stroke-width="9" d="M25 41 H55 A15 15 0 1 0 50.6 51.6"/>
+        <!-- t : short ascender, curved foot -->
+        <path class="stroke" stroke-width="9" d="M70 14 V49 A9 9 0 0 0 79 58"/>
+        <path class="stroke" stroke-width="9" d="M61 25 H80"/>
+        <!-- z -->
+        <path class="stroke" stroke-width="9" d="M92 26 H114 L92 58 H114"/>
+        <!-- 2 -->
+        <path class="stroke num" stroke-width="9" d="M128 24 A11 11 0 1 1 148 30 L128 58 H150"/>
+        <!-- 4 -->
+        <path class="stroke num" stroke-width="9" d="M181 13 L163 41 H191"/>
+        <path class="stroke num" stroke-width="9" d="M183 27 V58"/>
+      </svg>
+    </span>
+    <p>Dessiné, pas tapé&nbsp;: un logotype <b>monoline</b> construit au trait unique — mêmes courbes, même graisse, partout.
+       Le <b>ë</b> de Lëtzebuerg porte le point rouge&nbsp;; le <b>24</b> répond en rouge. Deux couleurs, un seul geste.</p>
+  </div>
+
+  <div class="wrap">
+
+    <h2>Versions</h2>
+    <div class="row">
+      <div class="cell">
+        <span class="logo"><svg viewBox="0 0 206 72"><circle class="dot-a" cx="34.5" cy="13" r="4.6"/><circle class="dot-b" cx="45.5" cy="13" r="4.6"/><path class="stroke" stroke-width="9" d="M12 12 V58"/><path class="stroke" stroke-width="9" d="M25 41 H55 A15 15 0 1 0 50.6 51.6"/><path class="stroke" stroke-width="9" d="M70 14 V49 A9 9 0 0 0 79 58"/><path class="stroke" stroke-width="9" d="M61 25 H80"/><path class="stroke" stroke-width="9" d="M92 26 H114 L92 58 H114"/><path class="stroke num" stroke-width="9" d="M128 24 A11 11 0 1 1 148 30 L128 58 H150"/><path class="stroke num" stroke-width="9" d="M181 13 L163 41 H191"/><path class="stroke num" stroke-width="9" d="M183 27 V58"/></svg></span>
+        <span class="cap">Principale</span>
+      </div>
+      <div class="cell blue">
+        <span class="logo rev"><svg viewBox="0 0 206 72"><circle class="dot-a" cx="34.5" cy="13" r="4.6"/><circle class="dot-b" cx="45.5" cy="13" r="4.6"/><path class="stroke" stroke-width="9" d="M12 12 V58"/><path class="stroke" stroke-width="9" d="M25 41 H55 A15 15 0 1 0 50.6 51.6"/><path class="stroke" stroke-width="9" d="M70 14 V49 A9 9 0 0 0 79 58"/><path class="stroke" stroke-width="9" d="M61 25 H80"/><path class="stroke" stroke-width="9" d="M92 26 H114 L92 58 H114"/><path class="stroke num" stroke-width="9" d="M128 24 A11 11 0 1 1 148 30 L128 58 H150"/><path class="stroke num" stroke-width="9" d="M181 13 L163 41 H191"/><path class="stroke num" stroke-width="9" d="M183 27 V58"/></svg></span>
+        <span class="cap">Sur bleu</span>
+      </div>
+      <div class="cell">
+        <span class="logo mono"><svg viewBox="0 0 206 72"><circle class="dot-a" cx="34.5" cy="13" r="4.6"/><circle class="dot-b" cx="45.5" cy="13" r="4.6"/><path class="stroke" stroke-width="9" d="M12 12 V58"/><path class="stroke" stroke-width="9" d="M25 41 H55 A15 15 0 1 0 50.6 51.6"/><path class="stroke" stroke-width="9" d="M70 14 V49 A9 9 0 0 0 79 58"/><path class="stroke" stroke-width="9" d="M61 25 H80"/><path class="stroke" stroke-width="9" d="M92 26 H114 L92 58 H114"/><path class="stroke num" stroke-width="9" d="M128 24 A11 11 0 1 1 148 30 L128 58 H150"/><path class="stroke num" stroke-width="9" d="M181 13 L163 41 H191"/><path class="stroke num" stroke-width="9" d="M183 27 V58"/></svg></span>
+        <span class="cap">Une couleur</span>
+      </div>
+    </div>
+
+    <h2>Icône — le ë seul</h2>
+    <div class="icons">
+      <div class="ic"><div>
+        <svg width="92" height="92" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="var(--blue)"/><circle cx="27" cy="13.5" r="4.1" fill="#fff"/><circle cx="37" cy="13.5" r="4.1" fill="var(--red)"/><path d="M18.5 39 H45.5 A13.5 13.5 0 1 0 41.5 48.5" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/></svg>
+      </div>512</div>
+      <div class="ic"><div>
+        <svg width="58" height="58" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="var(--blue)"/><circle cx="27" cy="13.5" r="4.1" fill="#fff"/><circle cx="37" cy="13.5" r="4.1" fill="var(--red)"/><path d="M18.5 39 H45.5 A13.5 13.5 0 1 0 41.5 48.5" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/></svg>
+      </div>180</div>
+      <div class="ic"><div>
+        <svg width="34" height="34" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="var(--blue)"/><circle cx="27" cy="13.5" r="4.6" fill="#fff"/><circle cx="37" cy="13.5" r="4.6" fill="var(--red)"/><path d="M18.5 39 H45.5 A13.5 13.5 0 1 0 41.5 48.5" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/></svg>
+      </div>32</div>
+      <div class="ic"><div>
+        <svg width="18" height="18" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="var(--blue)"/><circle cx="22" cy="32" r="7.5" fill="#fff"/><circle cx="42" cy="32" r="7.5" fill="var(--red)"/></svg>
+      </div>16 · deux points</div>
+    </div>
+
+    <h2>Construction</h2>
+    <div class="grid-note">
+      <div class="construction">
+        <svg viewBox="0 0 206 72">
+          <!-- guides -->
+          <g stroke="var(--line)" stroke-width="1">
+            <line x1="0" y1="58" x2="206" y2="58"/>
+            <line x1="0" y1="26" x2="206" y2="26"/>
+            <line x1="0" y1="12" x2="206" y2="12"/>
+          </g>
+          <g opacity=".9">
+            <circle cx="34.5" cy="13" r="4.6" fill="var(--text)" opacity=".35"/>
+            <circle cx="45.5" cy="13" r="4.6" fill="var(--red)" opacity=".55"/>
+            <path fill="none" stroke="var(--text)" opacity=".35" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" d="M12 12 V58 M25 41 H55 A15 15 0 1 0 50.6 51.6 M70 14 V49 A9 9 0 0 0 79 58 M61 25 H80 M92 26 H114 L92 58 H114"/>
+            <path fill="none" stroke="var(--red)" opacity=".55" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" d="M128 24 A11 11 0 1 1 148 30 L128 58 H150 M181 13 L163 41 H191 M183 27 V58"/>
+          </g>
+          <!-- construction circle on the e -->
+          <circle cx="40" cy="41" r="15" fill="none" stroke="var(--blue)" stroke-width="1" stroke-dasharray="3 3"/>
+          <circle cx="138" cy="24" r="11" fill="none" stroke="var(--blue)" stroke-width="1" stroke-dasharray="3 3"/>
+        </svg>
+        <p>Trait unique de 9 unités, terminaisons rondes. Le bol du <b>e</b> et l'épaule du <b>2</b> sont des cercles parfaits&nbsp;; hauteur d'x, ascendantes et chiffres partagent la même grille. C'est ce qui donne au mot sa cohérence — et ce qui manquait aux versions précédentes.</p>
+      </div>
+    </div>
+
+    <div class="foot">
+      letz24.lu · logotype vectoriel — identique sur tout écran, toute taille, toute impression.<br>
+      Validation → export SVG/PDF définitifs, favicons, et intégration des couleurs dans l'app.
+    </div>
+  </div>
+
+<script>
+  (function(){
+    var root=document.documentElement, btns=document.querySelectorAll('.toggle button');
+    function sync(){var t=root.getAttribute('data-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches);
+      btns.forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.set===(d?'dark':'light')));});}
+    btns.forEach(function(b){b.addEventListener('click',function(){root.setAttribute('data-theme',b.dataset.set);sync();});});
+    sync();
+  })();
+</script>
+</body>
+</html>

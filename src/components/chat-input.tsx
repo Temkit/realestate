@@ -132,7 +132,7 @@ export function ChatInput({
         </div>
 
         <p className="text-[10px] text-muted-foreground/40 text-center mt-1.5">
-          olu.lu searches athome, immotop, wortimmo, vivi
+          letz24.lu searches athome, immotop, wortimmo, vivi
         </p>
       </div>
     </div>

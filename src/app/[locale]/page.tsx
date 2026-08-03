@@ -222,7 +222,7 @@ export default async function HomePage({
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{t("pro.subtitle")}</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <a
-                href="mailto:pro@lux24.lu"
+                href="mailto:pro@letz24.lu"
                 className="rounded-xl bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:opacity-90"
               >
                 {t("pro.cta")}

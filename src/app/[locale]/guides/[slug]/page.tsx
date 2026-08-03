@@ -23,7 +23,7 @@ export async function generateMetadata({
   if (!guide) return { title: "Not found" };
   const fr = locale === "fr";
   return {
-    title: `${fr ? guide.title.fr : guide.title.en} | lux24`,
+    title: `${fr ? guide.title.fr : guide.title.en} | lëtz24`,
     description: fr ? guide.excerpt.fr : guide.excerpt.en,
     alternates: { canonical: `/${locale}/guides/${slug}` },
     openGraph: {

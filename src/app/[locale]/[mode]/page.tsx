@@ -48,13 +48,13 @@ export async function generateMetadata({
     const name = vname(vertical, locale);
     const title =
       locale === "fr"
-        ? `${name} au Luxembourg — devis gratuits & rendez-vous | lux24`
-        : `${name} in Luxembourg — free quotes & appointments | lux24`;
+        ? `${name} au Luxembourg — devis gratuits & rendez-vous | lëtz24`
+        : `${name} in Luxembourg — free quotes & appointments | lëtz24`;
     const description =
       locale === "fr"
         ? `Comparez les ${name.toLowerCase()} au Luxembourg. Demandez jusqu'à 3 devis gratuits ou prenez rendez-vous en ligne.`
         : `Compare ${name.toLowerCase()} in Luxembourg. Request up to 3 free quotes or book an appointment online.`;
-    const canonical = `https://olu.lu/${locale}/${mode}`;
+    const canonical = `https://letz24.lu/${locale}/${mode}`;
     return {
       title,
       description,
@@ -65,13 +65,13 @@ export async function generateMetadata({
 
   const title =
     locale === "fr"
-      ? `Immobilier ${modeEntry.internal === "buy" ? "à acheter" : "à louer"} au Luxembourg | olu.lu`
-      : `Real estate for ${modeEntry.internal === "buy" ? "sale" : "rent"} in Luxembourg | olu.lu`;
+      ? `Immobilier ${modeEntry.internal === "buy" ? "à acheter" : "à louer"} au Luxembourg | letz24.lu`
+      : `Real estate for ${modeEntry.internal === "buy" ? "sale" : "rent"} in Luxembourg | letz24.lu`;
   const description =
     locale === "fr"
       ? `Parcourez toutes les annonces d'immobilier ${modeEntry.internal === "buy" ? "à acheter" : "à louer"} au Luxembourg. Appartements, maisons, bureaux et studios dans les 12 communes principales.`
       : `Browse all Luxembourg real estate listings for ${modeEntry.internal === "buy" ? "sale" : "rent"}. Apartments, houses, offices and studios across 12 main communes.`;
-  const canonical = `https://olu.lu/${locale}/${mode}`;
+  const canonical = `https://letz24.lu/${locale}/${mode}`;
   const otherMode = modes.find((m) => m.internal !== modeEntry.internal);
 
   return {
@@ -80,8 +80,8 @@ export async function generateMetadata({
     alternates: {
       canonical,
       languages: {
-        fr: `https://olu.lu/fr/${otherMode ? (locale === "fr" ? mode : otherMode.slug) : mode}`,
-        en: `https://olu.lu/en/${otherMode ? (locale === "en" ? mode : otherMode.slug) : mode}`,
+        fr: `https://letz24.lu/fr/${otherMode ? (locale === "fr" ? mode : otherMode.slug) : mode}`,
+        en: `https://letz24.lu/en/${otherMode ? (locale === "en" ? mode : otherMode.slug) : mode}`,
         "x-default": canonical,
       },
     },
@@ -90,7 +90,7 @@ export async function generateMetadata({
       description,
       url: canonical,
       type: "website",
-      siteName: "olu.lu",
+      siteName: "letz24.lu",
       locale: locale === "fr" ? "fr_LU" : "en_US",
       images: ["/og-image.png"],
     },

@@ -38,7 +38,7 @@ export default async function PortalProfilePage({
       <h1 className="mb-2 text-lg font-semibold">Votre profil</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Ces informations apparaissent sur votre page publique. Pour changer votre nom,
-        commune ou formule, contactez lux24.
+        commune ou formule, contactez lëtz24.
       </p>
       {saved && (
         <p className="mb-4 rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-700">Enregistré.</p>

@@ -15,8 +15,8 @@ export function CookiePolicy() {
       <h2>{isFr ? "Qu'utilisons-nous ?" : "What do we use?"}</h2>
       <p>
         {isFr
-          ? "olu.lu utilise le stockage local de votre navigateur (localStorage) et un cookie pour fonctionner. Nous n'utilisons aucun cookie de suivi ou publicitaire."
-          : "olu.lu uses your browser's local storage (localStorage) and one cookie to operate. We do not use any tracking or advertising cookies."}
+          ? "letz24.lu utilise le stockage local de votre navigateur (localStorage) et un cookie pour fonctionner. Nous n'utilisons aucun cookie de suivi ou publicitaire."
+          : "letz24.lu uses your browser's local storage (localStorage) and one cookie to operate. We do not use any tracking or advertising cookies."}
       </p>
 
       <h2>{isFr ? "Détail du stockage" : "Storage Details"}</h2>

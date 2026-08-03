@@ -26,7 +26,7 @@ export default async function PortalAuthLayout({
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm font-semibold">
             {provider?.name ?? "Espace pro"}{" "}
-            <span className="font-normal text-muted-foreground">· lux24</span>
+            <span className="font-normal text-muted-foreground">· lëtz24</span>
           </span>
           <form action={logoutAction}>
             <button className="text-sm text-muted-foreground hover:text-foreground">

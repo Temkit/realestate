@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import NextLink from "next/link";
+import { Logo } from "@/components/marketplace/logo";
 
 export function Footer() {
   const t = useTranslations("footer");
@@ -13,13 +14,8 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-6 w-6 rounded bg-[#3b5bdb] flex items-center justify-center">
-                <span className="text-white text-[10px] font-extrabold">L</span>
-              </div>
-              <span className="text-sm font-bold">
-                lux<span className="text-muted-foreground font-normal">24</span>
-              </span>
+            <div className="mb-2">
+              <Logo className="h-6 w-auto" />
             </div>
             <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
               {t("disclaimer")}
@@ -52,7 +48,7 @@ export function Footer() {
             <Link href="/cookies" className="hover:text-foreground transition-colors">
               {t("cookies")}
             </Link>
-            <a href="mailto:contact@lux24.lu" className="hover:text-foreground transition-colors">
+            <a href="mailto:contact@letz24.lu" className="hover:text-foreground transition-colors">
               {t("contact")}
             </a>
             {/* Portal lives outside [locale] — plain next/link, not the i18n Link */}

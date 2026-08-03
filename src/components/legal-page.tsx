@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
+import { Logo } from "@/components/marketplace/logo";
 
 interface LegalPageProps {
   title: string;
@@ -25,13 +26,8 @@ export function LegalPage({ title, lastUpdated, children }: LegalPageProps) {
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">{t("backToHome")}</span>
           </Link>
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-md bg-[#3b5bdb] flex items-center justify-center">
-              <span className="text-white text-xs font-extrabold">olu</span>
-            </div>
-            <span className="text-sm font-bold">
-              olu<span className="text-muted-foreground font-normal">.lu</span>
-            </span>
+          <Link href="/" aria-label="lëtz24 — accueil">
+            <Logo className="h-6 w-auto" />
           </Link>
         </div>
       </header>
